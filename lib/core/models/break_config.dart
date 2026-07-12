@@ -70,6 +70,64 @@ class BreakConfig {
     return minutes >= workStartMinutes || minutes < workEndMinutes;
   }
 
+  Map<String, Object> toJson() => {
+    'microIntervalMs': microInterval.inMilliseconds,
+    'microDurationMs': microDuration.inMilliseconds,
+    'longIntervalMs': longInterval.inMilliseconds,
+    'longDurationMs': longDuration.inMilliseconds,
+    'warningLeadMs': warningLead.inMilliseconds,
+    'snoozeBudget': snoozeBudget,
+    'snoozeLengthMs': snoozeLength.inMilliseconds,
+    'deferRecheckMs': deferRecheck.inMilliseconds,
+    'deferCapMs': deferCap.inMilliseconds,
+    'idleFireThresholdMs': idleFireThreshold.inMilliseconds,
+    'workStartMinutes': workStartMinutes,
+    'workEndMinutes': workEndMinutes,
+    'workDays': workDays.toList()..sort(),
+    'strictMode': strictMode,
+  };
+
+  /// Tolerant deserialization: any missing/invalid field falls back to its
+  /// default, so config survives app upgrades that add fields.
+  factory BreakConfig.fromJson(Map<String, Object?> json) {
+    const defaults = BreakConfig();
+    Duration ms(String key, Duration fallback) {
+      final v = json[key];
+      return v is int && v > 0 ? Duration(milliseconds: v) : fallback;
+    }
+
+    final days = json['workDays'];
+    return BreakConfig(
+      microInterval: ms('microIntervalMs', defaults.microInterval),
+      microDuration: ms('microDurationMs', defaults.microDuration),
+      longInterval: ms('longIntervalMs', defaults.longInterval),
+      longDuration: ms('longDurationMs', defaults.longDuration),
+      warningLead: ms('warningLeadMs', defaults.warningLead),
+      snoozeBudget: switch (json['snoozeBudget']) {
+        final int v when v >= 0 => v,
+        _ => defaults.snoozeBudget,
+      },
+      snoozeLength: ms('snoozeLengthMs', defaults.snoozeLength),
+      deferRecheck: ms('deferRecheckMs', defaults.deferRecheck),
+      deferCap: ms('deferCapMs', defaults.deferCap),
+      idleFireThreshold: ms('idleFireThresholdMs', defaults.idleFireThreshold),
+      workStartMinutes: switch (json['workStartMinutes']) {
+        final int v when v >= 0 && v <= 24 * 60 => v,
+        _ => defaults.workStartMinutes,
+      },
+      workEndMinutes: switch (json['workEndMinutes']) {
+        final int v when v >= 0 && v <= 24 * 60 => v,
+        _ => defaults.workEndMinutes,
+      },
+      workDays: days is List
+          ? days.whereType<int>().where((d) => d >= 1 && d <= 7).toSet()
+          : defaults.workDays,
+      strictMode: json['strictMode'] is bool
+          ? json['strictMode']! as bool
+          : defaults.strictMode,
+    );
+  }
+
   BreakConfig copyWith({
     Duration? microInterval,
     Duration? microDuration,

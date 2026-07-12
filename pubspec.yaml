@@ -39,6 +39,7 @@ dependencies:
   dbus: ^0.7.14
   window_manager: ^0.5.2
   fl_chart: ^1.2.0
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:
