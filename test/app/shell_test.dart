@@ -3,12 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/overrides.dart';
+
 void main() {
   Future<void> pumpApp(WidgetTester tester, Size size) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(const ProviderScope(child: BreakTimeApp()));
+    await tester.pumpWidget(
+      ProviderScope(overrides: testOverrides, child: const BreakTimeApp()),
+    );
+    await tester.pump(); // let stream providers deliver their first values
   }
 
   group('AppShell navigation', () {
@@ -51,6 +56,20 @@ void main() {
           reason: 'missing destination: $label',
         );
       }
+    });
+  });
+
+  group('Dashboard live data', () {
+    testWidgets('renders countdown and today stats from providers', (
+      tester,
+    ) async {
+      await pumpApp(tester, const Size(1280, 800));
+
+      expect(find.text('Next eye break'), findsOneWidget);
+      expect(find.text('12:34'), findsOneWidget);
+      expect(find.text('3h 20m'), findsOneWidget); // screen time
+      expect(find.text('5'), findsOneWidget); // 4 completed + 1 credited
+      expect(find.text('1h 20m'), findsOneWidget); // longest focus
     });
   });
 }

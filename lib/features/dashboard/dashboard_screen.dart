@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/formats.dart';
 import '../../app/theme.dart';
+import '../../core/engine/phase.dart';
+import '../../core/models/break_kind.dart';
+import '../../services/providers.dart';
 
-/// Today at a glance: next break countdown, screen time, streak.
-/// Live values are wired to the break engine in M1; this shell renders the
-/// layout with empty states until then.
-class DashboardScreen extends StatelessWidget {
+/// Today at a glance: live next-break countdown and today's stats.
+class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
       body: SafeArea(
@@ -20,21 +23,7 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(height: AppTokens.spaceLg),
             const _NextBreakCard(),
             const SizedBox(height: AppTokens.spaceMd),
-            const Row(
-              children: [
-                Expanded(
-                  child: _StatCard(label: 'Screen time', value: '—'),
-                ),
-                SizedBox(width: AppTokens.spaceMd),
-                Expanded(
-                  child: _StatCard(label: 'Breaks taken', value: '—'),
-                ),
-                SizedBox(width: AppTokens.spaceMd),
-                Expanded(
-                  child: _StatCard(label: 'Streak', value: '—'),
-                ),
-              ],
-            ),
+            const _TodayStatsRow(),
           ],
         ),
       ),
@@ -42,12 +31,36 @@ class DashboardScreen extends StatelessWidget {
   }
 }
 
-class _NextBreakCard extends StatelessWidget {
+class _NextBreakCard extends ConsumerWidget {
   const _NextBreakCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final phase = ref.watch(enginePhaseProvider);
     final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    final (label, value) = switch (phase.value) {
+      Monitoring(:final nextBreakIn, :final nextBreakKind) => (
+        nextBreakKind == BreakKind.micro ? 'Next eye break' : 'Next long break',
+        formatCountdown(nextBreakIn),
+      ),
+      Warning(:final startsIn) => (
+        'Break starting',
+        'in ${startsIn.inSeconds}s',
+      ),
+      InBreak(:final remaining) => (
+        'Break in progress',
+        formatCountdown(remaining),
+      ),
+      Deferred() => ('Break waiting', 'until your call ends'),
+      Paused(:final byUser) => (
+        'Paused',
+        byUser ? 'by you' : 'outside work hours',
+      ),
+      null => ('Starting up', '…'),
+    };
+
     return Card(
       color: scheme.primaryContainer,
       child: Padding(
@@ -65,14 +78,14 @@ class _NextBreakCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Next break',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    label,
+                    style: textTheme.labelLarge?.copyWith(
                       color: scheme.onPrimaryContainer,
                     ),
                   ),
                   Text(
-                    'Engine not running yet',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    value,
+                    style: textTheme.headlineSmall?.copyWith(
                       color: scheme.onPrimaryContainer,
                     ),
                   ),
@@ -82,6 +95,42 @@ class _NextBreakCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _TodayStatsRow extends ConsumerWidget {
+  const _TodayStatsRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final slices = ref.watch(todaySliceStatsProvider).value;
+    final counts = ref.watch(todayBreakCountsProvider).value;
+
+    final screenTime = slices == null
+        ? '—'
+        : formatHoursMinutes(slices.screenTime);
+    final stretch = slices == null
+        ? '—'
+        : formatHoursMinutes(slices.longestStretch);
+    final breaks = counts == null
+        ? '—'
+        : '${counts.completed + counts.credited}';
+
+    return Row(
+      children: [
+        Expanded(
+          child: _StatCard(label: 'Screen time', value: screenTime),
+        ),
+        const SizedBox(width: AppTokens.spaceMd),
+        Expanded(
+          child: _StatCard(label: 'Breaks taken', value: breaks),
+        ),
+        const SizedBox(width: AppTokens.spaceMd),
+        Expanded(
+          child: _StatCard(label: 'Longest focus', value: stretch),
+        ),
+      ],
     );
   }
 }

@@ -1,0 +1,105 @@
+import 'dart:async';
+
+import '../core/clock.dart';
+import '../core/engine/engine.dart';
+import '../core/engine/phase.dart';
+import '../core/models/activity.dart';
+import '../data/break_log_repository.dart';
+import '../data/settings_repository.dart';
+import '../platform/interfaces/idle_monitor.dart';
+import '../platform/interfaces/session_signals.dart';
+import 'activity_recorder.dart';
+import 'context_sampler.dart';
+
+/// Drives the [BreakEngine] with real platform signals once per second and
+/// fans engine output into persistence. Owns the only periodic timer in
+/// the app.
+class EngineService {
+  EngineService({
+    required this.engine,
+    required this._clock,
+    required this._idleMonitor,
+    required this._sessionSignals,
+    required this._sampler,
+    required this._breakLog,
+    required this._settings,
+    required this._recorder,
+  });
+
+  /// How close a break must be before busy-probing is worth its cost.
+  static const _busyRelevanceWindow = Duration(seconds: 90);
+  static const _flushEvery = Duration(minutes: 1);
+  static const _snapshotEvery = Duration(seconds: 30);
+
+  final BreakEngine engine;
+  final Clock _clock;
+  final IdleMonitor _idleMonitor;
+  final SessionSignals _sessionSignals;
+  final ContextSampler _sampler;
+  final BreakLogRepository _breakLog;
+  final SettingsRepository _settings;
+  final ActivityRecorder _recorder;
+
+  Timer? _timer;
+  StreamSubscription<bool>? _awaySub;
+  StreamSubscription<Object?>? _eventSub;
+  bool _away = false;
+  DateTime _lastFlush = DateTime.now();
+  DateTime _lastSnapshot = DateTime.now();
+  bool _ticking = false;
+
+  void start({Duration tickEvery = const Duration(seconds: 1)}) {
+    _awaySub = _sessionSignals.away.listen((away) => _away = away);
+    _eventSub = engine.events.listen((event) {
+      // Fire-and-forget: persistence must never block the engine.
+      unawaited(_breakLog.record(event));
+      unawaited(_settings.saveSnapshot(engine.snapshot()));
+    });
+    _timer = Timer.periodic(tickEvery, (_) => unawaited(_tick()));
+  }
+
+  Future<void> _tick() async {
+    if (_ticking) return; // a slow D-Bus reply must not stack ticks
+    _ticking = true;
+    try {
+      final idle = await _idleMonitor.currentIdle();
+      final phase = engine.phase;
+      final relevant = switch (phase) {
+        Monitoring(:final nextBreakIn) => nextBreakIn < _busyRelevanceWindow,
+        Warning() || Deferred() => true,
+        InBreak() || Paused() => false,
+      };
+      final now = _clock.now();
+      await _sampler.refreshIfNeeded(relevant: relevant, now: now);
+
+      engine.tick(TickInput(idle: idle, locked: _away, busy: _sampler.value));
+
+      _recorder.observe(now, _sliceKind(idle));
+      if (now.difference(_lastFlush) >= _flushEvery) {
+        _lastFlush = now;
+        await _recorder.flush(now);
+      }
+      if (now.difference(_lastSnapshot) >= _snapshotEvery) {
+        _lastSnapshot = now;
+        await _settings.saveSnapshot(engine.snapshot());
+      }
+    } finally {
+      _ticking = false;
+    }
+  }
+
+  SliceKind _sliceKind(Duration idle) {
+    if (_away) return SliceKind.locked;
+    if (idle >= engine.config.idleFireThreshold) return SliceKind.idle;
+    return SliceKind.active;
+  }
+
+  Future<void> dispose() async {
+    _timer?.cancel();
+    await _awaySub?.cancel();
+    await _eventSub?.cancel();
+    await _recorder.flush(_clock.now());
+    await _settings.saveSnapshot(engine.snapshot());
+    engine.dispose();
+  }
+}
