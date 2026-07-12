@@ -89,6 +89,9 @@ class BreakEngine {
   Stream<EnginePhase> get phases => _phaseController.stream;
   Stream<EngineEvent> get events => _eventController.stream;
 
+  /// Whether the current break cycle still has snoozes left.
+  bool get canSnooze => _snoozesLeft > 0;
+
   EnginePhase get phase {
     if (_pausedByUser) return const Paused(byUser: true);
     if (_pausedByHours) return const Paused(byUser: false);

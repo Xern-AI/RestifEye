@@ -9,12 +9,17 @@ import '../data/activity_repository.dart';
 import '../data/break_log_repository.dart';
 import '../data/database.dart';
 import '../data/settings_repository.dart';
+import '../platform/interfaces/overlay_controller.dart';
+import '../platform/linux/linux_break_notifier.dart';
 import '../platform/linux/linux_context_signals.dart';
 import '../platform/linux/linux_idle_monitor.dart';
 import '../platform/linux/linux_session_signals.dart';
+import '../platform/linux/window_takeover.dart';
 import '../services/activity_recorder.dart';
 import '../services/context_sampler.dart';
 import '../services/engine_service.dart';
+import '../services/exercise_picker.dart';
+import '../services/notification_coordinator.dart';
 
 /// Dev mode (`BREAKTIME_DEV=1 flutter run`): breaks every 1–3 minutes so
 /// the full flow can be exercised without waiting real intervals.
@@ -35,15 +40,23 @@ const _devConfig = BreakConfig(
 /// Everything main() needs to run the app.
 /// (Riverpod 3 no longer exports the `Override` type — API change from 2.x —
 /// so the overrides list is built as an inferred literal at the call site.)
-typedef BootResult = ({AppDatabase db, EngineService service});
+typedef BootResult = ({
+  AppDatabase db,
+  EngineService service,
+  OverlayController overlay,
+  BreakConfig config,
+  ExercisePicker picker,
+});
 
-/// Builds the real object graph: database, engine, Linux adapters, service.
+/// Builds the real object graph: database, engine, Linux adapters,
+/// window takeover, notification coordinator, engine service.
 Future<BootResult> bootstrap() async {
   final db = AppDatabase.open();
   final settings = SettingsRepository(db);
 
   final config = isDevMode ? _devConfig : await settings.loadConfig();
   final snapshot = isDevMode ? null : await settings.loadSnapshot();
+  final optOuts = await settings.loadExerciseOptOuts();
 
   final clock = SystemClock();
   final engine = BreakEngine(
@@ -56,6 +69,14 @@ Future<BootResult> bootstrap() async {
   final systemBus = DBusClient.system();
   final activityRepo = ActivityRepository(db);
 
+  final overlay = WindowTakeover();
+  await overlay.init();
+
+  NotificationCoordinator(
+    engine: engine,
+    notifier: LinuxBreakNotifier(sessionBus),
+  ).start();
+
   final service = EngineService(
     engine: engine,
     clock: clock,
@@ -67,5 +88,11 @@ Future<BootResult> bootstrap() async {
     recorder: ActivityRecorder(activityRepo.insertSlice),
   )..start();
 
-  return (db: db, service: service);
+  return (
+    db: db,
+    service: service,
+    overlay: overlay,
+    config: config,
+    picker: ExercisePicker(optOuts: optOuts),
+  );
 }

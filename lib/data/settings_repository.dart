@@ -52,6 +52,21 @@ class SettingsRepository {
   Future<void> setFlag(String key, bool value) =>
       _write('flag_$key', value.toString());
 
+  static const _optOutsKey = 'exercise_optouts';
+
+  Future<Set<String>> loadExerciseOptOuts() async {
+    final raw = await _read(_optOutsKey);
+    if (raw == null) return {};
+    try {
+      return (jsonDecode(raw) as List).whereType<String>().toSet();
+    } on FormatException {
+      return {};
+    }
+  }
+
+  Future<void> saveExerciseOptOuts(Set<String> ids) =>
+      _write(_optOutsKey, jsonEncode(ids.toList()..sort()));
+
   Future<String?> _read(String key) async {
     final row = await (_db.select(
       _db.settingRows,

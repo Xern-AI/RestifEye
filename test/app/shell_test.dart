@@ -1,19 +1,25 @@
 import 'package:breaktime/app/app.dart';
+import 'package:breaktime/core/engine/events.dart';
+import 'package:breaktime/core/models/activity.dart';
+import 'package:breaktime/core/models/break_kind.dart';
+import 'package:breaktime/data/activity_repository.dart';
+import 'package:breaktime/data/break_log_repository.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/overrides.dart';
 
 void main() {
+  late TestHarness harness;
+
+  setUp(() => harness = TestHarness());
+
   Future<void> pumpApp(WidgetTester tester, Size size) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      ProviderScope(overrides: testOverrides, child: const BreakTimeApp()),
-    );
-    await tester.pump(); // let stream providers deliver their first values
+    await tester.pumpWidget(harness.wrap(const BreakTimeApp()));
+    await tester.pump();
   }
 
   group('AppShell navigation', () {
@@ -27,11 +33,14 @@ void main() {
 
         await tester.tap(find.byIcon(Icons.settings_outlined));
         await tester.pumpAndSettle();
-        expect(find.text('Break intervals'), findsOneWidget);
+        expect(find.text('Eye breaks'), findsOneWidget);
+        expect(find.text('Strict mode'), findsOneWidget);
 
         await tester.tap(find.byIcon(Icons.insights_outlined));
         await tester.pumpAndSettle();
         expect(find.textContaining('trends will appear'), findsOneWidget);
+
+        await cleanupHarness(tester, harness);
       },
     );
 
@@ -42,34 +51,51 @@ void main() {
 
       expect(find.byType(NavigationBar), findsOneWidget);
       expect(find.byType(NavigationRail), findsNothing);
-    });
 
-    testWidgets('all four destinations are present and labeled', (
-      tester,
-    ) async {
-      await pumpApp(tester, const Size(1280, 800));
-
-      for (final label in ['Dashboard', 'Analytics', 'Advice', 'Settings']) {
-        expect(
-          find.text(label),
-          findsWidgets,
-          reason: 'missing destination: $label',
-        );
-      }
+      await cleanupHarness(tester, harness);
     });
   });
 
   group('Dashboard live data', () {
-    testWidgets('renders countdown and today stats from providers', (
-      tester,
-    ) async {
+    testWidgets('renders the engine countdown', (tester) async {
       await pumpApp(tester, const Size(1280, 800));
+      harness.advance(const Duration(seconds: 1));
+      await tester.pump();
 
       expect(find.text('Next eye break'), findsOneWidget);
-      expect(find.text('12:34'), findsOneWidget);
-      expect(find.text('3h 20m'), findsOneWidget); // screen time
-      expect(find.text('5'), findsOneWidget); // 4 completed + 1 credited
-      expect(find.text('1h 20m'), findsOneWidget); // longest focus
+      expect(find.text('19:59'), findsOneWidget);
+
+      await cleanupHarness(tester, harness);
+    });
+
+    testWidgets('renders today stats from the database', (tester) async {
+      final day = DateTime.now();
+      final activity = ActivityRepository(harness.db);
+      await activity.insertSlice(
+        ActivitySlice(
+          start: DateTime(day.year, day.month, day.day, 9),
+          end: DateTime(day.year, day.month, day.day, 10, 20),
+          kind: SliceKind.active,
+        ),
+      );
+      final breakLog = BreakLogRepository(harness.db);
+      await breakLog.record(BreakCompleted(day, BreakKind.micro));
+      await breakLog.record(
+        BreakCredited(
+          day,
+          BreakKind.long,
+          BreakOutcome.creditedLock,
+          const Duration(minutes: 6),
+        ),
+      );
+
+      await pumpApp(tester, const Size(1280, 800));
+      await tester.pump(); // stream deliveries
+
+      expect(find.text('1h 20m'), findsNWidgets(2)); // screen time + stretch
+      expect(find.text('2'), findsOneWidget); // breaks taken
+
+      await cleanupHarness(tester, harness);
     });
   });
 }

@@ -13,6 +13,9 @@ Future<void> main() async {
       overrides: [
         databaseProvider.overrideWithValue(boot.db),
         engineServiceProvider.overrideWithValue(boot.service),
+        overlayControllerProvider.overrideWithValue(boot.overlay),
+        seedConfigProvider.overrideWithValue(boot.config),
+        exercisePickerProvider.overrideWithValue(boot.picker),
       ],
       child: const BreakTimeApp(),
     ),
