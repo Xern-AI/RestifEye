@@ -1,0 +1,373 @@
+import 'dart:async';
+
+import '../clock.dart';
+import '../models/break_config.dart';
+import '../models/break_kind.dart';
+import 'events.dart';
+import 'phase.dart';
+import 'snapshot.dart';
+
+/// Platform state sampled once per tick (~1 Hz).
+class TickInput {
+  const TickInput({
+    this.idle = Duration.zero,
+    this.locked = false,
+    this.busy = false,
+  });
+
+  /// Time since the last user input.
+  final Duration idle;
+
+  /// Session locked or system suspended.
+  final bool locked;
+
+  /// Microphone/camera in use, or Do Not Disturb enabled.
+  final bool busy;
+}
+
+/// Deterministic break scheduler. Pure Dart: no timers, no I/O — the caller
+/// drives it with [tick] and it reacts through [phase]/[phases]/[events].
+///
+/// Scheduling uses the monotonic clock only; wall time is used solely for
+/// work-hours checks and event timestamps.
+class BreakEngine {
+  BreakEngine({
+    required this._clock,
+    required this._config,
+    EngineSnapshot? restoreFrom,
+  }) {
+    final now = _clock.elapsed();
+    if (restoreFrom != null) {
+      final gap = _clock.now().difference(restoreFrom.savedAt);
+      if (gap >= _config.longDuration) {
+        // The app was gone long enough to count as a full break.
+        _resetDue(BreakKind.micro, from: now);
+        _resetDue(BreakKind.long, from: now);
+      } else {
+        _microDue = now + restoreFrom.microRemaining - gap;
+        _longDue = now + restoreFrom.longRemaining - gap;
+      }
+    } else {
+      _resetDue(BreakKind.micro, from: now);
+      _resetDue(BreakKind.long, from: now);
+    }
+  }
+
+  /// Lead time for the (re-)warning after a deferral or an away return.
+  static const Duration _shortLead = Duration(seconds: 15);
+
+  final Clock _clock;
+  BreakConfig _config;
+
+  final _phaseController = StreamController<EnginePhase>.broadcast(sync: true);
+  final _eventController = StreamController<EngineEvent>.broadcast(sync: true);
+
+  _Mode _mode = _Mode.monitoring;
+  late Duration _microDue;
+  late Duration _longDue;
+
+  BreakKind _activeKind = BreakKind.micro;
+  Duration _breakEndsAt = Duration.zero;
+  int _snoozesLeft = 0;
+  bool _strictNow = false;
+
+  /// When the current cycle's break actually fires (moves on re-warns).
+  Duration _fireAt = Duration.zero;
+
+  /// The cycle's original due time — fixed until the cycle ends, so total
+  /// deferral can be measured against it for the defer cap.
+  Duration _cycleDue = Duration.zero;
+
+  Duration _deferRecheckAt = Duration.zero;
+
+  Duration? _awayBegan;
+  bool _awayWasLocked = false;
+  bool _pausedByUser = false;
+  bool _pausedByHours = false;
+
+  BreakConfig get config => _config;
+  Stream<EnginePhase> get phases => _phaseController.stream;
+  Stream<EngineEvent> get events => _eventController.stream;
+
+  EnginePhase get phase {
+    if (_pausedByUser) return const Paused(byUser: true);
+    if (_pausedByHours) return const Paused(byUser: false);
+    final now = _clock.elapsed();
+    return switch (_mode) {
+      _Mode.monitoring => Monitoring(
+        nextBreakIn: _clampZero(_nextDue() - now),
+        nextBreakKind: _nextKind(),
+      ),
+      _Mode.warning => Warning(
+        kind: _activeKind,
+        startsIn: _clampZero(_fireAt - now),
+      ),
+      _Mode.inBreak => InBreak(
+        kind: _activeKind,
+        remaining: _clampZero(_breakEndsAt - now),
+        snoozesLeft: _snoozesLeft,
+        strict: _strictNow,
+      ),
+      _Mode.deferred => Deferred(
+        kind: _activeKind,
+        recheckIn: _clampZero(_deferRecheckAt - now),
+      ),
+    };
+  }
+
+  /// Advances the state machine. Call ~once per second.
+  void tick(TickInput input) {
+    if (_pausedByUser) return;
+    if (_updateWorkHoursPause()) return;
+
+    final now = _clock.elapsed();
+    _trackAway(input, now);
+
+    switch (_mode) {
+      case _Mode.monitoring:
+        if (_isAway(input)) break; // never schedule against an absent user
+        final due = _nextDue();
+        if (now >= due - _config.warningLead) {
+          _activeKind = _nextKind();
+          _cycleDue = due;
+          _fireAt = due;
+          if (input.busy) {
+            _defer(now);
+          } else {
+            _mode = _Mode.warning;
+            _emit(
+              WarningIssued(_clock.now(), _activeKind, _clampZero(due - now)),
+            );
+          }
+        }
+
+      case _Mode.warning:
+        if (_isAway(input)) break; // resolved by away credit on return
+        if (now >= _fireAt) {
+          // The defer cap overrides busy: a break can only be pushed so far.
+          if (input.busy && now - _cycleDue < _config.deferCap) {
+            _defer(now);
+          } else {
+            _startBreak(now);
+          }
+        }
+
+      case _Mode.deferred:
+        if (_isAway(input)) break;
+        if (!input.busy || now - _cycleDue >= _config.deferCap) {
+          _rewarn(now); // busy ended (or cap hit) — brief heads-up, then break
+        } else if (now >= _deferRecheckAt) {
+          _defer(now); // still busy: log continued deferral, keep waiting
+        }
+
+      case _Mode.inBreak:
+        if (now >= _breakEndsAt) {
+          _emit(BreakCompleted(_clock.now(), _activeKind));
+          _finishCycle(_activeKind, now);
+        }
+    }
+    _publishPhase();
+  }
+
+  /// User snoozes from the warning notification or the break overlay.
+  /// Returns false when the budget is exhausted (strict mode holds).
+  bool snooze() {
+    if (_mode != _Mode.warning && _mode != _Mode.inBreak) return false;
+    if (_snoozesLeft <= 0) return false;
+    _snoozesLeft -= 1;
+    final now = _clock.elapsed();
+    _setDue(_activeKind, now + _config.snoozeLength);
+    _mode = _Mode.monitoring;
+    _emit(BreakSnoozed(_clock.now(), _activeKind, snoozesLeft: _snoozesLeft));
+    _publishPhase();
+    return true;
+  }
+
+  /// Emergency escape (long-press) — always available, always logged.
+  void escape() {
+    if (_mode != _Mode.inBreak) return;
+    _emit(BreakEscaped(_clock.now(), _activeKind));
+    _finishCycle(_activeKind, _clock.elapsed());
+    _publishPhase();
+  }
+
+  /// User starts the due break immediately from the warning.
+  void startNow() {
+    if (_mode != _Mode.warning) return;
+    _startBreak(_clock.elapsed());
+    _publishPhase();
+  }
+
+  void setPausedByUser(bool paused) {
+    _pausedByUser = paused;
+    if (!paused) {
+      final now = _clock.elapsed();
+      _resetDue(BreakKind.micro, from: now);
+      _resetDue(BreakKind.long, from: now);
+      _mode = _Mode.monitoring;
+      _emit(EngineResumed(_clock.now()));
+    }
+    _publishPhase();
+  }
+
+  /// Applies new settings. Timers restart from now — predictable and simple.
+  void updateConfig(BreakConfig config) {
+    _config = config;
+    final now = _clock.elapsed();
+    _resetDue(BreakKind.micro, from: now);
+    _resetDue(BreakKind.long, from: now);
+    if (_mode != _Mode.inBreak) _mode = _Mode.monitoring;
+    _publishPhase();
+  }
+
+  EngineSnapshot snapshot() {
+    final now = _clock.elapsed();
+    return EngineSnapshot(
+      savedAt: _clock.now(),
+      microRemaining: _clampZero(_microDue - now),
+      longRemaining: _clampZero(_longDue - now),
+    );
+  }
+
+  void dispose() {
+    _phaseController.close();
+    _eventController.close();
+  }
+
+  // ---- internals -----------------------------------------------------------
+
+  bool _isAway(TickInput input) =>
+      input.locked || input.idle >= _config.idleFireThreshold;
+
+  /// Short heads-up before a break that was delayed (deferral or absence).
+  void _rewarn(Duration now) {
+    _fireAt = now + _shortLead;
+    _mode = _Mode.warning;
+    _emit(WarningIssued(_clock.now(), _activeKind, _shortLead));
+  }
+
+  void _trackAway(TickInput input, Duration now) {
+    if (_isAway(input)) {
+      // Idle time started accumulating before it crossed the threshold —
+      // backdate the span start for input-idle (but not for lock).
+      _awayBegan ??= input.locked ? now : now - input.idle;
+      _awayWasLocked = _awayWasLocked || input.locked;
+      return;
+    }
+    final began = _awayBegan;
+    if (began == null) return;
+    final wasLocked = _awayWasLocked;
+    _awayBegan = null;
+    _awayWasLocked = false;
+    _resolveAwaySpan(now - began, now, wasLocked: wasLocked);
+  }
+
+  void _resolveAwaySpan(
+    Duration span,
+    Duration now, {
+    required bool wasLocked,
+  }) {
+    final outcome = wasLocked
+        ? BreakOutcome.creditedLock
+        : BreakOutcome.creditedIdle;
+    if (span >= _config.longDuration) {
+      _emit(BreakCredited(_clock.now(), BreakKind.long, outcome, span));
+      _finishCycle(BreakKind.long, now);
+      return;
+    }
+    if (span >= _config.idleFireThreshold) {
+      _emit(BreakCredited(_clock.now(), BreakKind.micro, outcome, span));
+      _finishCycle(BreakKind.micro, now);
+      return;
+    }
+    // Span too short to credit. If a break came due during the absence,
+    // give a short warning on return instead of seizing the screen cold.
+    final cyclePending = _mode == _Mode.warning || _mode == _Mode.deferred;
+    if (cyclePending && now >= _fireAt) {
+      _rewarn(now);
+    } else if (_mode == _Mode.monitoring && now >= _nextDue()) {
+      _setDue(_nextKind(), now + _shortLead);
+    }
+  }
+
+  bool _updateWorkHoursPause() {
+    final within = _config.isWithinWorkHours(_clock.now());
+    if (!within && !_pausedByHours) {
+      _pausedByHours = true;
+      _emit(EnginePausedByWorkHours(_clock.now()));
+      _publishPhase();
+    } else if (within && _pausedByHours) {
+      _pausedByHours = false;
+      final now = _clock.elapsed();
+      _resetDue(BreakKind.micro, from: now);
+      _resetDue(BreakKind.long, from: now);
+      _mode = _Mode.monitoring;
+      _emit(EngineResumed(_clock.now()));
+      _publishPhase();
+    }
+    return _pausedByHours;
+  }
+
+  void _startBreak(Duration now) {
+    _mode = _Mode.inBreak;
+    _breakEndsAt = now + _config.breakDuration(_activeKind);
+    _strictNow = _snoozesLeft <= 0 && _config.strictMode;
+    _emit(BreakStarted(_clock.now(), _activeKind, strict: _strictNow));
+  }
+
+  void _defer(Duration now) {
+    _mode = _Mode.deferred;
+    _deferRecheckAt = now + _config.deferRecheck;
+    _emit(
+      BreakDeferred(
+        _clock.now(),
+        _activeKind,
+        totalDeferral: _clampZero(now - _cycleDue),
+      ),
+    );
+  }
+
+  /// Ends the current break cycle for [kind] and reschedules.
+  /// A long break always resets the micro timer too.
+  void _finishCycle(BreakKind kind, Duration now) {
+    _resetDue(kind, from: now);
+    if (kind == BreakKind.long) _resetDue(BreakKind.micro, from: now);
+    _mode = _Mode.monitoring;
+    _snoozesLeft = _config.snoozeBudget;
+    _strictNow = false;
+  }
+
+  /// If both breaks fall due within this window, the long one absorbs the
+  /// micro one (nobody wants an eye break two minutes before a long break).
+  static const Duration _mergeWindow = Duration(minutes: 2);
+
+  BreakKind _nextKind() =>
+      _longDue <= _microDue + _mergeWindow ? BreakKind.long : BreakKind.micro;
+
+  Duration _nextDue() => _nextKind() == BreakKind.long ? _longDue : _microDue;
+
+  void _resetDue(BreakKind kind, {required Duration from}) {
+    _setDue(kind, from + _config.interval(kind));
+    if (kind == BreakKind.micro) _snoozesLeft = _config.snoozeBudget;
+  }
+
+  void _setDue(BreakKind kind, Duration due) {
+    if (kind == BreakKind.micro) {
+      _microDue = due;
+    } else {
+      _longDue = due;
+    }
+  }
+
+  void _emit(EngineEvent event) {
+    if (!_eventController.isClosed) _eventController.add(event);
+  }
+
+  void _publishPhase() {
+    if (!_phaseController.isClosed) _phaseController.add(phase);
+  }
+
+  static Duration _clampZero(Duration d) => d.isNegative ? Duration.zero : d;
+}
+
+enum _Mode { monitoring, warning, deferred, inBreak }
