@@ -154,8 +154,12 @@ class PausedNotifier extends Notifier<bool> {
   }
 }
 
-/// Autostart + update-check switches (persisted).
-typedef GeneralSettings = ({bool autostart, bool updateCheck});
+/// Autostart, update-check, and break-window switches (persisted).
+typedef GeneralSettings = ({
+  bool autostart,
+  bool updateCheck,
+  bool fullscreenOverlay,
+});
 
 final generalSettingsProvider =
     AsyncNotifierProvider<GeneralSettingsNotifier, GeneralSettings>(
@@ -165,17 +169,31 @@ final generalSettingsProvider =
 class GeneralSettingsNotifier extends AsyncNotifier<GeneralSettings> {
   @override
   Future<GeneralSettings> build() async {
+    final settings = ref.watch(settingsRepositoryProvider);
     final autostart = await ref.watch(autostartProvider).isEnabled();
-    final updateCheck = await ref
-        .watch(settingsRepositoryProvider)
-        .getFlag(SettingsRepository.flagUpdateCheck, fallback: true);
-    return (autostart: autostart, updateCheck: updateCheck);
+    final updateCheck = await settings.getFlag(
+      SettingsRepository.flagUpdateCheck,
+      fallback: true,
+    );
+    final fullscreenOverlay = await settings.getFlag(
+      SettingsRepository.flagFullscreenOverlay,
+      fallback: true,
+    );
+    return (
+      autostart: autostart,
+      updateCheck: updateCheck,
+      fullscreenOverlay: fullscreenOverlay,
+    );
   }
 
   Future<void> setAutostart(bool enabled) async {
     await ref.read(autostartProvider).setEnabled(enabled);
     final previous = await future;
-    state = AsyncData((autostart: enabled, updateCheck: previous.updateCheck));
+    state = AsyncData((
+      autostart: enabled,
+      updateCheck: previous.updateCheck,
+      fullscreenOverlay: previous.fullscreenOverlay,
+    ));
   }
 
   Future<void> setUpdateCheck(bool enabled) async {
@@ -183,6 +201,22 @@ class GeneralSettingsNotifier extends AsyncNotifier<GeneralSettings> {
         .read(settingsRepositoryProvider)
         .setFlag(SettingsRepository.flagUpdateCheck, enabled);
     final previous = await future;
-    state = AsyncData((autostart: previous.autostart, updateCheck: enabled));
+    state = AsyncData((
+      autostart: previous.autostart,
+      updateCheck: enabled,
+      fullscreenOverlay: previous.fullscreenOverlay,
+    ));
+  }
+
+  Future<void> setFullscreenOverlay(bool enabled) async {
+    await ref
+        .read(settingsRepositoryProvider)
+        .setFlag(SettingsRepository.flagFullscreenOverlay, enabled);
+    final previous = await future;
+    state = AsyncData((
+      autostart: previous.autostart,
+      updateCheck: previous.updateCheck,
+      fullscreenOverlay: enabled,
+    ));
   }
 }

@@ -8,8 +8,10 @@ class FakeOverlayController implements OverlayController {
   Future<void> init() async => calls.add('init');
 
   @override
-  Future<void> enterBreak({required bool strict}) async =>
-      calls.add('enter(strict: $strict)');
+  Future<void> enterBreak({
+    required bool strict,
+    required bool fullscreen,
+  }) async => calls.add('enter(strict: $strict, fullscreen: $fullscreen)');
 
   @override
   Future<void> exitBreak() async => calls.add('exit');

@@ -22,6 +22,15 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
+
+  // Single instance: a second launch (app drawer, autostart, .desktop) must
+  // surface the existing window — never build a second engine + overlay.
+  GList* windows = gtk_application_get_windows(GTK_APPLICATION(application));
+  if (windows != NULL) {
+    gtk_window_present(GTK_WINDOW(windows->data));
+    return;
+  }
+
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
 
@@ -45,11 +54,11 @@ static void my_application_activate(GApplication* application) {
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "breaktime");
+    gtk_header_bar_set_title(header_bar, "BreakTime");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "breaktime");
+    gtk_window_set_title(window, "BreakTime");
   }
 
   gtk_window_set_default_size(window, 1280, 720);
@@ -142,7 +151,9 @@ MyApplication* my_application_new() {
   // the application to be recognized beyond its binary name.
   g_set_prgname(APPLICATION_ID);
 
+  // Default (unique) flags: GApplication routes a second launch to the
+  // primary instance's activate, which presents the existing window.
   return MY_APPLICATION(g_object_new(my_application_get_type(),
                                      "application-id", APPLICATION_ID, "flags",
-                                     G_APPLICATION_NON_UNIQUE, nullptr));
+                                     G_APPLICATION_DEFAULT_FLAGS, nullptr));
 }

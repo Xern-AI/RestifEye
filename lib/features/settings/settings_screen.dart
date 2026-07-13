@@ -64,7 +64,7 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (d) =>
                   notifier.update(config.copyWith(longDuration: d)),
             ),
-            const _SectionHeader('Snoozing'),
+            const _SectionHeader('Snoozing & skipping'),
             ListTile(
               leading: const Icon(Icons.snooze_outlined),
               title: const Text('Snoozes per break'),
@@ -87,6 +87,29 @@ class SettingsScreen extends ConsumerWidget {
                 ),
               ),
             ),
+            ListTile(
+              leading: const Icon(Icons.skip_next_outlined),
+              title: const Text('Skips in a row'),
+              subtitle: Text(
+                config.skipBudget == 0
+                    ? 'Breaks can never be skipped from the notification'
+                    : 'Skip up to ${config.skipBudget} consecutive '
+                          'break${config.skipBudget == 1 ? '' : 's'} from '
+                          'the notification',
+              ),
+              trailing: SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(value: 0, label: Text('0')),
+                  ButtonSegment(value: 1, label: Text('1')),
+                  ButtonSegment(value: 2, label: Text('2')),
+                  ButtonSegment(value: 3, label: Text('3')),
+                ],
+                selected: {config.skipBudget},
+                onSelectionChanged: (selection) => notifier.update(
+                  config.copyWith(skipBudget: selection.first),
+                ),
+              ),
+            ),
             SwitchListTile(
               secondary: const Icon(Icons.lock_clock_outlined),
               title: const Text('Strict mode'),
@@ -95,6 +118,20 @@ class SettingsScreen extends ConsumerWidget {
               ),
               value: config.strictMode,
               onChanged: (v) => notifier.update(config.copyWith(strictMode: v)),
+            ),
+            SwitchListTile(
+              secondary: const Icon(Icons.fullscreen_outlined),
+              title: const Text('Full-screen breaks'),
+              subtitle: const Text(
+                'Take over the whole screen during a break. '
+                'Strict breaks always do.',
+              ),
+              value:
+                  ref.watch(generalSettingsProvider).value?.fullscreenOverlay ??
+                  true,
+              onChanged: (v) => ref
+                  .read(generalSettingsProvider.notifier)
+                  .setFullscreenOverlay(v),
             ),
             const _SectionHeader('Work hours'),
             _WorkHoursTile(config: config, onChanged: notifier.update),

@@ -22,30 +22,34 @@ void main() {
     await tester.pump();
   }
 
-  testWidgets('overlay appears when a break starts, with snooze available', (
-    tester,
-  ) async {
+  testWidgets('overlay appears when a break starts, without a snooze '
+      'button (snoozing lives in the notification)', (tester) async {
     final harness = TestHarness();
     await pumpToBreak(tester, harness);
 
     expect(find.byType(BreakOverlay), findsOneWidget);
     expect(find.text('Eye break'), findsOneWidget);
-    expect(find.textContaining('Snooze (3 left)'), findsOneWidget);
+    expect(find.textContaining('Snooze'), findsNothing);
     expect(find.byType(HoldToSkip), findsOneWidget);
-    expect(harness.overlay.calls, contains('enter(strict: false)'));
+    expect(
+      harness.overlay.calls,
+      contains('enter(strict: false, fullscreen: true)'),
+    );
 
     await cleanupHarness(tester, harness);
   });
 
-  testWidgets('strict break hides snooze and holding skip escapes it', (
+  testWidgets('strict break takes the screen and holding skip escapes it', (
     tester,
   ) async {
     final harness = TestHarness(config: const BreakConfig(snoozeBudget: 0));
     await pumpToBreak(tester, harness);
 
     expect(find.byType(BreakOverlay), findsOneWidget);
-    expect(find.textContaining('Snooze'), findsNothing);
-    expect(harness.overlay.calls, contains('enter(strict: true)'));
+    expect(
+      harness.overlay.calls,
+      contains('enter(strict: true, fullscreen: true)'),
+    );
 
     // Hold the escape for its full 3 seconds. The first pump only starts
     // the ticker; the hold duration elapses on the second.
@@ -61,21 +65,24 @@ void main() {
     await cleanupHarness(tester, harness);
   });
 
-  testWidgets('snoozing dismisses the overlay and depletes the budget', (
-    tester,
-  ) async {
+  testWidgets('snoozing from the notification path dismisses the overlay '
+      'and depletes the budget', (tester) async {
     final harness = TestHarness();
     await pumpToBreak(tester, harness);
+    expect(find.byType(BreakOverlay), findsOneWidget);
 
-    await tester.tap(find.textContaining('Snooze'));
+    // The engine call is what the notification action triggers.
+    expect(harness.engine.snooze(), isTrue);
     await tester.pump();
 
     expect(find.byType(BreakOverlay), findsNothing);
+    expect(harness.overlay.calls, contains('exit'));
 
-    // Break returns after the 2-minute snooze with one fewer snooze left.
+    // Break returns after the 2-minute snooze; two snoozes remain.
     harness.advance(const Duration(minutes: 2, seconds: 5));
     await tester.pump();
-    expect(find.textContaining('Snooze (2 left)'), findsOneWidget);
+    expect(find.byType(BreakOverlay), findsOneWidget);
+    expect(harness.engine.canSnooze, isTrue);
 
     await cleanupHarness(tester, harness);
   });

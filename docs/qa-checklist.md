@@ -4,16 +4,21 @@ Run on: Fedora GNOME Wayland (Tier 1), Fedora KDE, any X11 session.
 Use dev mode for timing checks: `BREAKTIME_DEV=1 flutter run -d linux`.
 
 ## Break flow
-- [ ] Pre-break notification appears with Snooze + Start now actions
+- [ ] Pre-break notification appears with Start now + Snooze + Skip actions
 - [ ] Notification Snooze postpones; Start now opens the overlay immediately
-- [ ] Overlay goes fullscreen + always-on-top on break start
-- [ ] Exercise name, animation, and steps render; countdown ring progresses
-- [ ] Snooze button shows remaining budget and decrements per use
+- [ ] Notification Skip cancels the cycle; after the skip budget (default 2
+      in a row) the Skip action disappears until a break is completed
+- [ ] Overlay has no Snooze button (snoozing is notification-only)
+- [ ] Settings → "Full-screen breaks" off → break opens as a normal window;
+      strict breaks still take the full screen
+- [x] Overlay goes fullscreen + always-on-top on break start
+- [x] Exercise name, animation, and steps render; countdown ring progresses
+- [x] Snooze button shows remaining budget and decrements per use
 - [ ] After budget exhausted: no snooze button, overlay is strict
 - [ ] Strict overlay refocuses when clicking another window (best-effort)
-- [ ] Hold-to-skip requires a full 3-second hold; short press does nothing
+- [x] Hold-to-skip requires a full 3-second hold; short press does nothing
 - [ ] "Can't do this one" swaps the exercise and never shows it again
-- [ ] Break completes on its own and overlay closes; window restores
+- [x] Break completes on its own and overlay closes; window restores
 
 ## Situation awareness
 - [ ] Start a mic call (any app) → due break defers; ends → short re-warn
@@ -30,7 +35,16 @@ Use dev mode for timing checks: `BREAKTIME_DEV=1 flutter run -d linux`.
 - [ ] Data lives in ~/.local/share/breaktime/ and nowhere else
 
 ## App behavior
-- [ ] Window close hides to background; engine keeps running
+- [ ] Launching from the app drawer while running presents the existing
+      window — exactly one process, one overlay, one notification
+- [ ] Window close hides to background; engine keeps running; a one-time
+      "still running" notification appears on first hide
+- [ ] Tray icon visible (KDE/XFCE natively; GNOME needs the AppIndicator
+      extension); menu Open / Pause / Quit all work; Pause stays in sync
+      with the Settings toggle
+- [ ] Dashboard shows the long-break countdown as the secondary line
+- [ ] First run creates ~/.config/autostart entry automatically; disabling
+      the Settings toggle removes it and it stays off after restart
 - [ ] Relaunch mid-cycle restores timer state (snapshot)
 - [ ] Settings changes apply immediately and survive restart
 - [ ] Autostart toggle creates/removes ~/.config/autostart entry

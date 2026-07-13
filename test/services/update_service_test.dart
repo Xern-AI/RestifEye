@@ -38,6 +38,7 @@ class _StubNotifier implements BreakNotifier {
     required BreakKind kind,
     required Duration startsIn,
     required bool canSnooze,
+    required bool canSkip,
   }) async {}
 
   @override

@@ -9,8 +9,8 @@ graph TD
     UI[features/* MD3 screens<br/>dashboard·overlay·analytics·advice·settings·onboarding] -->|Riverpod 3| SVC
     SVC[services/*<br/>EngineService 1Hz·BreakSession·NotificationCoordinator<br/>RollupService·UpdateService·AdviceEngine·ExercisePicker] --> CORE
     CORE[core/* pure Dart<br/>BreakEngine state machine·Clock·models] 
-    SVC --> PLAT[platform/interfaces/*<br/>IdleMonitor·SessionSignals·ContextSignals<br/>BreakNotifier·OverlayController·Autostart·UpdateChecker]
-    PLAT --> LINUX[platform/linux/* D-Bus adapters<br/>Mutter/ScreenSaver idle·logind·pw-dump·gsettings<br/>Notifications·window_manager takeover·XDG autostart·GitHub API]
+    SVC --> PLAT[platform/interfaces/*<br/>IdleMonitor·SessionSignals·ContextSignals<br/>BreakNotifier·OverlayController·Autostart·UpdateChecker·TrayIndicator]
+    PLAT --> LINUX[platform/linux/* D-Bus adapters<br/>Mutter/ScreenSaver idle·logind·pw-dump·gsettings<br/>Notifications·window_manager takeover·XDG autostart·GitHub API<br/>SNI tray icon + dbusmenu]
     PLAT --> FAKE[platform/fake/* for tests+dev]
     SVC --> DATA[data/* drift SQLite<br/>slices·break events·rollups·exercise log·settings KV]
     DATA --> ADVICE[advice rules over rollups]
@@ -34,8 +34,18 @@ graph TD
 - **2026-07-13 — Packaging**: AppImage (primary, any distro) + binary RPM from CI bundle (from-source COPR spec = post-1.0); metainfo + desktop + SVG icon in hicolor; release workflow on `v*` tags runs tests → bundle → AppImage + RPM → GitHub Release.
 - **Deferred**: wlroots idle (ext-idle-notify-v1 needs native code), fullscreen-app detection (X11-only anyway), weekly advice digest notification, multi-monitor overlay (verify Flutter multi-window API first), dynamic color from wallpaper, COPR from-source spec, Flathub (revisit under their mature-project carve-out someday).
 
+- **2026-07-13 — First live-test fixes (user QA round 1)**:
+  - *Single instance*: runner used the Flutter template's `G_APPLICATION_NON_UNIQUE` → every app-drawer launch spawned a full new process (4 windows / 4 warning notifications / 4 overlays / breaks-taken ×4). Fixed with default GApplication flags + present-existing-window in `activate`. This one root cause explained the entire "4×" bug report.
+  - *Notification-first controls*: Snooze removed from the overlay (defeats snooze's purpose once the screen is taken); warning notification now has Start now / Snooze / Skip. New `BreakEngine.skip()` with `skipBudget` (default 2 **consecutive** skips, reset on completed/credited break, configurable 0–3 in Settings). New `BreakAction.skipped` (drift intEnum — append-only). Skips deliberately NOT in DailyRollups (schema untouched); revisit if advice rules want skip pressure.
+  - *Fullscreen optional*: `flagFullscreenOverlay` (settings KV, default on) → `OverlayController.enterBreak(strict:, fullscreen:)`. Strict breaks always fullscreen. Kept out of `BreakConfig` because `updateConfig` restarts engine timers — presentation flags must not reset schedules.
+  - *Tray*: hand-rolled StatusNotifierItem + com.canonical.dbusmenu over the `dbus` package (`platform/linux/sni_tray.dart`) because ayatana-appindicator dev libs aren't a build dep we want (tray_manager needs them; keeps AppImage dependency-free). Icon = ARGB32 pixmaps decoded at runtime from bundled PNGs (`app/tray_icons.dart`). Menu: Open/Pause/Quit; re-registers on watcher restart. GNOME requires AppIndicator extension — documented on site + QA list. `main.dart` now uses ProviderContainer + UncontrolledProviderScope so tray actions can drive `pausedProvider`.
+  - *Autostart default-on*: applied once at bootstrap behind `flagAutostartApplied` (never re-forces after user opt-out; skipped in dev mode). One-time "still running in background" notification on first window-hide (`flagHideNoticeShown`).
+  - *Dashboard*: `Monitoring` phase now carries `microIn`+`longIn`; card shows the other timer as a secondary line ("Eye break folds into the long break" when merged).
+  - 75 tests green (was 71), analyze --fatal-infos clean, release build OK. Landing page rebuilt (sticky nav, hero mock, steps, FAQ, a11y/reduced-motion, dark/light).
+
 ## 5. Current State
 - **M0–M4 code complete**: engine, data, adapters, overlay+exercises, analytics+advice, updates+autostart, packaging+site+workflows. 71 tests green, `flutter analyze --fatal-infos` clean.
 - **2026-07-13 live-verified on Fedora GNOME Wayland**: release build succeeded; app ran 85 s in dev mode (isolated XDG_DATA_HOME), recorded activity, persisted snapshots, and correctly HELD a due break while the user was idle (anti-annoyance behavior observed in the wild). Mutter IdleMonitor and gnome-shell notification daemon confirmed present.
 - **Repo**: `github.com/Xern-AI/breaktime` (transferred from ANSHAY 2026-07-13; old URL redirects). All baked-in slugs (version.dart update checker, metainfo, RPM spec, site) point to Xern-AI/breaktime.
-- **Remaining before v0.1.0 tag**: user runs docs/qa-checklist.md interactively (overlay visuals, snooze flow, mic-deferral, lock-credit); then `git tag v0.1.0 && git push --tags` triggers the release workflow. Consider renaming ("BreakTime" is a crowded name) before any paid Mac work.
+- **Remaining before v0.1.0 tag**: user re-runs docs/qa-checklist.md (new items: single-instance relaunch, Skip action + budget, windowed breaks, tray menu, autostart default) then `git tag v0.1.0 && git push --tags`.
+- **Rename pending**: user wants a unique catchy name before launch. Shortlist proposed 2026-07-13 (Fermata / Pausely / Unclench / Restio / Lull) — availability NOT yet live-verified (web-search quota); must check GitHub/pub/crates/App Store/USPTO/domains before committing. Rename touches: app id `com.xernai.breaktime`, desktop/metainfo/RPM/AppImage names, site, trademark note, update-checker slugs.

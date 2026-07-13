@@ -12,12 +12,13 @@ import '../data/database.dart';
 import '../data/settings_repository.dart';
 import '../data/rollup_repository.dart';
 import '../platform/interfaces/autostart.dart';
-import '../platform/interfaces/overlay_controller.dart';
+import '../platform/interfaces/tray_indicator.dart';
 import '../platform/linux/github_update_checker.dart';
 import '../platform/linux/linux_break_notifier.dart';
 import '../platform/linux/linux_context_signals.dart';
 import '../platform/linux/linux_idle_monitor.dart';
 import '../platform/linux/linux_session_signals.dart';
+import '../platform/linux/sni_tray.dart';
 import '../platform/linux/window_takeover.dart';
 import '../platform/linux/xdg_autostart.dart';
 import '../services/activity_recorder.dart';
@@ -50,14 +51,15 @@ const _devConfig = BreakConfig(
 typedef BootResult = ({
   AppDatabase db,
   EngineService service,
-  OverlayController overlay,
+  WindowTakeover overlay,
   BreakConfig config,
   ExercisePicker picker,
   Autostart autostart,
+  TrayIndicator tray,
 });
 
 /// Builds the real object graph: database, engine, Linux adapters,
-/// window takeover, notification coordinator, engine service.
+/// window takeover, notification coordinator, tray, engine service.
 Future<BootResult> bootstrap() async {
   final db = AppDatabase.open();
   final settings = SettingsRepository(db);
@@ -78,11 +80,36 @@ Future<BootResult> bootstrap() async {
   final activityRepo = ActivityRepository(db);
   final breakLogRepo = BreakLogRepository(db);
 
-  final overlay = WindowTakeover();
-  await overlay.init();
-
   final breakNotifier = LinuxBreakNotifier(sessionBus);
   NotificationCoordinator(engine: engine, notifier: breakNotifier).start();
+
+  // First close-to-background gets a one-time "still running" notice so
+  // nobody thinks the app quit.
+  final overlay = WindowTakeover(
+    onHiddenToBackground: () => unawaited(
+      _maybeShowHideNotice(settings, breakNotifier),
+    ),
+  );
+  await overlay.init();
+
+  // Launch at login is the default: a break reminder that only runs when
+  // you remember to start it churns users. One-time so an explicit opt-out
+  // in Settings is never overridden on the next start.
+  final autostart = XdgAutostart();
+  if (!isDevMode) {
+    final applied = await settings.getFlag(
+      SettingsRepository.flagAutostartApplied,
+      fallback: false,
+    );
+    if (!applied) {
+      try {
+        await autostart.setEnabled(true);
+      } on FileSystemException {
+        // Read-only config dir — the Settings toggle stays available.
+      }
+      await settings.setFlag(SettingsRepository.flagAutostartApplied, true);
+    }
+  }
 
   RollupService(
     activity: activityRepo,
@@ -117,6 +144,25 @@ Future<BootResult> bootstrap() async {
     overlay: overlay,
     config: config,
     picker: ExercisePicker(optOuts: optOuts),
-    autostart: XdgAutostart(),
+    autostart: autostart,
+    tray: SniTrayIndicator(sessionBus),
+  );
+}
+
+Future<void> _maybeShowHideNotice(
+  SettingsRepository settings,
+  LinuxBreakNotifier notifier,
+) async {
+  final shown = await settings.getFlag(
+    SettingsRepository.flagHideNoticeShown,
+    fallback: false,
+  );
+  if (shown) return;
+  await settings.setFlag(SettingsRepository.flagHideNoticeShown, true);
+  await notifier.showInfo(
+    title: 'BreakTime is still running',
+    body:
+        'Breaks continue in the background. Reopen it from the tray icon '
+        'or by launching BreakTime again.',
   );
 }

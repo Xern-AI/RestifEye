@@ -23,6 +23,8 @@ class LinuxBreakNotifier implements BreakNotifier {
           _actions.add(WarningAction.snooze);
         case _actionStart:
           _actions.add(WarningAction.startNow);
+        case _actionSkip:
+          _actions.add(WarningAction.skip);
       }
     }, onError: (Object _) {});
   }
@@ -32,6 +34,7 @@ class LinuxBreakNotifier implements BreakNotifier {
   static const _iface = 'org.freedesktop.Notifications';
   static const _actionSnooze = 'snooze';
   static const _actionStart = 'start';
+  static const _actionSkip = 'skip';
 
   final DBusClient _bus;
   final _actions = StreamController<WarningAction>.broadcast();
@@ -46,6 +49,7 @@ class LinuxBreakNotifier implements BreakNotifier {
     required BreakKind kind,
     required Duration startsIn,
     required bool canSnooze,
+    required bool canSkip,
   }) async {
     final title = kind == BreakKind.micro
         ? 'Eye break in ${startsIn.inSeconds}s'
@@ -69,6 +73,7 @@ class LinuxBreakNotifier implements BreakNotifier {
           _actionStart,
           'Start now',
           if (canSnooze) ...[_actionSnooze, 'Snooze'],
+          if (canSkip) ...[_actionSkip, 'Skip'],
         ]),
         DBusDict.stringVariant({'urgency': const DBusVariant(DBusByte(1))}),
         DBusInt32(startsIn.inMilliseconds),

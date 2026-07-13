@@ -23,10 +23,12 @@ class NotificationCoordinator {
               kind: kind,
               startsIn: lead,
               canSnooze: _engine.canSnooze,
+              canSkip: _engine.canSkip,
             ),
           );
         case BreakStarted() ||
             BreakSnoozed() ||
+            BreakSkipped() ||
             BreakDeferred() ||
             BreakCredited():
           unawaited(_notifier.dismissWarning());
@@ -40,6 +42,8 @@ class NotificationCoordinator {
           _engine.snooze();
         case WarningAction.startNow:
           _engine.startNow();
+        case WarningAction.skip:
+          _engine.skip();
       }
     });
   }

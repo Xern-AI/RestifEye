@@ -27,6 +27,13 @@ class BreakSnoozed extends EngineEvent {
   final int snoozesLeft;
 }
 
+/// User skipped the pending break outright from the warning notification.
+class BreakSkipped extends EngineEvent {
+  const BreakSkipped(super.at, this.kind, {required this.skipsLeft});
+  final BreakKind kind;
+  final int skipsLeft;
+}
+
 class BreakCompleted extends EngineEvent {
   const BreakCompleted(super.at, this.kind);
   final BreakKind kind;

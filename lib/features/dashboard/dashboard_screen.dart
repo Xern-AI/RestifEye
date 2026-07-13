@@ -40,25 +40,45 @@ class _NextBreakCard extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    final (label, value) = switch (phase.value) {
-      Monitoring(:final nextBreakIn, :final nextBreakKind) => (
-        nextBreakKind == BreakKind.micro ? 'Next eye break' : 'Next long break',
-        formatCountdown(nextBreakIn),
-      ),
+    // Secondary line: the countdown for the *other* timer, so both the eye
+    // and the long break are always visible while monitoring.
+    final (label, value, secondary) = switch (phase.value) {
+      Monitoring(
+        :final nextBreakIn,
+        :final nextBreakKind,
+        :final microIn,
+        :final longIn,
+      ) =>
+        nextBreakKind == BreakKind.micro
+            ? (
+                'Next eye break',
+                formatCountdown(nextBreakIn),
+                'Long break in ${formatCountdown(longIn)}',
+              )
+            : (
+                'Next long break',
+                formatCountdown(nextBreakIn),
+                microIn <= longIn
+                    ? 'Eye break folds into the long break'
+                    : 'Eye break in ${formatCountdown(microIn)}',
+              ),
       Warning(:final startsIn) => (
         'Break starting',
         'in ${startsIn.inSeconds}s',
+        null,
       ),
       InBreak(:final remaining) => (
         'Break in progress',
         formatCountdown(remaining),
+        null,
       ),
-      Deferred() => ('Break waiting', 'until your call ends'),
+      Deferred() => ('Break waiting', 'until your call ends', null),
       Paused(:final byUser) => (
         'Paused',
         byUser ? 'by you' : 'outside work hours',
+        null,
       ),
-      null => ('Starting up', '…'),
+      null => ('Starting up', '…', null),
     };
 
     return Card(
@@ -89,6 +109,17 @@ class _NextBreakCard extends ConsumerWidget {
                       color: scheme.onPrimaryContainer,
                     ),
                   ),
+                  if (secondary != null) ...[
+                    const SizedBox(height: AppTokens.spaceXs),
+                    Text(
+                      secondary,
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: scheme.onPrimaryContainer.withValues(
+                          alpha: 0.75,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

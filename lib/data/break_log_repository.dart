@@ -32,6 +32,11 @@ class BreakLogRepository {
         action: BreakAction.snoozed,
         valueMs: null,
       ),
+      BreakSkipped(:final kind) => (
+        kind: kind,
+        action: BreakAction.skipped,
+        valueMs: null,
+      ),
       BreakCompleted(:final kind) => (
         kind: kind,
         action: BreakAction.completed,
@@ -92,6 +97,7 @@ class BreakLogRepository {
           case BreakAction.warned:
           case BreakAction.started:
           case BreakAction.deferred:
+          case BreakAction.skipped:
             break;
         }
       }

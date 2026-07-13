@@ -27,7 +27,14 @@ class BreakSessionNotifier extends Notifier<Exercise?> {
       switch (event) {
         case BreakStarted(:final kind, :final strict):
           state = _picker.pick(kind);
-          unawaited(overlay.enterBreak(strict: strict));
+          // Strict breaks always take the full screen — a strict break in
+          // a background window would be no break at all.
+          final fullscreen =
+              ref.read(generalSettingsProvider).value?.fullscreenOverlay ??
+              true;
+          unawaited(
+            overlay.enterBreak(strict: strict, fullscreen: fullscreen || strict),
+          );
         case BreakCompleted():
           _closeSession(log, completed: true, at: event.at, overlay: overlay);
         case BreakEscaped():

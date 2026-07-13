@@ -110,6 +110,18 @@ void main() {
     });
   });
 
+  group('monitoring exposes both timers', () {
+    test('microIn and longIn count down independently', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 5));
+      final phase = rig.engine.phase as Monitoring;
+      expect(phase.microIn, const Duration(minutes: 15));
+      expect(phase.longIn, const Duration(minutes: 45));
+      expect(phase.nextBreakKind, BreakKind.micro);
+      expect(phase.nextBreakIn, phase.microIn);
+    });
+  });
+
   group('snooze budget and strict mode', () {
     test('snoozing pushes the break back and depletes the budget', () {
       final rig = Rig();
@@ -154,6 +166,55 @@ void main() {
 
       rig.run(const Duration(minutes: 20));
       expect((rig.engine.phase as InBreak).snoozesLeft, 3);
+    });
+
+    test('skip from the warning cancels the cycle and reschedules', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 19, seconds: 40));
+      expect(rig.engine.phase, isA<Warning>());
+
+      expect(rig.engine.skip(), isTrue);
+      expect(rig.eventsOf<BreakSkipped>().single.skipsLeft, 1);
+      final phase = rig.engine.phase as Monitoring;
+      expect(phase.nextBreakIn, greaterThan(const Duration(minutes: 19)));
+      expect(rig.eventsOf<BreakStarted>(), isEmpty);
+    });
+
+    test('consecutive skips stop at the budget; completing a break resets '
+        'it', () {
+      // Long interval pushed out so only micro cycles run in this test.
+      final rig = Rig(
+        config: const BreakConfig(longInterval: Duration(hours: 3)),
+      ); // default skipBudget = 2
+      rig.run(const Duration(minutes: 19, seconds: 40));
+      expect(rig.engine.skip(), isTrue);
+      rig.run(const Duration(minutes: 19, seconds: 45));
+      expect(rig.engine.skip(), isTrue);
+
+      // Third consecutive skip must be refused and the break must fire.
+      rig.run(const Duration(minutes: 19, seconds: 45));
+      expect(rig.engine.canSkip, isFalse);
+      expect(rig.engine.skip(), isFalse);
+      rig.run(const Duration(seconds: 30));
+      expect(rig.engine.phase, isA<InBreak>());
+
+      // Completing the break restores the skip budget.
+      rig.run(const Duration(seconds: 25));
+      expect(rig.eventsOf<BreakCompleted>(), hasLength(1));
+      expect(rig.engine.canSkip, isTrue);
+    });
+
+    test('skip does nothing outside warning/deferred and with a zero '
+        'budget', () {
+      final rig = Rig(config: const BreakConfig(skipBudget: 0));
+      expect(rig.engine.skip(), isFalse); // monitoring
+      rig.run(const Duration(minutes: 19, seconds: 40));
+      expect(rig.engine.phase, isA<Warning>());
+      expect(rig.engine.skip(), isFalse); // budget is zero
+      rig.run(const Duration(seconds: 30));
+      expect(rig.engine.phase, isA<InBreak>());
+      expect(rig.engine.skip(), isFalse); // in-break is never skippable
+      expect(rig.engine.phase, isA<InBreak>());
     });
 
     test('escape ends a strict break and is logged', () {

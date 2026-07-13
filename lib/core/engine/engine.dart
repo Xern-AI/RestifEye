@@ -69,6 +69,7 @@ class BreakEngine {
   BreakKind _activeKind = BreakKind.micro;
   Duration _breakEndsAt = Duration.zero;
   int _snoozesLeft = 0;
+  int _consecutiveSkips = 0;
   bool _strictNow = false;
 
   /// When the current cycle's break actually fires (moves on re-warns).
@@ -92,6 +93,9 @@ class BreakEngine {
   /// Whether the current break cycle still has snoozes left.
   bool get canSnooze => _snoozesLeft > 0;
 
+  /// Whether the consecutive-skip budget still allows skipping a break.
+  bool get canSkip => _consecutiveSkips < _config.skipBudget;
+
   EnginePhase get phase {
     if (_pausedByUser) return const Paused(byUser: true);
     if (_pausedByHours) return const Paused(byUser: false);
@@ -100,6 +104,8 @@ class BreakEngine {
       _Mode.monitoring => Monitoring(
         nextBreakIn: _clampZero(_nextDue() - now),
         nextBreakKind: _nextKind(),
+        microIn: _clampZero(_microDue - now),
+        longIn: _clampZero(_longDue - now),
       ),
       _Mode.warning => Warning(
         kind: _activeKind,
@@ -166,6 +172,7 @@ class BreakEngine {
       case _Mode.inBreak:
         if (now >= _breakEndsAt) {
           _emit(BreakCompleted(_clock.now(), _activeKind));
+          _consecutiveSkips = 0;
           _finishCycle(_activeKind, now);
         }
     }
@@ -199,6 +206,25 @@ class BreakEngine {
     if (_mode != _Mode.warning) return;
     _startBreak(_clock.elapsed());
     _publishPhase();
+  }
+
+  /// User skips the pending break entirely from the warning notification.
+  /// Returns false when [BreakConfig.skipBudget] consecutive skips are
+  /// already spent; the counter resets on a completed or credited break.
+  bool skip() {
+    if (_mode != _Mode.warning && _mode != _Mode.deferred) return false;
+    if (!canSkip) return false;
+    _consecutiveSkips += 1;
+    _emit(
+      BreakSkipped(
+        _clock.now(),
+        _activeKind,
+        skipsLeft: _config.skipBudget - _consecutiveSkips,
+      ),
+    );
+    _finishCycle(_activeKind, _clock.elapsed());
+    _publishPhase();
+    return true;
   }
 
   void setPausedByUser(bool paused) {
@@ -275,11 +301,13 @@ class BreakEngine {
         : BreakOutcome.creditedIdle;
     if (span >= _config.longDuration) {
       _emit(BreakCredited(_clock.now(), BreakKind.long, outcome, span));
+      _consecutiveSkips = 0;
       _finishCycle(BreakKind.long, now);
       return;
     }
     if (span >= _config.idleFireThreshold) {
       _emit(BreakCredited(_clock.now(), BreakKind.micro, outcome, span));
+      _consecutiveSkips = 0;
       _finishCycle(BreakKind.micro, now);
       return;
     }

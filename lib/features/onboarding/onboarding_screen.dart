@@ -41,6 +41,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body:
           'Set your work hours and days in Settings and BreakTime stays '
           'silent the rest of the time.\n\n'
+          'BreakTime starts with your computer and lives in the tray, so '
+          'protecting your eyes never depends on remembering to launch it '
+          '(you can turn autostart off in Settings).\n\n'
           'All data stays on this computer. No accounts, no cloud.',
     ),
   ];

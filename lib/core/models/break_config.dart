@@ -11,6 +11,7 @@ class BreakConfig {
     this.warningLead = const Duration(seconds: 30),
     this.snoozeBudget = 3,
     this.snoozeLength = const Duration(minutes: 2),
+    this.skipBudget = 2,
     this.deferRecheck = const Duration(minutes: 5),
     this.deferCap = const Duration(minutes: 15),
     this.idleFireThreshold = const Duration(minutes: 2),
@@ -19,6 +20,7 @@ class BreakConfig {
     this.workDays = const {1, 2, 3, 4, 5, 6, 7},
     this.strictMode = true,
   }) : assert(snoozeBudget >= 0),
+       assert(skipBudget >= 0),
        assert(workStartMinutes >= 0 && workStartMinutes <= 24 * 60),
        assert(workEndMinutes >= 0 && workEndMinutes <= 24 * 60);
 
@@ -33,6 +35,10 @@ class BreakConfig {
   /// Snoozes allowed per break before strict mode engages.
   final int snoozeBudget;
   final Duration snoozeLength;
+
+  /// Consecutive breaks that may be skipped from the warning notification.
+  /// The counter resets whenever a break is completed or credited.
+  final int skipBudget;
 
   /// While busy (call/DND), re-check at this interval...
   final Duration deferRecheck;
@@ -78,6 +84,7 @@ class BreakConfig {
     'warningLeadMs': warningLead.inMilliseconds,
     'snoozeBudget': snoozeBudget,
     'snoozeLengthMs': snoozeLength.inMilliseconds,
+    'skipBudget': skipBudget,
     'deferRecheckMs': deferRecheck.inMilliseconds,
     'deferCapMs': deferCap.inMilliseconds,
     'idleFireThresholdMs': idleFireThreshold.inMilliseconds,
@@ -108,6 +115,10 @@ class BreakConfig {
         _ => defaults.snoozeBudget,
       },
       snoozeLength: ms('snoozeLengthMs', defaults.snoozeLength),
+      skipBudget: switch (json['skipBudget']) {
+        final int v when v >= 0 => v,
+        _ => defaults.skipBudget,
+      },
       deferRecheck: ms('deferRecheckMs', defaults.deferRecheck),
       deferCap: ms('deferCapMs', defaults.deferCap),
       idleFireThreshold: ms('idleFireThresholdMs', defaults.idleFireThreshold),
@@ -136,6 +147,7 @@ class BreakConfig {
     Duration? warningLead,
     int? snoozeBudget,
     Duration? snoozeLength,
+    int? skipBudget,
     Duration? deferRecheck,
     Duration? deferCap,
     Duration? idleFireThreshold,
@@ -152,6 +164,7 @@ class BreakConfig {
       warningLead: warningLead ?? this.warningLead,
       snoozeBudget: snoozeBudget ?? this.snoozeBudget,
       snoozeLength: snoozeLength ?? this.snoozeLength,
+      skipBudget: skipBudget ?? this.skipBudget,
       deferRecheck: deferRecheck ?? this.deferRecheck,
       deferCap: deferCap ?? this.deferCap,
       idleFireThreshold: idleFireThreshold ?? this.idleFireThreshold,

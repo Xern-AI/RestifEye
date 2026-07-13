@@ -1,7 +1,7 @@
 import '../../core/models/break_kind.dart';
 
 /// What the user tapped on a pre-break warning notification.
-enum WarningAction { snooze, startNow }
+enum WarningAction { snooze, startNow, skip }
 
 /// Desktop notifications for the pre-break warning.
 abstract interface class BreakNotifier {
@@ -10,6 +10,7 @@ abstract interface class BreakNotifier {
     required BreakKind kind,
     required Duration startsIn,
     required bool canSnooze,
+    required bool canSkip,
   });
 
   /// Removes the warning, e.g. when the break starts or is snoozed.

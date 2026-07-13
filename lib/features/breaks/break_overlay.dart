@@ -10,8 +10,9 @@ import '../../services/providers.dart';
 import '../exercises/exercise_figure.dart';
 import 'hold_to_skip.dart';
 
-/// Full-screen break takeover: exercise, countdown ring, snooze (while the
-/// budget lasts), and the logged hold-to-skip escape.
+/// Break takeover screen: exercise, countdown ring, and the logged
+/// hold-to-skip escape. Snoozing and skipping live in the pre-break
+/// notification — once the overlay is up, the break has begun.
 class BreakOverlay extends ConsumerWidget {
   const BreakOverlay({super.key, required this.phase});
 
@@ -104,13 +105,6 @@ class BreakOverlay extends ConsumerWidget {
                           .read(breakSessionProvider.notifier)
                           .optOutCurrent(),
                       child: const Text("Can't do this exercise"),
-                    ),
-                  const SizedBox(width: AppTokens.spaceLg),
-                  if (!phase.strict && phase.snoozesLeft > 0)
-                    FilledButton.tonalIcon(
-                      onPressed: engine.snooze,
-                      icon: const Icon(Icons.snooze),
-                      label: Text('Snooze (${phase.snoozesLeft} left)'),
                     ),
                   const SizedBox(width: AppTokens.spaceLg),
                   HoldToSkip(onConfirmed: engine.escape),

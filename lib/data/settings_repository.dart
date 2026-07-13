@@ -17,6 +17,9 @@ class SettingsRepository {
   static const flagOnboardingDone = 'onboarding_done';
   static const flagUpdateCheck = 'update_check_enabled';
   static const flagAutostart = 'autostart_enabled';
+  static const flagFullscreenOverlay = 'fullscreen_overlay';
+  static const flagAutostartApplied = 'autostart_default_applied';
+  static const flagHideNoticeShown = 'hide_notice_shown';
 
   Future<BreakConfig> loadConfig() async {
     final raw = await _read(_configKey);

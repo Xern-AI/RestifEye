@@ -60,6 +60,7 @@ class AdviceLogRows extends Table {
 }
 
 /// Persisted lifecycle of a break, mirroring the engine's events.
+/// Stored by index — only ever append new values.
 enum BreakAction {
   warned,
   started,
@@ -68,4 +69,5 @@ enum BreakAction {
   escaped,
   deferred,
   credited,
+  skipped,
 }
