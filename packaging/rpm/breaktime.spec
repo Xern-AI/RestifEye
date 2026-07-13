@@ -8,7 +8,7 @@ Version:        %{?pkg_version}%{!?pkg_version:0.1.0}
 Release:        1%{?dist}
 Summary:        Break reminders that respect your flow
 License:        GPL-3.0-or-later
-URL:            https://github.com/xernai/breaktime
+URL:            https://github.com/Xern-AI/breaktime
 Source0:        breaktime-bundle.tar.gz
 BuildArch:      x86_64
 Requires:       gtk3, pipewire-utils

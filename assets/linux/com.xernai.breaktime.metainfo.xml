@@ -21,8 +21,8 @@
     </p>
   </description>
   <launchable type="desktop-id">com.xernai.breaktime.desktop</launchable>
-  <url type="homepage">https://github.com/xernai/breaktime</url>
-  <url type="bugtracker">https://github.com/xernai/breaktime/issues</url>
+  <url type="homepage">https://github.com/Xern-AI/breaktime</url>
+  <url type="bugtracker">https://github.com/Xern-AI/breaktime/issues</url>
   <content_rating type="oars-1.1"/>
   <releases>
     <release version="0.1.0" date="2026-07-13"/>

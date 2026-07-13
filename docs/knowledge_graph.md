@@ -36,6 +36,6 @@ graph TD
 
 ## 5. Current State
 - **M0–M4 code complete**: engine, data, adapters, overlay+exercises, analytics+advice, updates+autostart, packaging+site+workflows. 71 tests green, `flutter analyze --fatal-infos` clean.
-- **Pending user action**: `sudo dnf install clang ninja-build gtk3-devel` to build/run locally (unit tests don't need it); then run docs/qa-checklist.md on GNOME Wayland.
-- **Before first public release**: create the GitHub repo (name in `lib/app/version.dart` `githubRepoSlug` must match!), push, enable Pages (workflow), tag `v0.1.0`. Consider renaming ("BreakTime" is a crowded name) before any paid Mac work.
-- No git remote yet; 7 local commits on main.
+- **2026-07-13 live-verified on Fedora GNOME Wayland**: release build succeeded; app ran 85 s in dev mode (isolated XDG_DATA_HOME), recorded activity, persisted snapshots, and correctly HELD a due break while the user was idle (anti-annoyance behavior observed in the wild). Mutter IdleMonitor and gnome-shell notification daemon confirmed present.
+- **Repo**: `github.com/Xern-AI/breaktime` (transferred from ANSHAY 2026-07-13; old URL redirects). All baked-in slugs (version.dart update checker, metainfo, RPM spec, site) point to Xern-AI/breaktime.
+- **Remaining before v0.1.0 tag**: user runs docs/qa-checklist.md interactively (overlay visuals, snooze flow, mic-deferral, lock-credit); then `git tag v0.1.0 && git push --tags` triggers the release workflow. Consider renaming ("BreakTime" is a crowded name) before any paid Mac work.
