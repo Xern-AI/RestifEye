@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BreakTime — break reminders that respect your flow</title>
+<meta name="description" content="A free, open-source break and eye-rest reminder for Linux. Meeting-aware, Wayland-native, all data local.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+  :root {
+    --primary: #00695C;
+    --on-primary: #FFFFFF;
+    --primary-container: #74F8E5;
+    --on-primary-container: #00201C;
+    --surface: #F4FBF8;
+    --on-surface: #161D1B;
+    --on-surface-variant: #3F4946;
+    --surface-container: #E9EFEC;
+    --outline: #6F7976;
+    --radius: 24px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary: #53DBC9;
+      --on-primary: #00382F;
+      --primary-container: #005045;
+      --on-primary-container: #74F8E5;
+      --surface: #0E1513;
+      --on-surface: #DDE4E1;
+      --on-surface-variant: #BFC9C5;
+      --surface-container: #1B2321;
+      --outline: #89938F;
+    }
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+    background: var(--surface);
+    color: var(--on-surface);
+    line-height: 1.6;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  header { padding: 96px 0 64px; text-align: center; }
+  header img { width: 96px; height: 96px; margin-bottom: 24px; }
+  h1 { font-size: clamp(2rem, 5vw, 3rem); font-weight: 650; letter-spacing: -0.02em; }
+  .tagline { font-size: 1.25rem; color: var(--on-surface-variant); margin-top: 12px; }
+  .cta { margin-top: 40px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; padding: 14px 28px; border-radius: 100px;
+    text-decoration: none; font-weight: 600; font-size: 1rem;
+    transition: filter .15s ease;
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn-filled { background: var(--primary); color: var(--on-primary); }
+  .btn-tonal { background: var(--primary-container); color: var(--on-primary-container); }
+  .note { margin-top: 16px; font-size: .875rem; color: var(--on-surface-variant); }
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px; padding: 32px 0 64px;
+  }
+  .card {
+    background: var(--surface-container); border-radius: var(--radius);
+    padding: 28px;
+  }
+  .card h3 { font-size: 1.05rem; margin-bottom: 8px; }
+  .card p { font-size: .95rem; color: var(--on-surface-variant); }
+  .card .emoji { font-size: 1.6rem; display: block; margin-bottom: 12px; }
+  section h2 { font-size: 1.5rem; margin: 48px 0 8px; }
+  section > p { color: var(--on-surface-variant); max-width: 640px; }
+  code {
+    background: var(--surface-container); border-radius: 8px;
+    padding: 2px 8px; font-size: .9em;
+  }
+  pre {
+    background: var(--surface-container); border-radius: 16px;
+    padding: 20px 24px; overflow-x: auto; margin: 16px 0;
+  }
+  footer {
+    margin-top: 96px; padding: 40px 0; border-top: 1px solid var(--outline);
+    font-size: .875rem; color: var(--on-surface-variant); text-align: center;
+  }
+  footer a { color: var(--primary); }
+  a { color: var(--primary); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <img src="icon.svg" alt="" width="96" height="96">
+    <h1>BreakTime</h1>
+    <p class="tagline">Break reminders that respect your flow.<br>Free and open source, for Linux.</p>
+    <div class="cta">
+      <a class="btn btn-filled" href="https://github.com/xernai/breaktime/releases/latest">Download for Linux</a>
+      <a class="btn btn-tonal" href="https://github.com/xernai/breaktime">View source</a>
+    </div>
+    <p class="note">AppImage &amp; RPM · Fedora-first, works on most distributions</p>
+  </header>
+
+  <main>
+    <div class="grid">
+      <div class="card">
+        <span class="emoji" aria-hidden="true">📅</span>
+        <h3>Never interrupts a meeting</h3>
+        <p>Microphone or camera in use? Do&nbsp;Not&nbsp;Disturb on? Breaks wait — up to a limit, so waiting can't become skipping.</p>
+      </div>
+      <div class="card">
+        <span class="emoji" aria-hidden="true">🚶</span>
+        <h3>Counts breaks you already took</h3>
+        <p>Walked away, locked your screen, suspended? That was your break. No nagging for rest you already had.</p>
+      </div>
+      <div class="card">
+        <span class="emoji" aria-hidden="true">⏰</span>
+        <h3>Warns before it acts</h3>
+        <p>A 30-second heads-up before every break. Finish your sentence — the screen is never yanked away cold.</p>
+      </div>
+      <div class="card">
+        <span class="emoji" aria-hidden="true">💪</span>
+        <h3>Strict, but fair</h3>
+        <p>A snooze budget per break. When it runs out, the break happens — with an illustrated exercise for your eyes or body.</p>
+      </div>
+      <div class="card">
+        <span class="emoji" aria-hidden="true">📊</span>
+        <h3>Local analytics &amp; advice</h3>
+        <p>Screen time, focus stretches, and break compliance — weekly, monthly, yearly — with practical advice from your own patterns.</p>
+      </div>
+      <div class="card">
+        <span class="emoji" aria-hidden="true">🔒</span>
+        <h3>Private by architecture</h3>
+        <p>Everything stays on your machine. No accounts, no telemetry. One optional weekly update check — that's the entire network story.</p>
+      </div>
+    </div>
+
+    <section>
+      <h2>Install</h2>
+      <p>Grab the <a href="https://github.com/xernai/breaktime/releases/latest">latest release</a> — the AppImage runs anywhere:</p>
+      <pre><code>chmod +x BreakTime-*-x86_64.AppImage
+./BreakTime-*-x86_64.AppImage</code></pre>
+      <p>On Fedora, the RPM integrates with your app grid and updates: <code>sudo dnf install ./breaktime-*.rpm</code></p>
+    </section>
+
+    <section>
+      <h2>Using a Mac?</h2>
+      <p>A paid macOS version is on the roadmap. <a href="mailto:breaktime@xernai.dev?subject=BreakTime%20for%20Mac">Tell us you want it</a> — enough interest is exactly what gets it built.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>BreakTime by Xernai · <a href="https://github.com/xernai/breaktime/blob/main/LICENSE">GPL-3.0</a> ·
+    <a href="https://github.com/xernai/breaktime/blob/main/PRIVACY.md">Privacy</a> ·
+    <a href="https://github.com/xernai/breaktime/issues">Issues</a></p>
+    <p>The BreakTime and Xernai names and logos are trademarks; forks must rebrand.</p>
+  </footer>
+
+</div>
+</body>
+</html>

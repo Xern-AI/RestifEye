@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build AppImage + RPM
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux desktop toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config \
+            libgtk-3-dev rpm file appstream
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Test
+        run: |
+          flutter pub get
+          flutter analyze --fatal-infos
+          flutter test
+
+      - name: Build release bundle
+        run: flutter build linux --release
+
+      - name: Build AppImage
+        run: |
+          chmod +x packaging/appimage/build-appimage.sh
+          packaging/appimage/build-appimage.sh
+
+      - name: Build RPM
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p build/rpm/SOURCES staging/bundle staging/assets
+          cp -r build/linux/x64/release/bundle/* staging/bundle/
+          cp assets/linux/* staging/assets/
+          tar -C staging -czf build/rpm/SOURCES/breaktime-bundle.tar.gz .
+          rpmbuild -bb packaging/rpm/breaktime.spec \
+            --define "_topdir $PWD/build/rpm" \
+            --define "pkg_version $VERSION"
+
+      - name: Attach artifacts to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "BreakTime $GITHUB_REF_NAME" \
+            --generate-notes \
+            build/appimage/BreakTime-*-x86_64.AppImage \
+            build/rpm/RPMS/x86_64/breaktime-*.rpm

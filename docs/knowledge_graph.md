@@ -1,50 +1,41 @@
 # BreakTime — Knowledge Graph
 
 ## 1. Project Abstract
-BreakTime is a Linux (Fedora-first) break-reminder and digital-wellbeing app: configurable eye/health break intervals, limited snooze with escalating enforcement, randomized illustrated exercises per break, automatic screen/work-time tracking with weekly/monthly/yearly analytics and rule-based advice, and a top-bar countdown ticker. Material Design 3 UI. Core thesis: situation-aware scheduling + Wayland-native reliability, because competitors fail on interruption timing and Wayland support.
+BreakTime (`com.xernai.breaktime`, brand: Xernai) is a free, GPLv3, Linux-first (Fedora Tier-1) break-reminder and digital-wellbeing desktop app in Flutter/Material 3. Situation-aware scheduling (meeting deferral, natural-break credit, pre-break warnings, strict snooze budget) + Wayland-native reliability, with fully local screen-time analytics and rule-based advice. Distribution: GitHub Releases (AppImage + RPM) + github.io site; COPR post-1.0; Flathub blocked by its 2026 AI policy.
 
 ## 2. Architecture Graph (Mermaid)
 ```mermaid
 graph TD
-    UI[Flutter MD3 App<br/>settings · analytics · overlays] --> Core[Break Engine<br/>timers · snooze budget · scheduler]
-    Core --> Plat[Platform Abstraction Layer<br/>one interface, per-OS adapters]
-    Plat --> Idle[Idle: Mutter DBus / ext-idle-notify-v1 / XScreenSaver<br/>macOS later: CGEventSource]
-    Plat --> Ctx[Context: PipeWire mic-cam · DND · lock/suspend<br/>macOS later: CoreAudio · Focus]
-    Core --> Store[(SQLite local store<br/>sessions · breaks · compliance)]
-    Store --> Advice[Advice Engine<br/>rule-based, local]
+    UI[features/* MD3 screens<br/>dashboard·overlay·analytics·advice·settings·onboarding] -->|Riverpod 3| SVC
+    SVC[services/*<br/>EngineService 1Hz·BreakSession·NotificationCoordinator<br/>RollupService·UpdateService·AdviceEngine·ExercisePicker] --> CORE
+    CORE[core/* pure Dart<br/>BreakEngine state machine·Clock·models] 
+    SVC --> PLAT[platform/interfaces/*<br/>IdleMonitor·SessionSignals·ContextSignals<br/>BreakNotifier·OverlayController·Autostart·UpdateChecker]
+    PLAT --> LINUX[platform/linux/* D-Bus adapters<br/>Mutter/ScreenSaver idle·logind·pw-dump·gsettings<br/>Notifications·window_manager takeover·XDG autostart·GitHub API]
+    PLAT --> FAKE[platform/fake/* for tests+dev]
+    SVC --> DATA[data/* drift SQLite<br/>slices·break events·rollups·exercise log·settings KV]
+    DATA --> ADVICE[advice rules over rollups]
 ```
 
 ## 3. Module Map
-- (empty repo — no modules yet; structure to be defined in implementation plan)
-- `docs/` — project documentation and this knowledge graph.
+- `lib/core/` — pure-Dart break engine (state machine, monotonic clock, config, models). No Flutter/IO imports; the correctness core (24 tests).
+- `lib/platform/interfaces/` — the macOS-port seam; `linux/` D-Bus/XDG/process adapters; `fake/` deterministic test doubles.
+- `lib/services/` — orchestration: 1 Hz EngineService tick, break session (exercise pick + window takeover + logging), notifications, rollups, updates, advice rules, exercise picker.
+- `lib/data/` — drift schema + repositories (slices, break events, rollups, exercise log, settings KV incl. engine snapshot).
+- `lib/features/` — MVVM screens; `lib/app/` — theme tokens, shell, bootstrap wiring.
+- `assets/linux/` — desktop entry, AppStream metainfo, SVG icon. `packaging/` — AppImage script + RPM spec. `site/` — github.io landing page. `.github/workflows/` — ci / release / pages.
 
 ## 4. Design Decisions
-- **2026-07-12 — Feature scope proposed (pending user approval):**
-  - Two-tier breaks: 20-20-20 micro eye breaks + long breaks; independent intervals.
-  - Snooze budget with escalating friction; post-budget full-screen multi-monitor overlay; 3s long-press emergency escape (logged, counted against compliance) instead of a zero-escape hard lock.
-  - Exercise deck: curated illustrated micro-exercises (Rive/Lottie), weighted no-repeat shuffle, per-exercise blacklist for accessibility.
-  - Automatic tracking only (idle-monitor derived); local-first SQLite; no cloud/accounts.
-  - Rule-based advice engine over local data (no LLM/cloud).
-  - Differentiators: natural-break credit (away-time/lock/suspend counts as break), do-not-interrupt intelligence (PipeWire mic/camera in use, DND, fullscreen — deferral capped ~15 min), 30s pre-break warning toast, work-hours/quiet-hours window.
-  - Top-bar ticker requires GNOME Shell companion extension (GJS, DBus to main app); SNI tray elsewhere. Architectural requirement from day one.
-  - Wayland-first: idle via org.gnome.Mutter.IdleMonitor / ext-idle-notify-v1 / XScreenSaver behind one abstraction; monotonic-clock timing; crash-safe timer state.
-  - Deferred (anti-feature-creep): cloud sync, gamification beyond streaks, Pomodoro, calendar integration, team features, mobile, plugins.
-- **2026-07-12 — Stack leaning (not final):** Flutter Linux desktop for MD3 fidelity. Verified 2026-07-12: Flutter desktop stable; Canonical is lead maintainer of Flutter desktop since Google I/O 2026; multi-window API landed (usable for multi-monitor overlays). Verify exact package versions at implementation time.
-- **2026-07-12 — Top-bar ticker DROPPED (user decision):** persistent ticker risks annoyance; removal also eliminates the GNOME Shell extension (GJS) codebase entirely — major simplification. Countdown lives in the app window and the 30s pre-break toast only.
-- **2026-07-12 — Distribution (researched):** Flathub is NOT viable — its May 29, 2026 policy rejects new submissions containing AI-generated/AI-assisted code (carve-out only for mature pre-existing projects). Plan instead: (1) AppImage + RPM on GitHub Releases, (2) Fedora COPR repo for `dnf install`, (3) optionally self-hosted Flatpak remote (.flatpakref) on our own landing page (GitHub Pages). Own-page distribution is fully legal/normal on Linux.
-- **2026-07-12 — macOS strategy (researched):** Flutter macOS stable → UI carries over; port cost is platform adapters in Swift (idle via CGEventSource, mic/cam via CoreAudio, overlays via NSWindow levels, login item via SMAppService) + Apple Developer Program ($99/yr, required for notarization) + Mac hardware. Estimated ~20–30% of total effort IF platform abstraction layer is built from day one (now a hard architectural requirement). Paid-Mac model validated by market: LookAway ($15–19 one-time, Mac-only, successful), Time Out (freemium). Licensing note: fully open-source (GPL/MIT) means anyone may rebuild the Mac app free; acceptable in practice (convenience + signed binary is what's paid for) or use open-core.
-
-- **2026-07-12 — Licensing FINAL (supersedes earlier closed-source decision same day):**
-  - **GPLv3** for the app + **trademark kept on the app name/brand** (forks may not use the name). Chosen over PolyForm-NC: true open source, community trust, and it reopens Fedora COPR. Commercial forks are legal but must stay GPL/open and rebrand — free original + brand + update stream is the moat.
-  - **Contributions require DCO sign-off** (or CLA) so the sole copyright holder retains dual-licensing rights → future paid closed macOS build stays legal.
-  - **Single public repo `breaktime`:** app source + landing page (github.io) + GitHub Releases (binaries). No two-repo split needed anymore.
-  - **Distribution:** GitHub Releases (AppImage primary + RPM) **and COPR** (now allowed under GPL — native `dnf install` + auto-updates for Fedora). In-app update notifier via GitHub Releases API for AppImage users. Flathub still blocked (AI policy). No self-hosted infrastructure.
-  - Privacy stance: all data local, no network calls except update check — state loudly on site/README.
-- **2026-07-12 — Mac monetization plan (roadmap-only, build only if demand proven):**
-  - One-time purchase. GitHub Pages prohibits selling (e-commerce/"primarily commercial" sites; donations OK) → at Mac launch, move site hosting from github.io to Cloudflare Pages/Netlify free tier — same repo, same static site, just a different deploy target; trivial migration.
-  - Sales via Merchant of Record (Paddle / Lemon Squeezy / Gumroad — handles global VAT/sales tax) → hosted checkout → license key emailed → app validates key offline; unlicensed app runs in trial/locked mode. DMG can still be downloaded from GitHub Releases since the gate is the license key, not the download.
-  - Mac App Store remains an optional second channel later (Apple 15% small-business cut).
+- **2026-07-12 — Product**: two-tier breaks (20-20-20 micro + long), snooze budget→strict overlay with logged 3s hold-to-escape, illustrated exercises, natural-break credit, busy deferral (mic/cam via pw-dump, DND via gsettings) capped 15 min, 30s pre-warn, work hours/days. Top-bar ticker dropped (annoyance + GNOME-extension cost).
+- **2026-07-12 — License/distribution**: GPLv3 + trademark on names; DCO for contributions (preserves dual-licensing for future paid Mac build); single public repo; GitHub Releases + COPR later; no Flathub (their AI-code ban, May 2026); site on github.io → move to Cloudflare Pages when Mac sales start (GitHub Pages forbids selling).
+- **2026-07-13 — Engine**: deterministic 1Hz-ticked pure-Dart state machine; monotonic clock only for intervals (wall clock only for work-hours/persistence); defer cap measured from immutable cycle-due; deferral exits the moment busy clears; away spans remember lock vs idle; short re-warn after any delayed break; crash-safe wall-clock snapshot restore.
+- **2026-07-13 — Riverpod 3 API changes** (from training-data 2.x): `Override` type no longer exported → override lists must stay inferred literals (bootstrap returns instances; helpers build ProviderScope internally). Private named initializing formals (`required this._x`) now valid Dart.
+- **2026-07-13 — Test infra**: widget tests use TestHarness (real engine + in-memory drift + fakes). Drift in FakeAsync: never `db.close()` in widget tests (deadlock) and flush unmount timers via `cleanupHarness` as the last body line. AnimationController status listener proved unreliable for completion detection → value listener; GestureDetector needed `HitTestBehavior.opaque` (real bug caught by test).
+- **2026-07-13 — Illustrations**: code-drawn CustomPainter animations (theme-aware, GPL-clean, tiny) instead of Lottie/Rive assets.
+- **2026-07-13 — Packaging**: AppImage (primary, any distro) + binary RPM from CI bundle (from-source COPR spec = post-1.0); metainfo + desktop + SVG icon in hicolor; release workflow on `v*` tags runs tests → bundle → AppImage + RPM → GitHub Release.
+- **Deferred**: wlroots idle (ext-idle-notify-v1 needs native code), fullscreen-app detection (X11-only anyway), weekly advice digest notification, multi-monitor overlay (verify Flutter multi-window API first), dynamic color from wallpaper, COPR from-source spec, Flathub (revisit under their mature-project carve-out someday).
 
 ## 5. Current State
-- Ideation/decisions phase. Feature set proposed; licensing (GPLv3 + trademark + DCO), distribution (GitHub Releases + COPR), and Mac-roadmap decisions locked. Awaiting feature-set approval, then implementation planning.
-- No code, no git repo yet (`git init` pending). Single public repo: source + github.io site + releases.
+- **M0–M4 code complete**: engine, data, adapters, overlay+exercises, analytics+advice, updates+autostart, packaging+site+workflows. 71 tests green, `flutter analyze --fatal-infos` clean.
+- **Pending user action**: `sudo dnf install clang ninja-build gtk3-devel` to build/run locally (unit tests don't need it); then run docs/qa-checklist.md on GNOME Wayland.
+- **Before first public release**: create the GitHub repo (name in `lib/app/version.dart` `githubRepoSlug` must match!), push, enable Pages (workflow), tag `v0.1.0`. Consider renaming ("BreakTime" is a crowded name) before any paid Mac work.
+- No git remote yet; 7 local commits on main.
