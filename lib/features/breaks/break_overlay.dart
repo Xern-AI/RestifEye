@@ -103,7 +103,7 @@ class BreakOverlay extends ConsumerWidget {
                       onPressed: () => ref
                           .read(breakSessionProvider.notifier)
                           .optOutCurrent(),
-                      child: const Text("Can't do this one"),
+                      child: const Text("Can't do this exercise"),
                     ),
                   const SizedBox(width: AppTokens.spaceLg),
                   if (!phase.strict && phase.snoozesLeft > 0)
