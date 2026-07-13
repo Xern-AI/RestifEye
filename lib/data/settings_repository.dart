@@ -52,6 +52,11 @@ class SettingsRepository {
   Future<void> setFlag(String key, bool value) =>
       _write('flag_$key', value.toString());
 
+  /// Raw string access for service-owned keys (timestamps etc.).
+  Future<String?> readValue(String key) => _read(key);
+
+  Future<void> writeValue(String key, String value) => _write(key, value);
+
   static const _optOutsKey = 'exercise_optouts';
 
   Future<Set<String>> loadExerciseOptOuts() async {

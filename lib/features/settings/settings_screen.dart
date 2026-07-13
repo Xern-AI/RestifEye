@@ -99,6 +99,33 @@ class SettingsScreen extends ConsumerWidget {
             const _SectionHeader('Work hours'),
             _WorkHoursTile(config: config, onChanged: notifier.update),
             _WorkDaysTile(config: config, onChanged: notifier.update),
+            const _SectionHeader('General'),
+            SwitchListTile(
+              secondary: const Icon(Icons.pause_circle_outlined),
+              title: const Text('Pause BreakTime'),
+              subtitle: const Text('No breaks until you resume'),
+              value: ref.watch(pausedProvider),
+              onChanged: (v) => ref.read(pausedProvider.notifier).set(v),
+            ),
+            SwitchListTile(
+              secondary: const Icon(Icons.rocket_launch_outlined),
+              title: const Text('Start at login'),
+              value:
+                  ref.watch(generalSettingsProvider).value?.autostart ?? false,
+              onChanged: (v) =>
+                  ref.read(generalSettingsProvider.notifier).setAutostart(v),
+            ),
+            SwitchListTile(
+              secondary: const Icon(Icons.system_update_alt_outlined),
+              title: const Text('Check for updates weekly'),
+              subtitle: const Text(
+                'The only network request BreakTime ever makes',
+              ),
+              value:
+                  ref.watch(generalSettingsProvider).value?.updateCheck ?? true,
+              onChanged: (v) =>
+                  ref.read(generalSettingsProvider.notifier).setUpdateCheck(v),
+            ),
             const _SectionHeader('About'),
             const AboutListTile(
               icon: Icon(Icons.info_outlined),

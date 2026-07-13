@@ -77,6 +77,7 @@ class TestHarness {
         exercisePickerProvider.overrideWithValue(
           ExercisePicker(random: Random(7)),
         ),
+        autostartProvider.overrideWithValue(FakeAutostart()),
         onboardingDoneProvider.overrideWith((ref) => Future.value(true)),
       ],
       child: child,

@@ -67,6 +67,9 @@ class BreakLogRepository {
         );
   }
 
+  /// One-shot version of [watchDayCounts], for rollups.
+  Future<BreakCounts> countsFor(DateTime day) => watchDayCounts(day).first;
+
   /// Outcome counts for the day containing [day] (local time).
   Stream<BreakCounts> watchDayCounts(DateTime day) {
     final from = DateTime(day.year, day.month, day.day);

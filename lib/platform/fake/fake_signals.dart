@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import '../interfaces/autostart.dart';
 import '../interfaces/context_signals.dart';
 import '../interfaces/idle_monitor.dart';
 import '../interfaces/session_signals.dart';
@@ -32,4 +33,14 @@ class FakeContextSignals implements ContextSignals {
 
   @override
   Future<bool> isBusy() async => busy;
+}
+
+class FakeAutostart implements Autostart {
+  bool enabled = false;
+
+  @override
+  Future<bool> isEnabled() async => enabled;
+
+  @override
+  Future<void> setEnabled(bool value) async => enabled = value;
 }

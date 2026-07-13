@@ -7,8 +7,11 @@ import '../data/activity_repository.dart';
 import '../data/break_log_repository.dart';
 import '../data/database.dart';
 import '../data/exercise_log_repository.dart';
+import '../data/rollup_repository.dart';
 import '../data/settings_repository.dart';
+import '../platform/interfaces/autostart.dart';
 import '../platform/interfaces/overlay_controller.dart';
+import 'advice_engine.dart';
 import 'engine_service.dart';
 import 'exercise_picker.dart';
 
@@ -88,3 +91,98 @@ final todaySliceStatsProvider = StreamProvider<DayStats>(
 final todayBreakCountsProvider = StreamProvider<BreakCounts>(
   (ref) => ref.watch(breakLogRepositoryProvider).watchDayCounts(DateTime.now()),
 );
+
+final autostartProvider = Provider<Autostart>(
+  (ref) => throw UnimplementedError('override in bootstrap'),
+);
+
+final rollupRepositoryProvider = Provider<RollupRepository>(
+  (ref) => RollupRepository(ref.watch(databaseProvider)),
+);
+
+/// Which analytics range is selected.
+enum AnalyticsRange { week, month, year }
+
+final analyticsRangeProvider =
+    NotifierProvider<AnalyticsRangeNotifier, AnalyticsRange>(
+      AnalyticsRangeNotifier.new,
+    );
+
+class AnalyticsRangeNotifier extends Notifier<AnalyticsRange> {
+  @override
+  AnalyticsRange build() => AnalyticsRange.week;
+
+  void select(AnalyticsRange range) => state = range;
+}
+
+/// Rollups covering the selected analytics range (finished days only —
+/// today is shown live on the dashboard instead).
+final rangeRollupsProvider = StreamProvider<List<DayRollup>>((ref) {
+  final range = ref.watch(analyticsRangeProvider);
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final from = switch (range) {
+    AnalyticsRange.week => today.subtract(const Duration(days: 7)),
+    AnalyticsRange.month => today.subtract(const Duration(days: 30)),
+    AnalyticsRange.year => DateTime(today.year - 1, today.month, today.day),
+  };
+  return ref.watch(rollupRepositoryProvider).watchRange(from, today);
+});
+
+/// Current advice from the last four weeks of rollups.
+final adviceProvider = StreamProvider<List<Advice>>((ref) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  return ref
+      .watch(rollupRepositoryProvider)
+      .watchRange(today.subtract(const Duration(days: 28)), today)
+      .map(evaluateAdvice);
+});
+
+/// Engine pause toggle, mirrored for the UI.
+final pausedProvider = NotifierProvider<PausedNotifier, bool>(
+  PausedNotifier.new,
+);
+
+class PausedNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void set(bool paused) {
+    state = paused;
+    ref.read(engineServiceProvider).engine.setPausedByUser(paused);
+  }
+}
+
+/// Autostart + update-check switches (persisted).
+typedef GeneralSettings = ({bool autostart, bool updateCheck});
+
+final generalSettingsProvider =
+    AsyncNotifierProvider<GeneralSettingsNotifier, GeneralSettings>(
+      GeneralSettingsNotifier.new,
+    );
+
+class GeneralSettingsNotifier extends AsyncNotifier<GeneralSettings> {
+  @override
+  Future<GeneralSettings> build() async {
+    final autostart = await ref.watch(autostartProvider).isEnabled();
+    final updateCheck = await ref
+        .watch(settingsRepositoryProvider)
+        .getFlag(SettingsRepository.flagUpdateCheck, fallback: true);
+    return (autostart: autostart, updateCheck: updateCheck);
+  }
+
+  Future<void> setAutostart(bool enabled) async {
+    await ref.read(autostartProvider).setEnabled(enabled);
+    final previous = await future;
+    state = AsyncData((autostart: enabled, updateCheck: previous.updateCheck));
+  }
+
+  Future<void> setUpdateCheck(bool enabled) async {
+    await ref
+        .read(settingsRepositoryProvider)
+        .setFlag(SettingsRepository.flagUpdateCheck, enabled);
+    final previous = await future;
+    state = AsyncData((autostart: previous.autostart, updateCheck: enabled));
+  }
+}

@@ -80,6 +80,29 @@ class LinuxBreakNotifier implements BreakNotifier {
   }
 
   @override
+  Future<void> showInfo({required String title, required String body}) async {
+    try {
+      final object = DBusRemoteObject(
+        _bus,
+        name: _dest,
+        path: DBusObjectPath(_path),
+      );
+      await object.callMethod(_iface, 'Notify', [
+        const DBusString('BreakTime'),
+        const DBusUint32(0),
+        const DBusString('com.xernai.breaktime'),
+        DBusString(title),
+        DBusString(body),
+        DBusArray.string(const []),
+        DBusDict.stringVariant(const {}),
+        const DBusInt32(10000),
+      ], replySignature: DBusSignature('u'));
+    } on DBusMethodResponseException {
+      // No notification daemon.
+    }
+  }
+
+  @override
   Future<void> dismissWarning() async {
     if (_activeId == 0) return;
     try {

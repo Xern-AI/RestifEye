@@ -35,6 +35,17 @@ class ActivityRepository {
     );
   }
 
+  /// One-shot version of [watchSliceStats], for rollups.
+  Future<DayStats> sliceStatsFor(DateTime day) => watchSliceStats(day).first;
+
+  /// Start of the earliest recorded slice, or null with no data.
+  Future<DateTime?> earliestSliceStart() async {
+    final query = _db.select(_db.activitySlices)
+      ..orderBy([(t) => OrderingTerm.asc(t.startAt)])
+      ..limit(1);
+    return (await query.getSingleOrNull())?.startAt;
+  }
+
   /// Deletes slices already folded into daily rollups.
   Future<int> pruneBefore(DateTime cutoff) => (_db.delete(
     _db.activitySlices,

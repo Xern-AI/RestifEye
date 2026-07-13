@@ -16,6 +16,7 @@ Future<void> main() async {
         overlayControllerProvider.overrideWithValue(boot.overlay),
         seedConfigProvider.overrideWithValue(boot.config),
         exercisePickerProvider.overrideWithValue(boot.picker),
+        autostartProvider.overrideWithValue(boot.autostart),
       ],
       child: const BreakTimeApp(),
     ),

@@ -18,5 +18,8 @@ abstract interface class BreakNotifier {
   /// Actions invoked from the notification.
   Stream<WarningAction> get actions;
 
+  /// One-off informational notification (e.g. an available update).
+  Future<void> showInfo({required String title, required String body});
+
   Future<void> dispose();
 }
