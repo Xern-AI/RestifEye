@@ -83,8 +83,22 @@ class DayStats {
 /// app could show screen time but never answer "how much of today did I
 /// actually spend at this machine?".
 ///
-/// Slices are assumed non-overlapping; order does not matter.
+/// Slices are assumed non-overlapping.
+///
+/// The longest stretch is the longest run of *adjoining* active slices, not
+/// the longest single slice. [ActivityRecorder] is flushed once a minute for
+/// crash-safety, which closes the open slice and starts a new one — so an
+/// unbroken two-hour focus run is stored as ~120 one-minute slices. Reading
+/// the longest single slice therefore reported "1m" forever. Where the writer
+/// happened to checkpoint is a persistence detail and must not be visible in
+/// the statistics.
 DayStats computeSliceStats(Iterable<ActivitySlice> slices) {
+  // Adjoining slices share an instant exactly (flush sets the next start to
+  // the previous end), but tolerate a second of drift for suspend/NTP nudges.
+  const adjoining = Duration(seconds: 1);
+
+  final ordered = slices.toList()..sort((a, b) => a.start.compareTo(b.start));
+
   var screen = Duration.zero;
   var idle = Duration.zero;
   var away = Duration.zero;
@@ -92,19 +106,46 @@ DayStats computeSliceStats(Iterable<ActivitySlice> slices) {
   DateTime? first;
   DateTime? last;
 
-  for (final slice in slices) {
+  // The active run currently being accumulated.
+  DateTime? runStart;
+  DateTime? runEnd;
+
+  void closeRun() {
+    if (runStart == null) return;
+    final length = runEnd!.difference(runStart!);
+    if (length > longest) longest = length;
+    runStart = null;
+    runEnd = null;
+  }
+
+  for (final slice in ordered) {
     switch (slice.kind) {
       case SliceKind.active:
         screen += slice.length;
-        if (slice.length > longest) longest = slice.length;
         if (first == null || slice.start.isBefore(first)) first = slice.start;
         if (last == null || slice.end.isAfter(last)) last = slice.end;
+
+        final continues =
+            runEnd != null &&
+            slice.start.difference(runEnd!).abs() <= adjoining;
+        if (continues) {
+          runEnd = slice.end;
+        } else {
+          closeRun();
+          runStart = slice.start;
+          runEnd = slice.end;
+        }
+
+      // Any pause in activity ends the stretch.
       case SliceKind.idle:
         idle += slice.length;
+        closeRun();
       case SliceKind.locked:
         away += slice.length;
+        closeRun();
     }
   }
+  closeRun();
 
   return DayStats(
     screenTime: screen,
