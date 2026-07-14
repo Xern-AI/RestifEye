@@ -26,6 +26,12 @@
     --radius-sm: 14px;
     --hero-glow-1: rgba(0,137,123,.14);
     --hero-glow-2: rgba(116,248,229,.18);
+
+    /* One spacing scale. Every gap on the page is a step on it — the page
+       previously picked margins ad hoc (8/20/28/36/40/72), which is what made
+       the vertical rhythm feel arbitrary. */
+    --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+    --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -57,7 +63,21 @@
     line-height: 1.65;
     -webkit-font-smoothing: antialiased;
   }
-  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+  /* Headings must not inherit body leading (1.65) — that is prose spacing and
+     it made every h3 on the page look loose and unanchored to its paragraph.
+     Weight 650 was also a synthetic weight no system font actually ships. */
+  h1, h2, h3 {
+    line-height: 1.2;
+    letter-spacing: -.02em;
+    text-wrap: balance;
+    font-weight: 700;
+  }
+  /* padding-inline, NOT the padding shorthand. The sections are themselves
+     `.wrap` elements, and `.wrap` (0,1,0) outranks `section` (0,0,1) — so a
+     shorthand here silently zeroed every section's vertical padding, which is
+     why the page's vertical rhythm collapsed and headings crowded the block
+     above them. Separate longhands mean the two rules no longer collide. */
+  .wrap { max-width: 1040px; margin: 0 auto; padding-inline: var(--s-5); }
 
   /* ---- Nav ---- */
   .nav {
@@ -70,8 +90,8 @@
     display: flex; align-items: center; gap: 12px;
     max-width: 1040px; margin: 0 auto; padding: 12px 24px;
   }
-  .nav-inner img { width: 28px; height: 28px; }
-  .nav-inner strong { font-size: 1.05rem; letter-spacing: -.01em; }
+  .nav-inner img { display: block; width: 30px; height: 30px; }
+  .nav-inner strong { font-size: 1.05rem; letter-spacing: -.01em; line-height: 1; }
   .nav-links { margin-left: auto; display: flex; gap: 4px; align-items: center; }
   .nav-links a {
     color: var(--on-surface-variant); text-decoration: none;
@@ -87,7 +107,7 @@
   /* ---- Hero ---- */
   .hero {
     position: relative; overflow: hidden;
-    padding: 96px 0 72px; text-align: center;
+    padding-block: var(--s-9) var(--s-8); text-align: center;
   }
   .hero::before, .hero::after {
     content: ""; position: absolute; border-radius: 50%; filter: blur(80px);
@@ -96,24 +116,30 @@
   .hero::before { width: 480px; height: 480px; background: var(--hero-glow-1); top: -160px; left: -120px; }
   .hero::after { width: 520px; height: 520px; background: var(--hero-glow-2); bottom: -220px; right: -140px; }
   .hero > .wrap { position: relative; }
-  .hero img.mark { width: 88px; height: 88px; margin-bottom: 28px; filter: drop-shadow(0 6px 18px rgba(0,105,92,.25)); }
+    /* display:block + auto margins: an inline image sits on the text baseline,
+     which added a phantom descender gap under the mark and threw the hero's
+     vertical centring off. */
+  .hero img.mark {
+    display: block; width: 88px; height: 88px;
+    margin: 0 auto var(--s-5); filter: drop-shadow(0 6px 18px rgba(0,105,92,.25));
+  }
   .eyebrow {
     display: inline-block; font-size: .8rem; font-weight: 600; letter-spacing: .06em;
     text-transform: uppercase; color: var(--primary);
     background: color-mix(in srgb, var(--primary) 10%, transparent);
     border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
-    padding: 5px 14px; border-radius: 100px; margin-bottom: 20px;
+    padding: 5px 14px; border-radius: 100px; margin-bottom: var(--s-4);
   }
   h1 {
-    font-size: clamp(2.3rem, 5.5vw, 3.6rem); font-weight: 700;
-    letter-spacing: -0.025em; line-height: 1.12; max-width: 760px; margin: 0 auto;
+    font-size: clamp(2.3rem, 5.5vw, 3.6rem);
+    letter-spacing: -0.03em; line-height: 1.08; max-width: 760px; margin: 0 auto;
   }
   h1 em { font-style: normal; color: var(--primary); }
   .tagline {
     font-size: clamp(1.05rem, 2vw, 1.25rem); color: var(--on-surface-variant);
-    margin: 20px auto 0; max-width: 620px;
+    margin: var(--s-5) auto 0; max-width: 62ch;
   }
-  .cta { margin-top: 40px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .cta { margin-top: var(--s-7); display: flex; gap: var(--s-3); justify-content: center; flex-wrap: wrap; }
   .btn {
     display: inline-flex; align-items: center; gap: 10px;
     padding: 15px 30px; border-radius: 100px;
@@ -125,9 +151,9 @@
   .btn:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
   .btn-filled { background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow); }
   .btn-tonal { background: var(--primary-container); color: var(--on-primary-container); }
-  .note { margin-top: 18px; font-size: .875rem; color: var(--on-surface-variant); }
+  .note { margin-top: var(--s-4); font-size: .875rem; color: var(--on-surface-variant); }
   .trust {
-    margin-top: 36px; display: flex; gap: 10px 26px; justify-content: center;
+    margin-top: var(--s-6); display: flex; gap: var(--s-2) var(--s-5); justify-content: center;
     flex-wrap: wrap; font-size: .85rem; color: var(--on-surface-variant);
   }
   .trust span::before { content: "✓"; color: var(--primary); font-weight: 700; margin-right: 7px; }
@@ -163,17 +189,18 @@
   .mock-stat b { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; }
 
   /* ---- Sections ---- */
-  section { padding: 72px 0 8px; }
+  section { padding-block: var(--s-9); }
   .kicker {
     font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-    color: var(--primary); margin-bottom: 10px;
+    color: var(--primary); margin-bottom: var(--s-2);
   }
-  h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
-  .section-intro { color: var(--on-surface-variant); max-width: 640px; margin-top: 12px; }
+  /* A clear step down from h1 (3.6rem) so the hierarchy reads at a glance. */
+  h2 { font-size: clamp(1.75rem, 3.2vw, 2.4rem); }
+  .section-intro { color: var(--on-surface-variant); max-width: 62ch; margin-top: var(--s-3); }
 
   .grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 18px; margin-top: 40px;
+    gap: var(--s-4); margin-top: var(--s-7);
   }
   .card {
     background: var(--surface-container); border: 1px solid var(--outline);
@@ -181,7 +208,7 @@
     transition: transform .18s ease, box-shadow .18s ease;
   }
   .card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
-  .card h3 { font-size: 1.08rem; font-weight: 650; margin-bottom: 8px; letter-spacing: -.01em; }
+  .card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: var(--s-2); }
   .card p { font-size: .95rem; color: var(--on-surface-variant); }
   .card .glyph {
     width: 44px; height: 44px; display: grid; place-items: center;
@@ -190,7 +217,7 @@
   }
 
   /* ---- How it works ---- */
-  .steps { margin-top: 40px; display: grid; gap: 0; }
+  .steps { margin-top: var(--s-7); display: grid; gap: 0; }
   .step {
     display: grid; grid-template-columns: 56px 1fr; gap: 18px;
     padding: 22px 0; border-bottom: 1px solid var(--outline);
@@ -201,16 +228,16 @@
     display: grid; place-items: center; font-weight: 700;
     background: var(--primary-container); color: var(--on-primary-container);
   }
-  .step h3 { font-size: 1.05rem; font-weight: 650; margin-bottom: 4px; }
+  .step h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: var(--s-1); }
   .step p { color: var(--on-surface-variant); font-size: .95rem; max-width: 640px; }
 
   /* ---- Install ---- */
-  .install-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-top: 40px; }
+  .install-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--s-4); margin-top: var(--s-7); }
   .install-card {
     background: var(--surface-container); border: 1px solid var(--outline);
     border-radius: var(--radius); padding: 28px;
   }
-  .install-card h3 { font-size: 1.05rem; margin-bottom: 6px; }
+  .install-card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: var(--s-1); }
   .install-card .tag {
     display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .05em;
     text-transform: uppercase; color: var(--primary); margin-bottom: 12px;

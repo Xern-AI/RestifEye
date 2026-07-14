@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dbus/dbus.dart';
 
+import '../../app/brand.dart';
 import '../interfaces/tray_indicator.dart';
 
 /// StatusNotifierItem tray icon implemented directly over D-Bus — no native
@@ -29,7 +30,10 @@ class SniTrayIndicator implements TrayIndicator {
 
   @override
   Future<void> init({required List<TrayPixmap> icons}) async {
-    _item = _SniItemObject(icons: icons, onActivate: () => _emit(TrayAction.open));
+    _item = _SniItemObject(
+      icons: icons,
+      onActivate: () => _emit(TrayAction.open),
+    );
     _menu = _DbusMenuObject(onSelect: _emit);
     await _bus.registerObject(_item!);
     await _bus.registerObject(_menu!);
@@ -65,9 +69,12 @@ class SniTrayIndicator implements TrayIndicator {
         name: _watcherName,
         path: DBusObjectPath('/StatusNotifierWatcher'),
       );
-      await watcher.callMethod(_watcherName, 'RegisterStatusNotifierItem', [
-        DBusString(_bus.uniqueName),
-      ], replySignature: DBusSignature(''));
+      await watcher.callMethod(
+        _watcherName,
+        'RegisterStatusNotifierItem',
+        [DBusString(_bus.uniqueName)],
+        replySignature: DBusSignature(''),
+      );
       _registeredWithWatcher = true;
     } on Exception {
       // No status area on this desktop right now (or a bus hiccup) — stay
@@ -116,21 +123,22 @@ class _SniItemObject extends DBusObject {
 
   Map<String, DBusValue> get _properties => {
     'Category': const DBusString('ApplicationStatus'),
-    'Id': const DBusString('com.xernai.breaktime'),
-    'Title': const DBusString('BreakTime'),
+    'Id': const DBusString(Brand.appId),
+    'Title': const DBusString(Brand.appName),
     'Status': const DBusString('Active'),
     'WindowId': const DBusUint32(0),
-    'IconName': const DBusString('com.xernai.breaktime'),
+    'IconName': const DBusString(Brand.appId),
     'IconPixmap': _pixmaps,
     'OverlayIconName': const DBusString(''),
     'OverlayIconPixmap': DBusArray(DBusSignature('(iiay)'), const []),
     'AttentionIconName': const DBusString(''),
     'AttentionIconPixmap': DBusArray(DBusSignature('(iiay)'), const []),
     'AttentionMovieName': const DBusString(''),
+    // Hovering the icon must say plainly which app it is.
     'ToolTip': DBusStruct([
       const DBusString(''),
       DBusArray(DBusSignature('(iiay)'), const []),
-      const DBusString('BreakTime'),
+      const DBusString(Brand.appName),
       const DBusString('Running — breaks on schedule'),
     ]),
     'ItemIsMenu': const DBusBoolean(false),
@@ -170,8 +178,7 @@ class _SniItemObject extends DBusObject {
 
 /// com.canonical.dbusmenu at /MenuBar: Open / Pause / Quit.
 class _DbusMenuObject extends DBusObject {
-  _DbusMenuObject({required this.onSelect})
-    : super(DBusObjectPath('/MenuBar'));
+  _DbusMenuObject({required this.onSelect}) : super(DBusObjectPath('/MenuBar'));
 
   static const _iface = 'com.canonical.dbusmenu';
   static const _idRoot = 0;
@@ -199,12 +206,12 @@ class _DbusMenuObject extends DBusObject {
 
   Map<String, DBusValue> _itemProps(int id) => switch (id) {
     _idRoot => {'children-display': const DBusString('submenu')},
-    _idOpen => {'label': const DBusString('Open BreakTime')},
+    _idOpen => {'label': const DBusString('Open ${Brand.appName}')},
     _idPause => {
       'label': DBusString(_paused ? 'Resume breaks' : 'Pause breaks'),
     },
     _idSeparator => {'type': const DBusString('separator')},
-    _idQuit => {'label': const DBusString('Quit BreakTime')},
+    _idQuit => {'label': const DBusString('Quit ${Brand.appName}')},
     _ => {},
   };
 

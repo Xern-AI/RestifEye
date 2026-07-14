@@ -104,33 +104,61 @@ class _StatTiles extends StatelessWidget {
   Widget build(BuildContext context) {
     final active = rollups.where((r) => r.screen > Duration.zero).toList();
     final days = active.isEmpty ? 1 : active.length;
-    final avgScreen = Duration(
-      seconds: active.fold(0, (n, r) => n + r.screen.inSeconds) ~/ days,
-    );
+
+    Duration avg(int Function(DayRollup) seconds) =>
+        Duration(seconds: active.fold(0, (n, r) => n + seconds(r)) ~/ days);
+
+    final avgScreen = avg((r) => r.screen.inSeconds);
+    final avgAtComputer = avg((r) => atComputerOf(r).inSeconds);
+    final avgAway = avg((r) => r.away.inSeconds);
+    final avgStretch = avg((r) => r.longestStretch.inSeconds);
+
+    final activeRatio = avgAtComputer.inSeconds == 0
+        ? 0.0
+        : avgScreen.inSeconds / avgAtComputer.inSeconds;
+
     final taken = active.fold(0, (n, r) => n + r.completed + r.credited);
     final concluded = taken + active.fold(0, (n, r) => n + r.escaped);
     final compliance = concluded == 0 ? 100 : (taken * 100 ~/ concluded);
 
-    return Row(
-      children: [
-        Expanded(
-          child: _Tile(
-            label: 'Avg screen / day',
-            value: formatHoursMinutes(avgScreen),
-          ),
-        ),
-        const SizedBox(width: AppTokens.spaceMd),
-        Expanded(
-          child: _Tile(label: 'Break compliance', value: '$compliance%'),
-        ),
-        const SizedBox(width: AppTokens.spaceMd),
-        Expanded(
-          child: _Tile(
-            label: 'Breaks / day',
-            value: (taken / days).toStringAsFixed(1),
-          ),
-        ),
-      ],
+    // Average start/end of the working day, over the days that recorded one.
+    final withSpan = active
+        .where((r) => r.firstActivityMinute != null)
+        .toList();
+    final span = withSpan.isEmpty
+        ? '—'
+        : '${formatMinuteOfDay(withSpan.fold(0, (n, r) => n + r.firstActivityMinute!) ~/ withSpan.length)}'
+              ' – ${formatMinuteOfDay(withSpan.fold(0, (n, r) => n + r.lastActivityMinute!) ~/ withSpan.length)}';
+
+    final tiles = <({String label, String value})>[
+      (label: 'Avg active / day', value: formatHoursMinutes(avgScreen)),
+      (label: 'Avg at computer', value: formatHoursMinutes(avgAtComputer)),
+      (label: 'Active share', value: formatPercent(activeRatio)),
+      (label: 'Avg away', value: formatHoursMinutes(avgAway)),
+      (label: 'Longest focus', value: formatHoursMinutes(avgStretch)),
+      (label: 'Typical day', value: span),
+      (label: 'Break compliance', value: '$compliance%'),
+      (label: 'Breaks / day', value: (taken / days).toStringAsFixed(1)),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 720 ? 4 : 2;
+        final width =
+            (constraints.maxWidth - AppTokens.spaceMd * (columns - 1)) /
+            columns;
+        return Wrap(
+          spacing: AppTokens.spaceMd,
+          runSpacing: AppTokens.spaceMd,
+          children: [
+            for (final tile in tiles)
+              SizedBox(
+                width: width,
+                child: _Tile(label: tile.label, value: tile.value),
+              ),
+          ],
+        );
+      },
     );
   }
 }

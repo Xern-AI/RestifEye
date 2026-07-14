@@ -42,7 +42,11 @@ class RollupService {
       await _rollups.upsert((
         day: day,
         screen: stats.screenTime,
+        idle: stats.idleTime,
+        away: stats.awayTime,
         longestStretch: stats.longestStretch,
+        firstActivityMinute: _minuteOfDay(stats.firstActivity),
+        lastActivityMinute: _minuteOfDay(stats.lastActivity),
         completed: counts.completed,
         credited: counts.credited,
         escaped: counts.escaped,
@@ -64,6 +68,11 @@ class RollupService {
 
   /// Calendar-safe day increment (immune to DST shifts).
   static DateTime _nextDay(DateTime d) => DateTime(d.year, d.month, d.day + 1);
+
+  /// Local minutes since midnight — the only part of the timestamp that
+  /// means anything once the day is rolled up.
+  static int? _minuteOfDay(DateTime? at) =>
+      at == null ? null : at.hour * 60 + at.minute;
 
   void dispose() => _timer?.cancel();
 }

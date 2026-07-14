@@ -740,6 +740,50 @@ class $DailyRollupsTable extends DailyRollups
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _idleSecondsMeta = const VerificationMeta(
+    'idleSeconds',
+  );
+  @override
+  late final GeneratedColumn<int> idleSeconds = GeneratedColumn<int>(
+    'idle_seconds',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _awaySecondsMeta = const VerificationMeta(
+    'awaySeconds',
+  );
+  @override
+  late final GeneratedColumn<int> awaySeconds = GeneratedColumn<int>(
+    'away_seconds',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _firstActivityMinuteMeta =
+      const VerificationMeta('firstActivityMinute');
+  @override
+  late final GeneratedColumn<int> firstActivityMinute = GeneratedColumn<int>(
+    'first_activity_minute',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _lastActivityMinuteMeta =
+      const VerificationMeta('lastActivityMinute');
+  @override
+  late final GeneratedColumn<int> lastActivityMinute = GeneratedColumn<int>(
+    'last_activity_minute',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     day,
@@ -749,6 +793,10 @@ class $DailyRollupsTable extends DailyRollups
     breaksCredited,
     breaksEscaped,
     snoozes,
+    idleSeconds,
+    awaySeconds,
+    firstActivityMinute,
+    lastActivityMinute,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -833,6 +881,42 @@ class $DailyRollupsTable extends DailyRollups
     } else if (isInserting) {
       context.missing(_snoozesMeta);
     }
+    if (data.containsKey('idle_seconds')) {
+      context.handle(
+        _idleSecondsMeta,
+        idleSeconds.isAcceptableOrUnknown(
+          data['idle_seconds']!,
+          _idleSecondsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('away_seconds')) {
+      context.handle(
+        _awaySecondsMeta,
+        awaySeconds.isAcceptableOrUnknown(
+          data['away_seconds']!,
+          _awaySecondsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('first_activity_minute')) {
+      context.handle(
+        _firstActivityMinuteMeta,
+        firstActivityMinute.isAcceptableOrUnknown(
+          data['first_activity_minute']!,
+          _firstActivityMinuteMeta,
+        ),
+      );
+    }
+    if (data.containsKey('last_activity_minute')) {
+      context.handle(
+        _lastActivityMinuteMeta,
+        lastActivityMinute.isAcceptableOrUnknown(
+          data['last_activity_minute']!,
+          _lastActivityMinuteMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -870,6 +954,22 @@ class $DailyRollupsTable extends DailyRollups
         DriftSqlType.int,
         data['${effectivePrefix}snoozes'],
       )!,
+      idleSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}idle_seconds'],
+      )!,
+      awaySeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}away_seconds'],
+      )!,
+      firstActivityMinute: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}first_activity_minute'],
+      ),
+      lastActivityMinute: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}last_activity_minute'],
+      ),
     );
   }
 
@@ -887,6 +987,16 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
   final int breaksCredited;
   final int breaksEscaped;
   final int snoozes;
+
+  /// v2: at the machine but not touching it.
+  final int idleSeconds;
+
+  /// v2: locked or suspended.
+  final int awaySeconds;
+
+  /// v2: first and last activity, as minutes since local midnight.
+  final int? firstActivityMinute;
+  final int? lastActivityMinute;
   const DailyRollup({
     required this.day,
     required this.screenSeconds,
@@ -895,6 +1005,10 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
     required this.breaksCredited,
     required this.breaksEscaped,
     required this.snoozes,
+    required this.idleSeconds,
+    required this.awaySeconds,
+    this.firstActivityMinute,
+    this.lastActivityMinute,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -906,6 +1020,14 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
     map['breaks_credited'] = Variable<int>(breaksCredited);
     map['breaks_escaped'] = Variable<int>(breaksEscaped);
     map['snoozes'] = Variable<int>(snoozes);
+    map['idle_seconds'] = Variable<int>(idleSeconds);
+    map['away_seconds'] = Variable<int>(awaySeconds);
+    if (!nullToAbsent || firstActivityMinute != null) {
+      map['first_activity_minute'] = Variable<int>(firstActivityMinute);
+    }
+    if (!nullToAbsent || lastActivityMinute != null) {
+      map['last_activity_minute'] = Variable<int>(lastActivityMinute);
+    }
     return map;
   }
 
@@ -918,6 +1040,14 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
       breaksCredited: Value(breaksCredited),
       breaksEscaped: Value(breaksEscaped),
       snoozes: Value(snoozes),
+      idleSeconds: Value(idleSeconds),
+      awaySeconds: Value(awaySeconds),
+      firstActivityMinute: firstActivityMinute == null && nullToAbsent
+          ? const Value.absent()
+          : Value(firstActivityMinute),
+      lastActivityMinute: lastActivityMinute == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastActivityMinute),
     );
   }
 
@@ -936,6 +1066,12 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
       breaksCredited: serializer.fromJson<int>(json['breaksCredited']),
       breaksEscaped: serializer.fromJson<int>(json['breaksEscaped']),
       snoozes: serializer.fromJson<int>(json['snoozes']),
+      idleSeconds: serializer.fromJson<int>(json['idleSeconds']),
+      awaySeconds: serializer.fromJson<int>(json['awaySeconds']),
+      firstActivityMinute: serializer.fromJson<int?>(
+        json['firstActivityMinute'],
+      ),
+      lastActivityMinute: serializer.fromJson<int?>(json['lastActivityMinute']),
     );
   }
   @override
@@ -949,6 +1085,10 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
       'breaksCredited': serializer.toJson<int>(breaksCredited),
       'breaksEscaped': serializer.toJson<int>(breaksEscaped),
       'snoozes': serializer.toJson<int>(snoozes),
+      'idleSeconds': serializer.toJson<int>(idleSeconds),
+      'awaySeconds': serializer.toJson<int>(awaySeconds),
+      'firstActivityMinute': serializer.toJson<int?>(firstActivityMinute),
+      'lastActivityMinute': serializer.toJson<int?>(lastActivityMinute),
     };
   }
 
@@ -960,6 +1100,10 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
     int? breaksCredited,
     int? breaksEscaped,
     int? snoozes,
+    int? idleSeconds,
+    int? awaySeconds,
+    Value<int?> firstActivityMinute = const Value.absent(),
+    Value<int?> lastActivityMinute = const Value.absent(),
   }) => DailyRollup(
     day: day ?? this.day,
     screenSeconds: screenSeconds ?? this.screenSeconds,
@@ -968,6 +1112,14 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
     breaksCredited: breaksCredited ?? this.breaksCredited,
     breaksEscaped: breaksEscaped ?? this.breaksEscaped,
     snoozes: snoozes ?? this.snoozes,
+    idleSeconds: idleSeconds ?? this.idleSeconds,
+    awaySeconds: awaySeconds ?? this.awaySeconds,
+    firstActivityMinute: firstActivityMinute.present
+        ? firstActivityMinute.value
+        : this.firstActivityMinute,
+    lastActivityMinute: lastActivityMinute.present
+        ? lastActivityMinute.value
+        : this.lastActivityMinute,
   );
   DailyRollup copyWithCompanion(DailyRollupsCompanion data) {
     return DailyRollup(
@@ -988,6 +1140,18 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
           ? data.breaksEscaped.value
           : this.breaksEscaped,
       snoozes: data.snoozes.present ? data.snoozes.value : this.snoozes,
+      idleSeconds: data.idleSeconds.present
+          ? data.idleSeconds.value
+          : this.idleSeconds,
+      awaySeconds: data.awaySeconds.present
+          ? data.awaySeconds.value
+          : this.awaySeconds,
+      firstActivityMinute: data.firstActivityMinute.present
+          ? data.firstActivityMinute.value
+          : this.firstActivityMinute,
+      lastActivityMinute: data.lastActivityMinute.present
+          ? data.lastActivityMinute.value
+          : this.lastActivityMinute,
     );
   }
 
@@ -1000,7 +1164,11 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
           ..write('breaksCompleted: $breaksCompleted, ')
           ..write('breaksCredited: $breaksCredited, ')
           ..write('breaksEscaped: $breaksEscaped, ')
-          ..write('snoozes: $snoozes')
+          ..write('snoozes: $snoozes, ')
+          ..write('idleSeconds: $idleSeconds, ')
+          ..write('awaySeconds: $awaySeconds, ')
+          ..write('firstActivityMinute: $firstActivityMinute, ')
+          ..write('lastActivityMinute: $lastActivityMinute')
           ..write(')'))
         .toString();
   }
@@ -1014,6 +1182,10 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
     breaksCredited,
     breaksEscaped,
     snoozes,
+    idleSeconds,
+    awaySeconds,
+    firstActivityMinute,
+    lastActivityMinute,
   );
   @override
   bool operator ==(Object other) =>
@@ -1025,7 +1197,11 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
           other.breaksCompleted == this.breaksCompleted &&
           other.breaksCredited == this.breaksCredited &&
           other.breaksEscaped == this.breaksEscaped &&
-          other.snoozes == this.snoozes);
+          other.snoozes == this.snoozes &&
+          other.idleSeconds == this.idleSeconds &&
+          other.awaySeconds == this.awaySeconds &&
+          other.firstActivityMinute == this.firstActivityMinute &&
+          other.lastActivityMinute == this.lastActivityMinute);
 }
 
 class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
@@ -1036,6 +1212,10 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
   final Value<int> breaksCredited;
   final Value<int> breaksEscaped;
   final Value<int> snoozes;
+  final Value<int> idleSeconds;
+  final Value<int> awaySeconds;
+  final Value<int?> firstActivityMinute;
+  final Value<int?> lastActivityMinute;
   final Value<int> rowid;
   const DailyRollupsCompanion({
     this.day = const Value.absent(),
@@ -1045,6 +1225,10 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
     this.breaksCredited = const Value.absent(),
     this.breaksEscaped = const Value.absent(),
     this.snoozes = const Value.absent(),
+    this.idleSeconds = const Value.absent(),
+    this.awaySeconds = const Value.absent(),
+    this.firstActivityMinute = const Value.absent(),
+    this.lastActivityMinute = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DailyRollupsCompanion.insert({
@@ -1055,6 +1239,10 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
     required int breaksCredited,
     required int breaksEscaped,
     required int snoozes,
+    this.idleSeconds = const Value.absent(),
+    this.awaySeconds = const Value.absent(),
+    this.firstActivityMinute = const Value.absent(),
+    this.lastActivityMinute = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : day = Value(day),
        screenSeconds = Value(screenSeconds),
@@ -1071,6 +1259,10 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
     Expression<int>? breaksCredited,
     Expression<int>? breaksEscaped,
     Expression<int>? snoozes,
+    Expression<int>? idleSeconds,
+    Expression<int>? awaySeconds,
+    Expression<int>? firstActivityMinute,
+    Expression<int>? lastActivityMinute,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1082,6 +1274,12 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
       if (breaksCredited != null) 'breaks_credited': breaksCredited,
       if (breaksEscaped != null) 'breaks_escaped': breaksEscaped,
       if (snoozes != null) 'snoozes': snoozes,
+      if (idleSeconds != null) 'idle_seconds': idleSeconds,
+      if (awaySeconds != null) 'away_seconds': awaySeconds,
+      if (firstActivityMinute != null)
+        'first_activity_minute': firstActivityMinute,
+      if (lastActivityMinute != null)
+        'last_activity_minute': lastActivityMinute,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1094,6 +1292,10 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
     Value<int>? breaksCredited,
     Value<int>? breaksEscaped,
     Value<int>? snoozes,
+    Value<int>? idleSeconds,
+    Value<int>? awaySeconds,
+    Value<int?>? firstActivityMinute,
+    Value<int?>? lastActivityMinute,
     Value<int>? rowid,
   }) {
     return DailyRollupsCompanion(
@@ -1105,6 +1307,10 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
       breaksCredited: breaksCredited ?? this.breaksCredited,
       breaksEscaped: breaksEscaped ?? this.breaksEscaped,
       snoozes: snoozes ?? this.snoozes,
+      idleSeconds: idleSeconds ?? this.idleSeconds,
+      awaySeconds: awaySeconds ?? this.awaySeconds,
+      firstActivityMinute: firstActivityMinute ?? this.firstActivityMinute,
+      lastActivityMinute: lastActivityMinute ?? this.lastActivityMinute,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1135,6 +1341,18 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
     if (snoozes.present) {
       map['snoozes'] = Variable<int>(snoozes.value);
     }
+    if (idleSeconds.present) {
+      map['idle_seconds'] = Variable<int>(idleSeconds.value);
+    }
+    if (awaySeconds.present) {
+      map['away_seconds'] = Variable<int>(awaySeconds.value);
+    }
+    if (firstActivityMinute.present) {
+      map['first_activity_minute'] = Variable<int>(firstActivityMinute.value);
+    }
+    if (lastActivityMinute.present) {
+      map['last_activity_minute'] = Variable<int>(lastActivityMinute.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1151,6 +1369,10 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
           ..write('breaksCredited: $breaksCredited, ')
           ..write('breaksEscaped: $breaksEscaped, ')
           ..write('snoozes: $snoozes, ')
+          ..write('idleSeconds: $idleSeconds, ')
+          ..write('awaySeconds: $awaySeconds, ')
+          ..write('firstActivityMinute: $firstActivityMinute, ')
+          ..write('lastActivityMinute: $lastActivityMinute, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2328,6 +2550,10 @@ typedef $$DailyRollupsTableCreateCompanionBuilder =
       required int breaksCredited,
       required int breaksEscaped,
       required int snoozes,
+      Value<int> idleSeconds,
+      Value<int> awaySeconds,
+      Value<int?> firstActivityMinute,
+      Value<int?> lastActivityMinute,
       Value<int> rowid,
     });
 typedef $$DailyRollupsTableUpdateCompanionBuilder =
@@ -2339,6 +2565,10 @@ typedef $$DailyRollupsTableUpdateCompanionBuilder =
       Value<int> breaksCredited,
       Value<int> breaksEscaped,
       Value<int> snoozes,
+      Value<int> idleSeconds,
+      Value<int> awaySeconds,
+      Value<int?> firstActivityMinute,
+      Value<int?> lastActivityMinute,
       Value<int> rowid,
     });
 
@@ -2383,6 +2613,26 @@ class $$DailyRollupsTableFilterComposer
 
   ColumnFilters<int> get snoozes => $composableBuilder(
     column: $table.snoozes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get idleSeconds => $composableBuilder(
+    column: $table.idleSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get awaySeconds => $composableBuilder(
+    column: $table.awaySeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get firstActivityMinute => $composableBuilder(
+    column: $table.firstActivityMinute,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get lastActivityMinute => $composableBuilder(
+    column: $table.lastActivityMinute,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2430,6 +2680,26 @@ class $$DailyRollupsTableOrderingComposer
     column: $table.snoozes,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get idleSeconds => $composableBuilder(
+    column: $table.idleSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get awaySeconds => $composableBuilder(
+    column: $table.awaySeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get firstActivityMinute => $composableBuilder(
+    column: $table.firstActivityMinute,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get lastActivityMinute => $composableBuilder(
+    column: $table.lastActivityMinute,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DailyRollupsTableAnnotationComposer
@@ -2471,6 +2741,26 @@ class $$DailyRollupsTableAnnotationComposer
 
   GeneratedColumn<int> get snoozes =>
       $composableBuilder(column: $table.snoozes, builder: (column) => column);
+
+  GeneratedColumn<int> get idleSeconds => $composableBuilder(
+    column: $table.idleSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get awaySeconds => $composableBuilder(
+    column: $table.awaySeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get firstActivityMinute => $composableBuilder(
+    column: $table.firstActivityMinute,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get lastActivityMinute => $composableBuilder(
+    column: $table.lastActivityMinute,
+    builder: (column) => column,
+  );
 }
 
 class $$DailyRollupsTableTableManager
@@ -2511,6 +2801,10 @@ class $$DailyRollupsTableTableManager
                 Value<int> breaksCredited = const Value.absent(),
                 Value<int> breaksEscaped = const Value.absent(),
                 Value<int> snoozes = const Value.absent(),
+                Value<int> idleSeconds = const Value.absent(),
+                Value<int> awaySeconds = const Value.absent(),
+                Value<int?> firstActivityMinute = const Value.absent(),
+                Value<int?> lastActivityMinute = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DailyRollupsCompanion(
                 day: day,
@@ -2520,6 +2814,10 @@ class $$DailyRollupsTableTableManager
                 breaksCredited: breaksCredited,
                 breaksEscaped: breaksEscaped,
                 snoozes: snoozes,
+                idleSeconds: idleSeconds,
+                awaySeconds: awaySeconds,
+                firstActivityMinute: firstActivityMinute,
+                lastActivityMinute: lastActivityMinute,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2531,6 +2829,10 @@ class $$DailyRollupsTableTableManager
                 required int breaksCredited,
                 required int breaksEscaped,
                 required int snoozes,
+                Value<int> idleSeconds = const Value.absent(),
+                Value<int> awaySeconds = const Value.absent(),
+                Value<int?> firstActivityMinute = const Value.absent(),
+                Value<int?> lastActivityMinute = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DailyRollupsCompanion.insert(
                 day: day,
@@ -2540,6 +2842,10 @@ class $$DailyRollupsTableTableManager
                 breaksCredited: breaksCredited,
                 breaksEscaped: breaksEscaped,
                 snoozes: snoozes,
+                idleSeconds: idleSeconds,
+                awaySeconds: awaySeconds,
+                firstActivityMinute: firstActivityMinute,
+                lastActivityMinute: lastActivityMinute,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

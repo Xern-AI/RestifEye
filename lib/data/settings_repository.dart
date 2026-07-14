@@ -20,6 +20,7 @@ class SettingsRepository {
   static const flagFullscreenOverlay = 'fullscreen_overlay';
   static const flagAutostartApplied = 'autostart_default_applied';
   static const flagHideNoticeShown = 'hide_notice_shown';
+  static const flagSounds = 'sounds_enabled';
 
   Future<BreakConfig> loadConfig() async {
     final raw = await _read(_configKey);

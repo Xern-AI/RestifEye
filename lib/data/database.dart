@@ -40,5 +40,21 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.inMemory() => AppDatabase(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  /// v1 → v2 adds the idle/away/workday-span columns to daily_rollups.
+  /// Additive and defaulted, so existing rows survive untouched: a user's
+  /// history is theirs, and an upgrade must never quietly drop it.
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(dailyRollups, dailyRollups.idleSeconds);
+        await m.addColumn(dailyRollups, dailyRollups.awaySeconds);
+        await m.addColumn(dailyRollups, dailyRollups.firstActivityMinute);
+        await m.addColumn(dailyRollups, dailyRollups.lastActivityMinute);
+      }
+    },
+  );
 }

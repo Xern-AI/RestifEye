@@ -59,7 +59,12 @@ class Deferred extends EnginePhase {
 
 /// Outside work hours, or paused by the user.
 class Paused extends EnginePhase {
-  const Paused({required this.byUser});
+  const Paused({required this.byUser, this.until});
 
   final bool byUser;
+
+  /// Wall-clock moment a timed pause lapses and breaks resume by themselves.
+  /// Null for an open-ended pause (and always null outside work hours, which
+  /// ends on its own schedule).
+  final DateTime? until;
 }

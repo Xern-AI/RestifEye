@@ -1,7 +1,9 @@
 import 'package:breaktime/app/app.dart';
+import 'package:breaktime/core/engine/engine.dart';
 import 'package:breaktime/core/models/break_config.dart';
 import 'package:breaktime/features/breaks/break_overlay.dart';
 import 'package:breaktime/features/breaks/hold_to_skip.dart';
+import 'package:breaktime/platform/interfaces/overlay_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -32,8 +34,8 @@ void main() {
     expect(find.textContaining('Snooze'), findsNothing);
     expect(find.byType(HoldToSkip), findsOneWidget);
     expect(
-      harness.overlay.calls,
-      contains('enter(strict: false, fullscreen: true)'),
+      harness.overlay.state,
+      const BreakWindowState(inBreak: true, strict: false, fullscreen: true),
     );
 
     await cleanupHarness(tester, harness);
@@ -47,8 +49,8 @@ void main() {
 
     expect(find.byType(BreakOverlay), findsOneWidget);
     expect(
-      harness.overlay.calls,
-      contains('enter(strict: true, fullscreen: true)'),
+      harness.overlay.state,
+      const BreakWindowState(inBreak: true, strict: true, fullscreen: true),
     );
 
     // Hold the escape for its full 3 seconds. The first pump only starts
@@ -60,7 +62,7 @@ void main() {
     await tester.pump();
 
     expect(find.byType(BreakOverlay), findsNothing);
-    expect(harness.overlay.calls, contains('exit'));
+    expect(harness.overlay.state, BreakWindowState.normal);
 
     await cleanupHarness(tester, harness);
   });
@@ -76,13 +78,67 @@ void main() {
     await tester.pump();
 
     expect(find.byType(BreakOverlay), findsNothing);
-    expect(harness.overlay.calls, contains('exit'));
+    expect(harness.overlay.state, BreakWindowState.normal);
 
     // Break returns after the 2-minute snooze; two snoozes remain.
     harness.advance(const Duration(minutes: 2, seconds: 5));
     await tester.pump();
     expect(find.byType(BreakOverlay), findsOneWidget);
     expect(harness.engine.canSnooze, isTrue);
+
+    await cleanupHarness(tester, harness);
+  });
+
+  // ---- Regression: the bug that trapped a real user ------------------------
+
+  testWidgets('stepping away during a long break and coming back releases '
+      'the window (regression: user was trapped in a full-screen, '
+      'undecorated, unclosable window)', (tester) async {
+    final harness = TestHarness();
+    // Drive straight to the long break (it absorbs the micro one).
+    await pumpToBreak(
+      tester,
+      harness,
+      lead: const Duration(minutes: 50, seconds: 5),
+    );
+
+    expect(find.byType(BreakOverlay), findsOneWidget);
+    expect(harness.overlay.state.inBreak, isTrue);
+
+    // A movement break is *meant* to get you away from the keyboard. Idling
+    // past idleFireThreshold (2 min) used to make the engine credit an away
+    // span from inside the break, ending the cycle without ever emitting
+    // BreakCompleted — so nothing told the window to leave full-screen.
+    harness.advance(
+      const Duration(minutes: 3),
+      const TickInput(idle: Duration(minutes: 3)),
+    );
+    await tester.pump();
+
+    // Back at the keyboard. The break has run its course either way.
+    harness.advance(const Duration(minutes: 3));
+    await tester.pump();
+
+    expect(find.byType(BreakOverlay), findsNothing);
+    expect(
+      harness.overlay.state,
+      BreakWindowState.normal,
+      reason: 'window must be restored — this is the trapped-user bug',
+    );
+
+    await cleanupHarness(tester, harness);
+  });
+
+  testWidgets('pausing mid-break releases the window', (tester) async {
+    final harness = TestHarness();
+    await pumpToBreak(tester, harness);
+    expect(harness.overlay.state.inBreak, isTrue);
+
+    harness.engine.setPausedByUser(true);
+    await tester.pump();
+
+    expect(find.byType(BreakOverlay), findsNothing);
+    expect(harness.overlay.state, BreakWindowState.normal);
 
     await cleanupHarness(tester, harness);
   });

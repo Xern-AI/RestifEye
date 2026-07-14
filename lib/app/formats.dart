@@ -17,3 +17,13 @@ String formatHoursMinutes(Duration d) {
   if (h == 0) return '${m}m';
   return '${h}h ${m}m';
 }
+
+/// A percentage with no decimals: "81%".
+String formatPercent(double fraction) => '${(fraction * 100).round()}%';
+
+/// Minutes since local midnight as a 24-hour clock time: "09:14".
+String formatMinuteOfDay(int minuteOfDay) {
+  final h = (minuteOfDay ~/ 60).toString().padLeft(2, '0');
+  final m = (minuteOfDay % 60).toString().padLeft(2, '0');
+  return '$h:$m';
+}

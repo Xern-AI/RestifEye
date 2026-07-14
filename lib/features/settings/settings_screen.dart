@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/break_config.dart';
+import '../../platform/interfaces/tray_support.dart';
 import '../../services/providers.dart';
 
 /// All break configuration. Every change applies immediately (engine
@@ -138,12 +139,17 @@ class SettingsScreen extends ConsumerWidget {
             _WorkDaysTile(config: config, onChanged: notifier.update),
             const _SectionHeader('General'),
             SwitchListTile(
-              secondary: const Icon(Icons.pause_circle_outlined),
-              title: const Text('Pause BreakTime'),
-              subtitle: const Text('No breaks until you resume'),
-              value: ref.watch(pausedProvider),
-              onChanged: (v) => ref.read(pausedProvider.notifier).set(v),
+              secondary: const Icon(Icons.volume_up_outlined),
+              title: const Text('Sounds'),
+              subtitle: const Text(
+                'Play a sound for break warnings, and when a break '
+                'starts and ends',
+              ),
+              value: ref.watch(generalSettingsProvider).value?.sounds ?? true,
+              onChanged: (v) =>
+                  ref.read(generalSettingsProvider.notifier).setSounds(v),
             ),
+            const _TrayTile(),
             SwitchListTile(
               secondary: const Icon(Icons.rocket_launch_outlined),
               title: const Text('Start at login'),
@@ -172,6 +178,72 @@ class SettingsScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Tray icon health, and a one-click fix when the desktop needs one.
+///
+/// GNOME has no status area of its own: the top-right corner next to battery
+/// and wi-fi is only reachable through a shell extension that hosts
+/// StatusNotifierItems. Our icon registers correctly and is simply drawn by
+/// nobody. Rather than bury that in a FAQ, name the exact extension and offer
+/// to switch it on — GNOME exposes EnableExtension over D-Bus, so this needs
+/// no terminal and no logout.
+class _TrayTile extends ConsumerWidget {
+  const _TrayTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(trayStatusProvider);
+    final scheme = Theme.of(context).colorScheme;
+
+    final support = status.value;
+    final busy = status.isLoading;
+    final name = support?.extensionName ?? 'the AppIndicator extension';
+
+    final (subtitle, action) = switch (support?.state) {
+      TrayState.working => ('Showing in the top bar', null),
+      TrayState.extensionDisabled => (
+        'Needs the “$name” GNOME extension, which you already have '
+            'installed — it is just switched off',
+        'Enable',
+      ),
+      TrayState.extensionMissing => (
+        'GNOME has no tray of its own. Install the “$name” extension to '
+            'show one.',
+        'Install',
+      ),
+      TrayState.unavailable => (
+        'This desktop has no status area BreakTime can use',
+        null,
+      ),
+      null => ('Checking…', null),
+    };
+
+    return ListTile(
+      leading: Icon(
+        support?.state == TrayState.working
+            ? Icons.check_circle_outlined
+            : Icons.info_outlined,
+        color: support?.state == TrayState.working ? scheme.primary : null,
+      ),
+      title: const Text('Tray icon'),
+      subtitle: Text(subtitle),
+      isThreeLine: action != null,
+      trailing: action == null
+          ? null
+          : FilledButton.tonal(
+              onPressed: busy
+                  ? null
+                  : () => ref.read(trayStatusProvider.notifier).enable(),
+              child: busy
+                  ? const SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(action),
+            ),
     );
   }
 }

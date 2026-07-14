@@ -37,6 +37,12 @@ class BreakEngine {
     EngineSnapshot? restoreFrom,
   }) {
     final now = _clock.elapsed();
+    // Budgets are per-cycle and deliberately not persisted, so they must be
+    // seeded on *every* construction path. Leaving them at zero on restore
+    // made the first break after each login strict (and stripped Snooze from
+    // its notification), because `_strictNow = _snoozesLeft <= 0 && strict`.
+    _snoozesLeft = _config.snoozeBudget;
+    _consecutiveSkips = 0;
     if (restoreFrom != null) {
       final gap = _clock.now().difference(restoreFrom.savedAt);
       if (gap >= _config.longDuration) {
@@ -83,6 +89,16 @@ class BreakEngine {
 
   Duration? _awayBegan;
   bool _awayWasLocked = false;
+
+  /// Wall-clock moment a timed pause lapses, or null for an open-ended one.
+  /// Wall clock, not monotonic, because it must survive suspend and restart:
+  /// "pause for 2 hours" means two hours of the user's life, not of uptime.
+  DateTime? _pausedUntil;
+
+  /// An away span may never be backdated before this point — the moment the
+  /// last break (or pause) ended. Guards against re-crediting time the user
+  /// has already been given credit for.
+  Duration _awayFloor = Duration.zero;
   bool _pausedByUser = false;
   bool _pausedByHours = false;
 
@@ -97,7 +113,9 @@ class BreakEngine {
   bool get canSkip => _consecutiveSkips < _config.skipBudget;
 
   EnginePhase get phase {
-    if (_pausedByUser) return const Paused(byUser: true);
+    if (_pausedByUser) {
+      return Paused(byUser: true, until: _pausedUntil);
+    }
     if (_pausedByHours) return const Paused(byUser: false);
     final now = _clock.elapsed();
     return switch (_mode) {
@@ -126,8 +144,13 @@ class BreakEngine {
 
   /// Advances the state machine. Call ~once per second.
   void tick(TickInput input) {
-    if (_pausedByUser) return;
-    if (_updateWorkHoursPause()) return;
+    // The phase is published on every tick, even while paused: consumers
+    // (the window takeover above all) re-derive their state from it, so a
+    // silent engine would let them drift out of sync.
+    if (_updateUserPause() || _updateWorkHoursPause()) {
+      _publishPhase();
+      return;
+    }
 
     final now = _clock.elapsed();
     _trackAway(input, now);
@@ -227,16 +250,41 @@ class BreakEngine {
     return true;
   }
 
-  void setPausedByUser(bool paused) {
+  /// Pauses breaks. [until] is a wall-clock deadline after which the engine
+  /// resumes on its own; null pauses open-endedly.
+  ///
+  /// A pause that never lapses is how a break reminder quietly dies: silenced
+  /// before a meeting, forgotten, never resumed. Timed pauses are the default
+  /// in the UI for exactly that reason.
+  void setPausedByUser(bool paused, {DateTime? until}) {
+    if (paused) _abandonBreak();
     _pausedByUser = paused;
+    _pausedUntil = paused ? until : null;
     if (!paused) {
       final now = _clock.elapsed();
       _resetDue(BreakKind.micro, from: now);
       _resetDue(BreakKind.long, from: now);
       _mode = _Mode.monitoring;
+      // Time spent paused is not rest to be credited.
+      _awayFloor = now;
+      _awayBegan = null;
+      _awayWasLocked = false;
       _emit(EngineResumed(_clock.now()));
     }
     _publishPhase();
+  }
+
+  /// When the current timed pause lapses, or null if there is no deadline.
+  DateTime? get pausedUntil => _pausedUntil;
+
+  /// Resumes if a timed pause has run its course. Returns true while the
+  /// engine remains paused by the user.
+  bool _updateUserPause() {
+    if (!_pausedByUser) return false;
+    final until = _pausedUntil;
+    if (until == null || _clock.now().isBefore(until)) return true;
+    setPausedByUser(false);
+    return false;
   }
 
   /// Applies new settings. Timers restart from now — predictable and simple.
@@ -276,10 +324,29 @@ class BreakEngine {
   }
 
   void _trackAway(TickInput input, Duration now) {
+    // A break *is* the rest, so being away during one is the whole point —
+    // it is not a separate away span. Tracking it here used to credit the
+    // same rest twice and, far worse, end the cycle from *inside* the break:
+    // `_resolveAwaySpan` finished the cycle, so the `inBreak` case below
+    // never ran, `BreakCompleted` never fired, and nothing ever told the
+    // window to leave full-screen — trapping the user in an undecorated,
+    // always-on-top window they could not close.
+    if (_mode == _Mode.inBreak) {
+      _awayBegan = null;
+      _awayWasLocked = false;
+      return;
+    }
     if (_isAway(input)) {
       // Idle time started accumulating before it crossed the threshold —
       // backdate the span start for input-idle (but not for lock).
-      _awayBegan ??= input.locked ? now : now - input.idle;
+      //
+      // Clamped to _awayFloor: the reported idle time runs straight through
+      // any break the user just sat out, so an unclamped backdate would
+      // measure the break itself as a fresh away span and credit a second
+      // break the moment they touched the keyboard again.
+      _awayBegan ??= input.locked
+          ? now
+          : _laterOf(now - input.idle, _awayFloor);
       _awayWasLocked = _awayWasLocked || input.locked;
       return;
     }
@@ -321,9 +388,20 @@ class BreakEngine {
     }
   }
 
+  /// Ends a break that is on screen when the engine stops running it
+  /// (user pause, work window closing). Without this the mode would stay
+  /// `inBreak` while `tick` returns early, so no completion event would ever
+  /// fire and the break overlay would never be told to stand down.
+  void _abandonBreak() {
+    if (_mode != _Mode.inBreak) return;
+    _emit(BreakEscaped(_clock.now(), _activeKind));
+    _finishCycle(_activeKind, _clock.elapsed());
+  }
+
   bool _updateWorkHoursPause() {
     final within = _config.isWithinWorkHours(_clock.now());
     if (!within && !_pausedByHours) {
+      _abandonBreak();
       _pausedByHours = true;
       _emit(EnginePausedByWorkHours(_clock.now()));
       _publishPhase();
@@ -333,6 +411,10 @@ class BreakEngine {
       _resetDue(BreakKind.micro, from: now);
       _resetDue(BreakKind.long, from: now);
       _mode = _Mode.monitoring;
+      // Time spent paused is not rest to be credited.
+      _awayFloor = now;
+      _awayBegan = null;
+      _awayWasLocked = false;
       _emit(EngineResumed(_clock.now()));
       _publishPhase();
     }
@@ -366,7 +448,14 @@ class BreakEngine {
     _mode = _Mode.monitoring;
     _snoozesLeft = _config.snoozeBudget;
     _strictNow = false;
+    // Rest up to this point is settled; nothing before it may be credited
+    // again.
+    _awayFloor = now;
+    _awayBegan = null;
+    _awayWasLocked = false;
   }
+
+  static Duration _laterOf(Duration a, Duration b) => a > b ? a : b;
 
   /// If both breaks fall due within this window, the long one absorbs the
   /// micro one (nobody wants an eye break two minutes before a long break).

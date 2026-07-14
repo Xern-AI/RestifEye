@@ -1,4 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+<!-- viewBox is cropped to the artwork (8..120), not the 0..128 canvas: the
+     original left a 6.25% transparent inset baked in, so the mark rendered
+     smaller than its box and sat visually off-centre next to the wordmark.
+     Icon padding belongs in the desktop icon (assets/linux/), not here. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 8 112 112">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#00897B"/>

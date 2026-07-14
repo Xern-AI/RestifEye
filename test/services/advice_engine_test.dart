@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 DayRollup day(
   int dayOfMonth, {
   int screenMinutes = 300,
+  int idleMinutes = 60,
+  int awayMinutes = 30,
   int stretchMinutes = 45,
   int completed = 8,
   int credited = 2,
@@ -13,7 +15,11 @@ DayRollup day(
 }) => (
   day: DateTime(2026, 6, dayOfMonth),
   screen: Duration(minutes: screenMinutes),
+  idle: Duration(minutes: idleMinutes),
+  away: Duration(minutes: awayMinutes),
   longestStretch: Duration(minutes: stretchMinutes),
+  firstActivityMinute: 9 * 60,
+  lastActivityMinute: 18 * 60,
   completed: completed,
   credited: credited,
   escaped: escaped,

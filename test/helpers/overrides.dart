@@ -4,6 +4,7 @@ import 'package:breaktime/core/clock.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:breaktime/core/engine/engine.dart';
+import 'package:breaktime/core/engine/snapshot.dart';
 import 'package:breaktime/core/models/activity.dart';
 import 'package:breaktime/core/models/break_config.dart';
 import 'package:breaktime/data/activity_repository.dart';
@@ -12,7 +13,9 @@ import 'package:breaktime/data/database.dart';
 import 'package:breaktime/data/settings_repository.dart';
 import 'package:breaktime/platform/fake/fake_overlay.dart';
 import 'package:breaktime/platform/fake/fake_signals.dart';
+import 'package:breaktime/platform/interfaces/sound_player.dart';
 import 'package:breaktime/services/activity_recorder.dart';
+import 'package:breaktime/services/app_lifecycle.dart';
 import 'package:breaktime/services/context_sampler.dart';
 import 'package:breaktime/services/engine_service.dart';
 import 'package:breaktime/services/exercise_picker.dart';
@@ -22,14 +25,20 @@ import 'package:flutter_test/flutter_test.dart';
 /// A full app harness on fakes: real engine + in-memory DB, manual clock,
 /// no D-Bus, no window manager. Drive time with [advance].
 class TestHarness {
-  TestHarness({BreakConfig config = const BreakConfig()})
-    : clock = ManualClock(),
-      db = AppDatabase.inMemory(),
-      overlay = FakeOverlayController(),
-      idle = FakeIdleMonitor(),
-      session = FakeSessionSignals(),
-      context = FakeContextSignals() {
-    engine = BreakEngine(clock: clock, config: config);
+  TestHarness({
+    BreakConfig config = const BreakConfig(),
+    EngineSnapshot? restoreFrom,
+  }) : clock = ManualClock(),
+       db = AppDatabase.inMemory(),
+       overlay = FakeOverlayController(),
+       idle = FakeIdleMonitor(),
+       session = FakeSessionSignals(),
+       context = FakeContextSignals() {
+    engine = BreakEngine(
+      clock: clock,
+      config: config,
+      restoreFrom: restoreFrom,
+    );
     service = EngineService(
       engine: engine,
       clock: clock,
@@ -39,6 +48,12 @@ class TestHarness {
       breakLog: BreakLogRepository(db),
       settings: SettingsRepository(db),
       recorder: ActivityRecorder(ActivityRepository(db).insertSlice),
+    );
+    lifecycle = AppLifecycle(
+      overlay: overlay,
+      service: service,
+      tray: tray,
+      exitProcess: (code) => exitCode = code, // never kill the test runner
     );
     // Note: service is NOT started — tests tick the engine directly for
     // full determinism.
@@ -50,8 +65,14 @@ class TestHarness {
   final FakeIdleMonitor idle;
   final FakeSessionSignals session;
   final FakeContextSignals context;
+  final FakeTrayIndicator tray = FakeTrayIndicator();
+  final SilentSoundPlayer sounds = SilentSoundPlayer();
   late final BreakEngine engine;
   late final EngineService service;
+  late final AppLifecycle lifecycle;
+
+  /// Set when the app would have exited; null while it is still running.
+  int? exitCode;
 
   /// Advances the engine in 1 s ticks.
   void advance(Duration duration, [TickInput input = const TickInput()]) {
@@ -78,6 +99,8 @@ class TestHarness {
           ExercisePicker(random: Random(7)),
         ),
         autostartProvider.overrideWithValue(FakeAutostart()),
+        appLifecycleProvider.overrideWithValue(lifecycle),
+        soundPlayerProvider.overrideWithValue(sounds),
         onboardingDoneProvider.overrideWith((ref) => Future.value(true)),
       ],
       child: child,

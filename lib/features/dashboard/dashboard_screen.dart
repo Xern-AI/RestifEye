@@ -22,6 +22,8 @@ class DashboardScreen extends ConsumerWidget {
             Text('Today', style: textTheme.headlineMedium),
             const SizedBox(height: AppTokens.spaceLg),
             const _NextBreakCard(),
+            const SizedBox(height: AppTokens.spaceSm),
+            const _PauseControl(),
             const SizedBox(height: AppTokens.spaceMd),
             const _TodayStatsRow(),
           ],
@@ -130,51 +132,177 @@ class _NextBreakCard extends ConsumerWidget {
   }
 }
 
+/// Pause breaks for a bounded stretch — a meeting, a demo, deep work.
+///
+/// Timed by default and capped at three hours. An open-ended pause is offered
+/// but not encouraged: the failure mode of a break reminder is being silenced
+/// "just for now" and never switched back on, and the user never finds out.
+class _PauseControl extends ConsumerWidget {
+  const _PauseControl();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pause = ref.watch(pausedProvider);
+    final notifier = ref.read(pausedProvider.notifier);
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    if (!pause.paused) {
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: MenuAnchor(
+          menuChildren: [
+            for (final option in PauseDuration.values)
+              MenuItemButton(
+                onPressed: () => notifier.pause(option),
+                child: Text(option.label),
+              ),
+          ],
+          builder: (context, controller, _) => TextButton.icon(
+            onPressed: () =>
+                controller.isOpen ? controller.close() : controller.open(),
+            icon: const Icon(Icons.pause_circle_outline),
+            label: const Text('Pause breaks'),
+          ),
+        ),
+      );
+    }
+
+    // Re-reading the live phase keeps the countdown ticking with the engine.
+    final phase = ref.watch(enginePhaseProvider).value;
+    final until = switch (phase) {
+      Paused(:final until) => until,
+      _ => pause.until,
+    };
+    final remaining = until?.difference(DateTime.now());
+
+    return Card(
+      color: scheme.tertiaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(AppTokens.spaceMd),
+        child: Row(
+          children: [
+            Icon(Icons.pause_circle, color: scheme.onTertiaryContainer),
+            const SizedBox(width: AppTokens.spaceMd),
+            Expanded(
+              child: Text(
+                remaining == null || remaining.isNegative
+                    ? 'Paused until you resume'
+                    : 'Paused · resumes in ${formatCountdown(remaining)}',
+                style: textTheme.bodyLarge?.copyWith(
+                  color: scheme.onTertiaryContainer,
+                ),
+              ),
+            ),
+            FilledButton.tonal(
+              onPressed: notifier.resume,
+              child: const Text('Resume'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Today's numbers.
+///
+/// Idle and away time were already being recorded every second and thrown
+/// away at the aggregation step; they answer the question screen time alone
+/// cannot — how much of the day was actually spent at this machine.
+///
+/// Wraps rather than scrolls sideways, so nothing is hidden at narrow widths.
 class _TodayStatsRow extends ConsumerWidget {
   const _TodayStatsRow();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final slices = ref.watch(todaySliceStatsProvider).value;
+    final stats = ref.watch(todaySliceStatsProvider).value;
     final counts = ref.watch(todayBreakCountsProvider).value;
 
-    final screenTime = slices == null
-        ? '—'
-        : formatHoursMinutes(slices.screenTime);
-    final stretch = slices == null
-        ? '—'
-        : formatHoursMinutes(slices.longestStretch);
-    final breaks = counts == null
-        ? '—'
-        : '${counts.completed + counts.credited}';
+    String dur(Duration? d) => d == null ? '—' : formatHoursMinutes(d);
 
-    return Row(
-      children: [
-        Expanded(
-          child: _StatCard(label: 'Screen time', value: screenTime),
-        ),
-        const SizedBox(width: AppTokens.spaceMd),
-        Expanded(
-          child: _StatCard(label: 'Breaks taken', value: breaks),
-        ),
-        const SizedBox(width: AppTokens.spaceMd),
-        Expanded(
-          child: _StatCard(label: 'Longest focus', value: stretch),
-        ),
-      ],
+    final span = switch ((stats?.firstActivity, stats?.lastActivity)) {
+      (final DateTime first, final DateTime last) =>
+        '${formatMinuteOfDay(first.hour * 60 + first.minute)}'
+            ' – ${formatMinuteOfDay(last.hour * 60 + last.minute)}',
+      _ => '—',
+    };
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Three across when there is room, two when there is not.
+        final columns = constraints.maxWidth >= 720 ? 3 : 2;
+        final width =
+            (constraints.maxWidth - AppTokens.spaceMd * (columns - 1)) /
+            columns;
+
+        return Wrap(
+          spacing: AppTokens.spaceMd,
+          runSpacing: AppTokens.spaceMd,
+          children: [
+            for (final card in [
+              (
+                label: 'Active',
+                value: dur(stats?.screenTime),
+                hint: 'Typing and clicking',
+              ),
+              (
+                label: 'At computer',
+                value: dur(stats?.atComputer),
+                hint: stats == null
+                    ? null
+                    : '${formatPercent(stats.activeRatio)} of it active',
+              ),
+              (
+                label: 'Idle',
+                value: dur(stats?.idleTime),
+                hint: 'Here, but hands off',
+              ),
+              (
+                label: 'Away',
+                value: dur(stats?.awayTime),
+                hint: 'Locked or suspended',
+              ),
+              (
+                label: 'Longest focus',
+                value: dur(stats?.longestStretch),
+                hint: 'Unbroken stretch',
+              ),
+              (
+                label: 'Breaks taken',
+                value: counts == null
+                    ? '—'
+                    : '${counts.completed + counts.credited}',
+                hint: span == '—' ? null : 'Day ran $span',
+              ),
+            ])
+              SizedBox(
+                width: width,
+                child: _StatCard(
+                  label: card.label,
+                  value: card.value,
+                  hint: card.hint,
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
 
 class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.value});
+  const _StatCard({required this.label, required this.value, this.hint});
 
   final String label;
   final String value;
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppTokens.spaceMd),
@@ -184,6 +312,17 @@ class _StatCard extends StatelessWidget {
             Text(label, style: textTheme.labelMedium),
             const SizedBox(height: AppTokens.spaceSm),
             Text(value, style: textTheme.headlineSmall),
+            if (hint != null) ...[
+              const SizedBox(height: AppTokens.spaceXs),
+              Text(
+                hint!,
+                style: textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ],
         ),
       ),

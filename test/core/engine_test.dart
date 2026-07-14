@@ -381,6 +381,175 @@ void main() {
       final phase = engine2.phase as Monitoring;
       expect(phase.nextBreakIn, greaterThan(const Duration(minutes: 18)));
     });
+
+    // Regression: snooze/skip budgets are per-cycle and not persisted, so
+    // they must be seeded on the restore path too. Leaving _snoozesLeft at 0
+    // made the first break after *every* login strict — no Snooze action on
+    // its notification, and a forced full-screen takeover.
+    test('a restored engine starts with a full snooze budget', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 15));
+      final snap = rig.engine.snapshot();
+
+      final clock2 = ManualClock(
+        startAt: rig.clock.now().add(const Duration(minutes: 1)),
+      );
+      final engine2 = BreakEngine(
+        clock: clock2,
+        config: const BreakConfig(),
+        restoreFrom: snap,
+      );
+
+      expect(engine2.canSnooze, isTrue);
+      expect(engine2.canSkip, isTrue);
+    });
+
+    test('the first break after a restore is not strict', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 15));
+      final snap = rig.engine.snapshot();
+
+      final clock2 = ManualClock(
+        startAt: rig.clock.now().add(const Duration(minutes: 1)),
+      );
+      final engine2 = BreakEngine(
+        clock: clock2,
+        config: const BreakConfig(),
+        restoreFrom: snap,
+      );
+      // 20 - 15 - 1 = 4 minutes to the break.
+      for (var i = 0; i < 4 * 60 + 1; i++) {
+        clock2.advance(const Duration(seconds: 1));
+        engine2.tick(const TickInput());
+      }
+
+      final phase = engine2.phase as InBreak;
+      expect(phase.strict, isFalse);
+      expect(phase.snoozesLeft, const BreakConfig().snoozeBudget);
+    });
+  });
+
+  group('away during a break', () {
+    // THE regression test. A movement break is *meant* to get the user away
+    // from the keyboard. Away-tracking used to run during breaks, so idling
+    // past idleFireThreshold credited an away span from inside the break:
+    // _finishCycle ran, the inBreak case never did, BreakCompleted never
+    // fired — and nothing ever told the window to leave full-screen. The
+    // user was left in an undecorated, always-on-top window that would not
+    // close.
+    test('a long break the user sits out still completes exactly once', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 49, seconds: 40));
+      expect(rig.engine.phase, isA<Warning>());
+      // Micro breaks legitimately fired during the run-up; only the long
+      // break is under test.
+      rig.events.clear();
+      rig.engine.startNow();
+      expect(rig.engine.phase, isA<InBreak>());
+
+      // 5-minute long break, spent away from the keyboard as intended.
+      rig.runIdle(const Duration(minutes: 5, seconds: 30));
+
+      expect(rig.eventsOf<BreakCompleted>(), hasLength(1));
+      expect(
+        rig.eventsOf<BreakCredited>(),
+        isEmpty,
+        reason: 'the break IS the rest — it must not also be credited',
+      );
+      expect(rig.engine.phase, isA<Monitoring>());
+    });
+
+    test('going idle mid-break does not end the cycle early', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 49, seconds: 40));
+      rig.events.clear();
+      rig.engine.startNow();
+
+      // Idle well past idleFireThreshold (2 min) but short of the break end.
+      rig.runIdle(const Duration(minutes: 3));
+
+      expect(
+        rig.engine.phase,
+        isA<InBreak>(),
+        reason: 'the break must still be running',
+      );
+      expect(rig.eventsOf<BreakCompleted>(), isEmpty);
+      expect(rig.eventsOf<BreakCredited>(), isEmpty);
+    });
+
+    // The idle clock keeps counting through a break the user sat out, so an
+    // unclamped backdate measured the break itself as a fresh away span and
+    // handed out a second break's credit the moment they typed again.
+    test('a break the user sat out is not also credited as an away span', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 49, seconds: 40));
+      rig.events.clear();
+      rig.engine.startNow();
+
+      // Sit out the whole 5-minute break, then return to the keyboard.
+      rig.runIdle(const Duration(minutes: 5, seconds: 20));
+      rig.run(const Duration(seconds: 5)); // idle back to zero
+
+      expect(rig.eventsOf<BreakCompleted>(), hasLength(1));
+      expect(
+        rig.eventsOf<BreakCredited>(),
+        isEmpty,
+        reason:
+            'the break was already counted — crediting it again would '
+            'push the next long break out by a whole interval',
+      );
+    });
+
+    test('a timed pause resumes on its own', () {
+      final rig = Rig(startAt: monday9am);
+      rig.engine.setPausedByUser(
+        true,
+        until: monday9am.add(const Duration(minutes: 30)),
+      );
+      expect(rig.engine.phase, isA<Paused>());
+
+      rig.run(const Duration(minutes: 29));
+      expect(
+        rig.engine.phase,
+        isA<Paused>(),
+        reason: 'still inside the pause window',
+      );
+
+      rig.run(const Duration(minutes: 2));
+      expect(
+        rig.engine.phase,
+        isA<Monitoring>(),
+        reason: 'the whole point of a timed pause is that it ends by itself',
+      );
+      expect(rig.eventsOf<EngineResumed>(), hasLength(1));
+    });
+
+    test('an open-ended pause never resumes by itself', () {
+      final rig = Rig(startAt: monday9am);
+      rig.engine.setPausedByUser(true);
+      rig.run(const Duration(hours: 8));
+      expect(rig.engine.phase, isA<Paused>());
+      expect((rig.engine.phase as Paused).until, isNull);
+    });
+
+    test('the pause deadline is exposed for the countdown', () {
+      final rig = Rig(startAt: monday9am);
+      final until = monday9am.add(const Duration(hours: 3));
+      rig.engine.setPausedByUser(true, until: until);
+      expect((rig.engine.phase as Paused).until, until);
+    });
+
+    test('pausing during a break ends it so the window can be released', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 19, seconds: 40));
+      rig.engine.startNow();
+      expect(rig.engine.phase, isA<InBreak>());
+
+      rig.engine.setPausedByUser(true);
+
+      expect(rig.eventsOf<BreakEscaped>(), hasLength(1));
+      expect(rig.engine.phase, isA<Paused>());
+    });
   });
 
   group('user controls', () {

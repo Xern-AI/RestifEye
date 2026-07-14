@@ -68,16 +68,24 @@ void main() {
       await cleanupHarness(tester, harness);
     });
 
-    testWidgets('renders today stats from the database', (tester) async {
+    testWidgets('renders today stats from the database, including the idle '
+        'and away time that used to be discarded', (tester) async {
       final day = DateTime.now();
       final activity = ActivityRepository(harness.db);
+      DateTime at(int hour, [int minute = 0]) =>
+          DateTime(day.year, day.month, day.day, hour, minute);
+
+      // 1h20m hands-on, 40m at the desk but idle, 30m locked away.
       await activity.insertSlice(
-        ActivitySlice(
-          start: DateTime(day.year, day.month, day.day, 9),
-          end: DateTime(day.year, day.month, day.day, 10, 20),
-          kind: SliceKind.active,
-        ),
+        ActivitySlice(start: at(9), end: at(10, 20), kind: SliceKind.active),
       );
+      await activity.insertSlice(
+        ActivitySlice(start: at(10, 20), end: at(11), kind: SliceKind.idle),
+      );
+      await activity.insertSlice(
+        ActivitySlice(start: at(11), end: at(11, 30), kind: SliceKind.locked),
+      );
+
       final breakLog = BreakLogRepository(harness.db);
       await breakLog.record(BreakCompleted(day, BreakKind.micro));
       await breakLog.record(
@@ -92,8 +100,15 @@ void main() {
       await pumpApp(tester, const Size(1280, 800));
       await tester.pump(); // stream deliveries
 
-      expect(find.text('1h 20m'), findsNWidgets(2)); // screen time + stretch
+      expect(find.text('Active'), findsOneWidget);
+      expect(find.text('2h 0m'), findsOneWidget); // at computer: 1h20 + 40m
+      expect(find.text('40m'), findsOneWidget); // idle
+      expect(find.text('30m'), findsOneWidget); // away
+      // Active share of time at the computer: 80 min of 120.
+      expect(find.textContaining('67%'), findsOneWidget);
       expect(find.text('2'), findsOneWidget); // breaks taken
+      // Active time and longest unbroken stretch are the same single slice.
+      expect(find.text('1h 20m'), findsNWidgets(2));
 
       await cleanupHarness(tester, harness);
     });
