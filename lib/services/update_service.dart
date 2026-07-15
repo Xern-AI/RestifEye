@@ -42,8 +42,8 @@ class UpdateService {
       return null;
     }
     await _notifier.showInfo(
-      title: 'BreakTime $latest is available',
-      body: 'You have $appVersion. Get the update from the BreakTime site.',
+      title: 'RestifEye $latest is available',
+      body: 'You have $appVersion. Get the update from the RestifEye site.',
     );
     return latest;
   }

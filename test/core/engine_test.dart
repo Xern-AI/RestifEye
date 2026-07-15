@@ -1,9 +1,9 @@
-import 'package:breaktime/core/clock.dart';
-import 'package:breaktime/core/engine/engine.dart';
-import 'package:breaktime/core/engine/events.dart';
-import 'package:breaktime/core/engine/phase.dart';
-import 'package:breaktime/core/models/break_config.dart';
-import 'package:breaktime/core/models/break_kind.dart';
+import 'package:restifeye/core/clock.dart';
+import 'package:restifeye/core/engine/engine.dart';
+import 'package:restifeye/core/engine/events.dart';
+import 'package:restifeye/core/engine/phase.dart';
+import 'package:restifeye/core/models/break_config.dart';
+import 'package:restifeye/core/models/break_kind.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Test rig: drives the engine one second at a time, capturing events.

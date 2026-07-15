@@ -22,7 +22,7 @@ class GithubUpdateChecker implements UpdateChecker {
         HttpHeaders.acceptHeader,
         'application/vnd.github+json',
       );
-      request.headers.set(HttpHeaders.userAgentHeader, 'BreakTime/$appVersion');
+      request.headers.set(HttpHeaders.userAgentHeader, 'RestifEye/$appVersion');
       final response = await request.close();
       if (response.statusCode != 200) return null;
       final body = await response.transform(utf8.decoder).join();

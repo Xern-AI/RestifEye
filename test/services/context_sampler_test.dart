@@ -1,5 +1,5 @@
-import 'package:breaktime/platform/fake/fake_signals.dart';
-import 'package:breaktime/services/context_sampler.dart';
+import 'package:restifeye/platform/fake/fake_signals.dart';
+import 'package:restifeye/services/context_sampler.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -46,8 +46,8 @@ jobs:
           mkdir -p build/rpm/SOURCES staging/bundle staging/assets
           cp -r build/linux/x64/release/bundle/* staging/bundle/
           cp assets/linux/* staging/assets/
-          tar -C staging -czf build/rpm/SOURCES/breaktime-bundle.tar.gz .
-          rpmbuild -bb packaging/rpm/breaktime.spec \
+          tar -C staging -czf build/rpm/SOURCES/RestifEye-bundle.tar.gz .
+          rpmbuild -bb packaging/rpm/RestifEye.spec \
             --define "_topdir $PWD/build/rpm" \
             --define "pkg_version $VERSION"
 
@@ -56,7 +56,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
-            --title "BreakTime $GITHUB_REF_NAME" \
+            --title "RestifEye $GITHUB_REF_NAME" \
             --generate-notes \
-            build/appimage/BreakTime-*-x86_64.AppImage \
-            build/rpm/RPMS/x86_64/breaktime-*.rpm
+            build/appimage/RestifEye-*-x86_64.AppImage \
+            build/rpm/RPMS/x86_64/RestifEye-*.rpm

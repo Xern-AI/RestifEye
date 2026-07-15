@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:breaktime/platform/linux/xdg_autostart.dart';
+import 'package:restifeye/platform/linux/xdg_autostart.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -8,7 +8,7 @@ void main() {
   late XdgAutostart autostart;
 
   setUp(() {
-    tmp = Directory.systemTemp.createTempSync('breaktime_autostart_');
+    tmp = Directory.systemTemp.createTempSync('RestifEye_autostart_');
     autostart = XdgAutostart(configHome: tmp.path);
   });
 
@@ -20,11 +20,11 @@ void main() {
     await autostart.setEnabled(true);
     expect(await autostart.isEnabled(), isTrue);
     final content = File(
-      '${tmp.path}/autostart/com.xernai.breaktime.desktop',
+      '${tmp.path}/autostart/com.xernai.restifeye.desktop',
     ).readAsStringSync();
     expect(content, contains('[Desktop Entry]'));
     expect(content, contains('Exec='));
-    expect(content, contains('Name=BreakTime'));
+    expect(content, contains('Name=RestifEye'));
 
     await autostart.setEnabled(false);
     expect(await autostart.isEnabled(), isFalse);

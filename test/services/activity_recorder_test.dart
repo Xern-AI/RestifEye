@@ -1,5 +1,5 @@
-import 'package:breaktime/core/models/activity.dart';
-import 'package:breaktime/services/activity_recorder.dart';
+import 'package:restifeye/core/models/activity.dart';
+import 'package:restifeye/services/activity_recorder.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -24,15 +24,29 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   /// Production database at the XDG data location
-  /// (`~/.local/share/breaktime/breaktime.db`).
+  /// (`~/.local/share/RestifEye/RestifEye.db`).
   factory AppDatabase.open() {
     final dataHome =
         Platform.environment['XDG_DATA_HOME'] ??
         p.join(Platform.environment['HOME'] ?? '.', '.local', 'share');
-    final dir = Directory(p.join(dataHome, 'breaktime'))
-      ..createSync(recursive: true);
+    final dir = Directory(p.join(dataHome, 'RestifEye'));
+    // One-shot migration from the pre-rename install (the app shipped as
+    // BreakTime before v0.1.0 and kept its data in `breaktime/breaktime.db`).
+    final legacyDir = Directory(p.join(dataHome, 'breaktime'));
+    if (!dir.existsSync() && legacyDir.existsSync()) {
+      legacyDir.renameSync(dir.path);
+    }
+    dir.createSync(recursive: true);
+    if (!File(p.join(dir.path, 'RestifEye.db')).existsSync()) {
+      for (final ext in ['', '-wal', '-shm']) {
+        final legacyDb = File(p.join(dir.path, 'breaktime.db$ext'));
+        if (legacyDb.existsSync()) {
+          legacyDb.renameSync(p.join(dir.path, 'RestifEye.db$ext'));
+        }
+      }
+    }
     return AppDatabase(
-      NativeDatabase.createInBackground(File(p.join(dir.path, 'breaktime.db'))),
+      NativeDatabase.createInBackground(File(p.join(dir.path, 'RestifEye.db'))),
     );
   }
 

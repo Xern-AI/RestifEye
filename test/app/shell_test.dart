@@ -1,9 +1,9 @@
-import 'package:breaktime/app/app.dart';
-import 'package:breaktime/core/engine/events.dart';
-import 'package:breaktime/core/models/activity.dart';
-import 'package:breaktime/core/models/break_kind.dart';
-import 'package:breaktime/data/activity_repository.dart';
-import 'package:breaktime/data/break_log_repository.dart';
+import 'package:restifeye/app/app.dart';
+import 'package:restifeye/core/engine/events.dart';
+import 'package:restifeye/core/models/activity.dart';
+import 'package:restifeye/core/models/break_kind.dart';
+import 'package:restifeye/data/activity_repository.dart';
+import 'package:restifeye/data/break_log_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -18,7 +18,7 @@ void main() {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(harness.wrap(const BreakTimeApp()));
+    await tester.pumpWidget(harness.wrap(const RestifEyeApp()));
     await tester.pump();
   }
 

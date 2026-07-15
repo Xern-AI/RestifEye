@@ -32,7 +32,7 @@ List<Advice> evaluateAdvice(List<DayRollup> rollups) {
         ruleId: 'collecting',
         title: 'Still learning your rhythm',
         body:
-            'Advice appears after a few days of use. Keep BreakTime '
+            'Advice appears after a few days of use. Keep RestifEye '
             'running and check back soon.',
         positive: true,
       ),
@@ -137,7 +137,7 @@ List<Advice> evaluateAdvice(List<DayRollup> rollups) {
           title: '${worstName}s are your hardest day',
           body:
               'Break compliance drops to ${(worstAvg * 100).round()}% on '
-              '${worstName}s. Heavy meeting load? BreakTime already defers '
+              '${worstName}s. Heavy meeting load? RestifEye already defers '
               'during calls — but if the day is just packed, a gentler '
               'schedule beats skipped breaks.',
         ),

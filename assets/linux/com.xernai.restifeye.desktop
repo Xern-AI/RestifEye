@@ -1,11 +1,11 @@
 [Desktop Entry]
 Type=Application
-Name=BreakTime
+Name=RestifEye
 GenericName=Break Reminder
 Comment=Break reminders that respect your flow
-Exec=breaktime
-Icon=com.xernai.breaktime
+Exec=RestifEye
+Icon=com.xernai.restifeye
 Terminal=false
 Categories=Utility;Accessibility;
 Keywords=break;eyes;health;posture;screen time;wellbeing;
-StartupWMClass=breaktime
+StartupWMClass=RestifEye

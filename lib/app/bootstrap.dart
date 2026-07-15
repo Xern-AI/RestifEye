@@ -34,9 +34,9 @@ import '../services/rollup_service.dart';
 import '../services/update_service.dart';
 import 'brand.dart';
 
-/// Dev mode (`BREAKTIME_DEV=1 flutter run`): breaks every 1–3 minutes so
+/// Dev mode (`RESTIFEYE_DEV=1 flutter run`): breaks every 1–3 minutes so
 /// the full flow can be exercised without waiting real intervals.
-bool get isDevMode => Platform.environment['BREAKTIME_DEV'] == '1';
+bool get isDevMode => Platform.environment['RESTIFEYE_DEV'] == '1';
 
 /// Long interval must clear `micro + BreakEngine._mergeWindow` (2 min) or the
 /// long break absorbs every micro one and eye breaks can never be exercised.

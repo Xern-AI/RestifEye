@@ -1,12 +1,12 @@
-import 'package:breaktime/core/clock.dart';
-import 'package:breaktime/core/engine/events.dart';
-import 'package:breaktime/core/models/activity.dart';
-import 'package:breaktime/core/models/break_kind.dart';
-import 'package:breaktime/data/activity_repository.dart';
-import 'package:breaktime/data/break_log_repository.dart';
-import 'package:breaktime/data/database.dart';
-import 'package:breaktime/data/rollup_repository.dart';
-import 'package:breaktime/services/rollup_service.dart';
+import 'package:restifeye/core/clock.dart';
+import 'package:restifeye/core/engine/events.dart';
+import 'package:restifeye/core/models/activity.dart';
+import 'package:restifeye/core/models/break_kind.dart';
+import 'package:restifeye/data/activity_repository.dart';
+import 'package:restifeye/data/break_log_repository.dart';
+import 'package:restifeye/data/database.dart';
+import 'package:restifeye/data/rollup_repository.dart';
+import 'package:restifeye/services/rollup_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

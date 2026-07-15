@@ -1,8 +1,8 @@
 import 'dart:math';
 
-import 'package:breaktime/core/models/break_kind.dart';
-import 'package:breaktime/core/models/exercise.dart';
-import 'package:breaktime/services/exercise_picker.dart';
+import 'package:restifeye/core/models/break_kind.dart';
+import 'package:restifeye/core/models/exercise.dart';
+import 'package:restifeye/services/exercise_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

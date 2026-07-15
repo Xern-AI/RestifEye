@@ -1,5 +1,5 @@
-import 'package:breaktime/data/rollup_repository.dart';
-import 'package:breaktime/services/advice_engine.dart';
+import 'package:restifeye/data/rollup_repository.dart';
+import 'package:restifeye/services/advice_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 DayRollup day(

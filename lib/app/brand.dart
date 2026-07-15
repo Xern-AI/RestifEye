@@ -7,11 +7,11 @@
 /// `docs/knowledge_graph.md`.
 abstract final class Brand {
   /// Human-readable product name, shown to users.
-  static const appName = 'BreakTime';
+  static const appName = 'RestifEye';
 
   /// Reverse-DNS application id. Must match the `.desktop` file's basename,
   /// or the desktop will not attach our icon and name to notifications.
-  static const appId = 'com.xernai.breaktime';
+  static const appId = 'com.xernai.restifeye';
 
   /// Vendor, for the About box and copyright lines.
   static const vendor = 'Xernai';

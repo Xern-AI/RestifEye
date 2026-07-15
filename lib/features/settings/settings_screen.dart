@@ -162,7 +162,7 @@ class SettingsScreen extends ConsumerWidget {
               secondary: const Icon(Icons.system_update_alt_outlined),
               title: const Text('Check for updates weekly'),
               subtitle: const Text(
-                'The only network request BreakTime ever makes',
+                'The only network request RestifEye ever makes',
               ),
               value:
                   ref.watch(generalSettingsProvider).value?.updateCheck ?? true,
@@ -172,7 +172,7 @@ class SettingsScreen extends ConsumerWidget {
             const _SectionHeader('About'),
             const AboutListTile(
               icon: Icon(Icons.info_outlined),
-              applicationName: 'BreakTime',
+              applicationName: 'RestifEye',
               applicationLegalese: '© 2026 Xernai · GPL-3.0',
             ),
           ],
@@ -215,7 +215,7 @@ class _TrayTile extends ConsumerWidget {
         'Install',
       ),
       TrayState.unavailable => (
-        'This desktop has no status area BreakTime can use',
+        'This desktop has no status area RestifEye can use',
         null,
       ),
       null => ('Checking…', null),

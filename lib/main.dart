@@ -39,12 +39,12 @@ Future<void> main() async {
   runApp(
     UncontrolledProviderScope(
       container: container,
-      child: const BreakTimeApp(),
+      child: const RestifEyeApp(),
     ),
   );
 }
 
-/// Tray icon: the visible "BreakTime is running" signal. Failures must
+/// Tray icon: the visible "RestifEye is running" signal. Failures must
 /// never take the app down — the tray is a convenience, not a dependency.
 Future<void> _wireTray(
   BootResult boot,

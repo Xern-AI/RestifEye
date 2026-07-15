@@ -1,7 +1,7 @@
 # Pre-release QA checklist
 
 Run on: Fedora GNOME Wayland (Tier 1), Fedora KDE, any X11 session.
-Use dev mode for timing checks: `BREAKTIME_DEV=1 flutter run -d linux`.
+Use dev mode for timing checks: `RESTIFEYE_DEV=1 flutter run -d linux`.
 Dev mode: eye breaks every 1 min, movement breaks every 6 min.
 
 ## Round-2 regressions (verify these first)
@@ -17,7 +17,7 @@ Dev mode: eye breaks every 1 min, movement breaks every 6 min.
 - [ ] Pause during a break → the break ends and the window is released
 - [ ] Eye-break notification appears on **every** cycle (was silently swallowed
       after the first orphaned notification)
-- [ ] Only ever one BreakTime notification on screen at a time (no stacking)
+- [ ] Only ever one RestifEye notification on screen at a time (no stacking)
 
 ## Sounds
 - [ ] Warning, break start and break end each make a sound
@@ -36,7 +36,7 @@ Dev mode: eye breaks every 1 min, movement breaks every 6 min.
       the exact extension and offers Enable
 - [ ] Clicking Enable makes the icon appear top-right next to battery/wi-fi,
       with no terminal and no logout
-- [ ] Hovering the icon says "BreakTime"
+- [ ] Hovering the icon says "RestifEye"
 - [ ] With no tray available, closing the window still tells you how to get
       the app back
 
@@ -69,7 +69,7 @@ Dev mode: eye breaks every 1 min, movement breaks every 6 min.
 ## Tracking & analytics
 - [x] Dashboard countdown ticks; screen time grows during use
 - [x] Next day: analytics shows yesterday's rollup; advice updates
-- [ ] Data lives in ~/.local/share/breaktime/ and nowhere else
+- [ ] Data lives in ~/.local/share/RestifEye/ and nowhere else
 - [ ] Dashboard shows active / at-computer / idle / away, and they add up
 - [ ] Idle time grows when you stop typing but stay at the machine;
       away time grows when you lock the screen
@@ -94,6 +94,6 @@ Dev mode: eye breaks every 1 min, movement breaks every 6 min.
 
 ## Packaging
 - [ ] AppImage launches on a clean Fedora VM (no Flutter installed)
-- [ ] RPM installs; app appears in the grid with icon; `breaktime` on PATH
+- [ ] RPM installs; app appears in the grid with icon; `RestifEye` on PATH
 - [ ] `appstreamcli validate` passes on the metainfo
 - [ ] No network traffic except the update check (verify with a monitor)

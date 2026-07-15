@@ -1,4 +1,4 @@
-# Contributing to BreakTime
+# Contributing to RestifEye
 
 Thanks for your interest! Contributions are welcome under the rules below.
 

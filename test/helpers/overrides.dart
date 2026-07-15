@@ -1,25 +1,25 @@
 import 'dart:math';
 
-import 'package:breaktime/core/clock.dart';
+import 'package:restifeye/core/clock.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:breaktime/core/engine/engine.dart';
-import 'package:breaktime/core/engine/snapshot.dart';
-import 'package:breaktime/core/models/activity.dart';
-import 'package:breaktime/core/models/break_config.dart';
-import 'package:breaktime/data/activity_repository.dart';
-import 'package:breaktime/data/break_log_repository.dart';
-import 'package:breaktime/data/database.dart';
-import 'package:breaktime/data/settings_repository.dart';
-import 'package:breaktime/platform/fake/fake_overlay.dart';
-import 'package:breaktime/platform/fake/fake_signals.dart';
-import 'package:breaktime/platform/interfaces/sound_player.dart';
-import 'package:breaktime/services/activity_recorder.dart';
-import 'package:breaktime/services/app_lifecycle.dart';
-import 'package:breaktime/services/context_sampler.dart';
-import 'package:breaktime/services/engine_service.dart';
-import 'package:breaktime/services/exercise_picker.dart';
-import 'package:breaktime/services/providers.dart';
+import 'package:restifeye/core/engine/engine.dart';
+import 'package:restifeye/core/engine/snapshot.dart';
+import 'package:restifeye/core/models/activity.dart';
+import 'package:restifeye/core/models/break_config.dart';
+import 'package:restifeye/data/activity_repository.dart';
+import 'package:restifeye/data/break_log_repository.dart';
+import 'package:restifeye/data/database.dart';
+import 'package:restifeye/data/settings_repository.dart';
+import 'package:restifeye/platform/fake/fake_overlay.dart';
+import 'package:restifeye/platform/fake/fake_signals.dart';
+import 'package:restifeye/platform/interfaces/sound_player.dart';
+import 'package:restifeye/services/activity_recorder.dart';
+import 'package:restifeye/services/app_lifecycle.dart';
+import 'package:restifeye/services/context_sampler.dart';
+import 'package:restifeye/services/engine_service.dart';
+import 'package:restifeye/services/exercise_picker.dart';
+import 'package:restifeye/services/providers.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// A full app harness on fakes: real engine + in-memory DB, manual clock,

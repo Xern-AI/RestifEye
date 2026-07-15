@@ -22,7 +22,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       icon: Icons.spa_outlined,
       title: 'Breaks that respect your flow',
       body:
-          'BreakTime reminds you to rest your eyes and move — but never '
+          'RestifEye reminds you to rest your eyes and move — but never '
           'mid-meeting, and never without a 30-second heads-up.\n\n'
           'Step away on your own and it counts your break automatically.',
     ),
@@ -39,9 +39,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       icon: Icons.schedule_outlined,
       title: 'Only when you work',
       body:
-          'Set your work hours and days in Settings and BreakTime stays '
+          'Set your work hours and days in Settings and RestifEye stays '
           'silent the rest of the time.\n\n'
-          'BreakTime starts with your computer and lives in the tray, so '
+          'RestifEye starts with your computer and lives in the tray, so '
           'protecting your eyes never depends on remembering to launch it '
           '(you can turn autostart off in Settings).\n\n'
           'All data stays on this computer. No accounts, no cloud.',

@@ -19,7 +19,7 @@ class XdgAutostart implements Autostart {
 
   final Directory _dir;
 
-  File get _file => File(p.join(_dir.path, 'com.xernai.breaktime.desktop'));
+  File get _file => File(p.join(_dir.path, 'com.xernai.restifeye.desktop'));
 
   /// AppImages must relaunch via the image path, not the extracted binary.
   static String get _execPath =>
@@ -38,10 +38,10 @@ class XdgAutostart implements Autostart {
     await _file.writeAsString('''
 [Desktop Entry]
 Type=Application
-Name=BreakTime
+Name=RestifEye
 Comment=Break reminders that respect your flow
 Exec=$_execPath
-Icon=com.xernai.breaktime
+Icon=com.xernai.restifeye
 Terminal=false
 X-GNOME-Autostart-enabled=true
 ''');

@@ -1,4 +1,4 @@
-import 'package:breaktime/core/models/activity.dart';
+import 'package:restifeye/core/models/activity.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

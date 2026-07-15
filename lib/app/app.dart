@@ -13,13 +13,13 @@ import '../services/providers.dart';
 import 'shell.dart';
 import 'theme.dart';
 
-class BreakTimeApp extends StatelessWidget {
-  const BreakTimeApp({super.key});
+class RestifEyeApp extends StatelessWidget {
+  const RestifEyeApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'BreakTime',
+      title: 'RestifEye',
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.system,

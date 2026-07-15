@@ -14,7 +14,7 @@ class TrayPixmap {
   final List<int> argb32;
 }
 
-/// A persistent "BreakTime is running" indicator in the system tray /
+/// A persistent "RestifEye is running" indicator in the system tray /
 /// status area, with a minimal menu (open, pause, quit).
 abstract interface class TrayIndicator {
   /// Registers the indicator. Safe to call on desktops without a status

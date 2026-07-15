@@ -1,11 +1,11 @@
-import 'package:breaktime/app/version.dart';
-import 'package:breaktime/core/clock.dart';
-import 'package:breaktime/core/models/break_kind.dart';
-import 'package:breaktime/data/database.dart';
-import 'package:breaktime/data/settings_repository.dart';
-import 'package:breaktime/platform/interfaces/break_notifier.dart';
-import 'package:breaktime/platform/interfaces/update_checker.dart';
-import 'package:breaktime/services/update_service.dart';
+import 'package:restifeye/app/version.dart';
+import 'package:restifeye/core/clock.dart';
+import 'package:restifeye/core/models/break_kind.dart';
+import 'package:restifeye/data/database.dart';
+import 'package:restifeye/data/settings_repository.dart';
+import 'package:restifeye/platform/interfaces/break_notifier.dart';
+import 'package:restifeye/platform/interfaces/update_checker.dart';
+import 'package:restifeye/services/update_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 class _StubChecker implements UpdateChecker {

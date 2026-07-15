@@ -1,7 +1,7 @@
-import 'package:breaktime/core/engine/phase.dart';
-import 'package:breaktime/core/models/break_kind.dart';
-import 'package:breaktime/platform/interfaces/overlay_controller.dart';
-import 'package:breaktime/services/overlay_reconciler.dart';
+import 'package:restifeye/core/engine/phase.dart';
+import 'package:restifeye/core/models/break_kind.dart';
+import 'package:restifeye/platform/interfaces/overlay_controller.dart';
+import 'package:restifeye/services/overlay_reconciler.dart';
 // flutter_test also exports an unrelated EnginePhase (the Flutter engine's).
 import 'package:flutter_test/flutter_test.dart' hide EnginePhase;
 

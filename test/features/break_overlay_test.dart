@@ -1,9 +1,9 @@
-import 'package:breaktime/app/app.dart';
-import 'package:breaktime/core/engine/engine.dart';
-import 'package:breaktime/core/models/break_config.dart';
-import 'package:breaktime/features/breaks/break_overlay.dart';
-import 'package:breaktime/features/breaks/hold_to_skip.dart';
-import 'package:breaktime/platform/interfaces/overlay_controller.dart';
+import 'package:restifeye/app/app.dart';
+import 'package:restifeye/core/engine/engine.dart';
+import 'package:restifeye/core/models/break_config.dart';
+import 'package:restifeye/features/breaks/break_overlay.dart';
+import 'package:restifeye/features/breaks/hold_to_skip.dart';
+import 'package:restifeye/platform/interfaces/overlay_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -18,7 +18,7 @@ void main() {
     tester.view.physicalSize = const Size(1280, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
-    await tester.pumpWidget(harness.wrap(const BreakTimeApp()));
+    await tester.pumpWidget(harness.wrap(const RestifEyeApp()));
     await tester.pump();
     harness.advance(lead);
     await tester.pump();

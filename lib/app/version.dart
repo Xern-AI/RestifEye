@@ -3,7 +3,7 @@
 const appVersion = '0.1.0';
 
 /// GitHub repo used by the update check (and the site links).
-const githubRepoSlug = 'Xern-AI/breaktime';
+const githubRepoSlug = 'Xern-AI/restifeye';
 
 /// True when [candidate] is a strictly newer semver than [current].
 /// Tolerates a leading 'v' and missing segments; returns false on garbage.
