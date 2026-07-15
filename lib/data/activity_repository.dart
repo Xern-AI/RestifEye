@@ -20,16 +20,24 @@ class ActivityRepository {
       );
 
   /// Screen-time stats for the day containing [day] (local time).
+  ///
+  /// Slices *overlapping* the day are selected and clipped to it. Matching on
+  /// the start alone credited a midnight- or suspend-spanning slice entirely
+  /// to the day it began, so the following day silently lost those hours.
   Stream<DayStats> watchSliceStats(DateTime day) {
     final from = DateTime(day.year, day.month, day.day);
     final to = from.add(const Duration(days: 1));
     final query = _db.select(_db.activitySlices)
-      ..where((t) => t.startAt.isBiggerOrEqualValue(from))
+      ..where((t) => t.endAt.isBiggerThanValue(from))
       ..where((t) => t.startAt.isSmallerThanValue(to));
     return query.watch().map(
       (rows) => computeSliceStats(
         rows.map(
-          (r) => ActivitySlice(start: r.startAt, end: r.endAt, kind: r.kind),
+          (r) => ActivitySlice(
+            start: r.startAt.isBefore(from) ? from : r.startAt,
+            end: r.endAt.isAfter(to) ? to : r.endAt,
+            kind: r.kind,
+          ),
         ),
       ),
     );
