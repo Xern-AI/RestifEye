@@ -8,4 +8,4 @@ Icon=com.xernai.restifeye
 Terminal=false
 Categories=Utility;Accessibility;
 Keywords=break;eyes;health;posture;screen time;wellbeing;
-StartupWMClass=RestifEye
+StartupWMClass=com.xernai.restifeye
