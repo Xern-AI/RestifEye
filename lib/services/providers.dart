@@ -91,15 +91,41 @@ final enginePhaseProvider = StreamProvider<EnginePhase>(
   (ref) => ref.watch(engineServiceProvider).engine.phases,
 );
 
+/// Wall-clock source for date-sensitive providers; overridden in tests.
+final wallClockProvider = Provider<DateTime Function()>((ref) => DateTime.now);
+
+/// The current local calendar day (midnight-truncated).
+///
+/// Capturing `DateTime.now()` inside a long-lived provider pins it to the
+/// day the provider was first read: an app left running froze the dashboard
+/// on its launch day forever. This provider invalidates itself when the
+/// local date changes, so everything derived from "today" rolls over at
+/// midnight. A short periodic re-check is used rather than one timer aimed
+/// at midnight because monotonic timers stop during suspend and would fire
+/// hours late after resume.
+final todayProvider = Provider<DateTime>((ref) {
+  final now = ref.watch(wallClockProvider)();
+  final today = DateTime(now.year, now.month, now.day);
+  final timer = Timer.periodic(const Duration(seconds: 30), (_) {
+    final n = ref.read(wallClockProvider)();
+    if (DateTime(n.year, n.month, n.day) != today) ref.invalidateSelf();
+  });
+  ref.onDispose(timer.cancel);
+  return today;
+});
+
 /// Today's screen time / longest stretch, reactive to new slices.
 final todaySliceStatsProvider = StreamProvider<DayStats>(
-  (ref) =>
-      ref.watch(activityRepositoryProvider).watchSliceStats(DateTime.now()),
+  (ref) => ref
+      .watch(activityRepositoryProvider)
+      .watchSliceStats(ref.watch(todayProvider)),
 );
 
 /// Today's break outcome counts, reactive to new break events.
 final todayBreakCountsProvider = StreamProvider<BreakCounts>(
-  (ref) => ref.watch(breakLogRepositoryProvider).watchDayCounts(DateTime.now()),
+  (ref) => ref
+      .watch(breakLogRepositoryProvider)
+      .watchDayCounts(ref.watch(todayProvider)),
 );
 
 final autostartProvider = Provider<Autostart>(
@@ -129,8 +155,7 @@ class AnalyticsRangeNotifier extends Notifier<AnalyticsRange> {
 /// today is shown live on the dashboard instead).
 final rangeRollupsProvider = StreamProvider<List<DayRollup>>((ref) {
   final range = ref.watch(analyticsRangeProvider);
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
+  final today = ref.watch(todayProvider);
   final from = switch (range) {
     AnalyticsRange.week => today.subtract(const Duration(days: 7)),
     AnalyticsRange.month => today.subtract(const Duration(days: 30)),
@@ -141,8 +166,7 @@ final rangeRollupsProvider = StreamProvider<List<DayRollup>>((ref) {
 
 /// Current advice from the last four weeks of rollups.
 final adviceProvider = StreamProvider<List<Advice>>((ref) {
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
+  final today = ref.watch(todayProvider);
   return ref
       .watch(rollupRepositoryProvider)
       .watchRange(today.subtract(const Duration(days: 28)), today)

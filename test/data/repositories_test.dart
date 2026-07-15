@@ -102,6 +102,66 @@ void main() {
       expect(stats.longestStretch, const Duration(minutes: 90));
     });
 
+    test('splits a midnight-spanning slice between both days', () async {
+      final repo = ActivityRepository(db);
+      final day = DateTime(2026, 7, 14);
+      final nextDay = DateTime(2026, 7, 15);
+
+      await repo.insertSlice(
+        ActivitySlice(
+          start: DateTime(2026, 7, 14, 22),
+          end: DateTime(2026, 7, 14, 23),
+          kind: SliceKind.active,
+        ),
+      );
+      // Locked through midnight: an hour and a half split 1h / 30m.
+      await repo.insertSlice(
+        ActivitySlice(
+          start: DateTime(2026, 7, 14, 23),
+          end: DateTime(2026, 7, 15, 0, 30),
+          kind: SliceKind.locked,
+        ),
+      );
+      await repo.insertSlice(
+        ActivitySlice(
+          start: DateTime(2026, 7, 15, 0, 30),
+          end: DateTime(2026, 7, 15, 1),
+          kind: SliceKind.active,
+        ),
+      );
+
+      final first = await repo.watchSliceStats(day).first;
+      expect(first.screenTime, const Duration(hours: 1));
+      expect(first.awayTime, const Duration(hours: 1));
+
+      final second = await repo.watchSliceStats(nextDay).first;
+      expect(second.awayTime, const Duration(minutes: 30));
+      expect(second.screenTime, const Duration(minutes: 30));
+      expect(second.firstActivity, DateTime(2026, 7, 15, 0, 30));
+    });
+
+    test(
+      'clamps the workday span of an active slice crossing midnight',
+      () async {
+        final repo = ActivityRepository(db);
+        await repo.insertSlice(
+          ActivitySlice(
+            start: DateTime(2026, 7, 16, 23, 30),
+            end: DateTime(2026, 7, 17, 0, 15),
+            kind: SliceKind.active,
+          ),
+        );
+
+        final before = await repo.watchSliceStats(DateTime(2026, 7, 16)).first;
+        expect(before.screenTime, const Duration(minutes: 30));
+        expect(before.lastActivity, DateTime(2026, 7, 17));
+
+        final after = await repo.watchSliceStats(DateTime(2026, 7, 17)).first;
+        expect(after.screenTime, const Duration(minutes: 15));
+        expect(after.firstActivity, DateTime(2026, 7, 17));
+      },
+    );
+
     test('pruneBefore removes only fully old slices', () async {
       final repo = ActivityRepository(db);
       final cutoff = DateTime(2026, 7, 10);
