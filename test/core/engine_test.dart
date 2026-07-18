@@ -168,6 +168,80 @@ void main() {
       expect((rig.engine.phase as InBreak).snoozesLeft, 3);
     });
 
+    // Regression: the budget used to be one global counter shared by two
+    // independently-scheduled cycles. Snoozing a long break pushes it past
+    // `_microDue + mergeWindow`, so the *micro* break (already due) fires
+    // next; completing that micro cycle refilled the shared counter, handing
+    // the still-pending long break a fresh budget on top of what it had
+    // already spent. Users reported snoozing a 3-budget long break 5 times.
+    test('a micro cycle does not refill a pending long break\'s budget', () {
+      // micro 20 / long 21 — the long lands inside the 2 min merge window,
+      // so it is the kind that comes due first and absorbs the micro.
+      final rig = Rig(
+        config: const BreakConfig(
+          microInterval: Duration(minutes: 20),
+          longInterval: Duration(minutes: 21),
+        ),
+      );
+      rig.run(const Duration(minutes: 21, seconds: 5));
+      final started = rig.engine.phase as InBreak;
+      expect(started.kind, BreakKind.long, reason: 'long absorbs the micro');
+
+      // Snooze #1 of 3 on the long break.
+      expect(rig.engine.snooze(), isTrue);
+
+      // The long is now at +2 min, past micro's merge window, so the overdue
+      // micro takes over and runs to completion.
+      rig.run(const Duration(seconds: 5));
+      expect((rig.engine.phase as InBreak).kind, BreakKind.micro);
+      rig.run(const Duration(seconds: 25)); // micro completes (20 s)
+
+      // Back to the long break. It must remember it already spent one snooze.
+      rig.run(const Duration(minutes: 2, seconds: 5));
+      final resumed = rig.engine.phase as InBreak;
+      expect(resumed.kind, BreakKind.long);
+      expect(
+        resumed.snoozesLeft,
+        2,
+        reason: 'the long break spent one snooze before the micro interrupted',
+      );
+
+      // Only two snoozes may remain — the third attempt must fail.
+      expect(rig.engine.snooze(), isTrue);
+      rig.run(const Duration(minutes: 2, seconds: 5));
+      expect(rig.engine.snooze(), isTrue);
+      rig.run(const Duration(minutes: 2, seconds: 5));
+      expect(
+        rig.engine.snooze(),
+        isFalse,
+        reason: 'budget of 3 is spent; a 4th snooze must be refused',
+      );
+      expect((rig.engine.phase as InBreak).strict, isTrue);
+    });
+
+    test('each break kind carries its own snooze budget', () {
+      final rig = Rig(
+        config: const BreakConfig(
+          microInterval: Duration(minutes: 20),
+          longInterval: Duration(minutes: 60),
+        ),
+      );
+      // Spend two snoozes on a micro break, then let it complete.
+      rig.run(const Duration(minutes: 20, seconds: 5));
+      expect(rig.engine.snooze(), isTrue);
+      rig.run(const Duration(minutes: 2, seconds: 5));
+      expect(rig.engine.snooze(), isTrue);
+      rig.run(const Duration(minutes: 2, seconds: 5));
+      expect((rig.engine.phase as InBreak).snoozesLeft, 1);
+      rig.run(const Duration(seconds: 25)); // completes
+
+      // The long break is untouched by the micro's spending.
+      rig.run(const Duration(minutes: 36));
+      final long = rig.engine.phase as InBreak;
+      expect(long.kind, BreakKind.long);
+      expect(long.snoozesLeft, 3);
+    });
+
     test('skip from the warning cancels the cycle and reschedules', () {
       final rig = Rig();
       rig.run(const Duration(minutes: 19, seconds: 40));

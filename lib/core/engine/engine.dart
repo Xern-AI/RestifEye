@@ -41,7 +41,7 @@ class BreakEngine {
     // seeded on *every* construction path. Leaving them at zero on restore
     // made the first break after each login strict (and stripped Snooze from
     // its notification), because `_strictNow = _snoozesLeft <= 0 && strict`.
-    _snoozesLeft = _config.snoozeBudget;
+    _refillSnoozes();
     _consecutiveSkips = 0;
     if (restoreFrom != null) {
       final gap = _clock.now().difference(restoreFrom.savedAt);
@@ -74,7 +74,15 @@ class BreakEngine {
 
   BreakKind _activeKind = BreakKind.micro;
   Duration _breakEndsAt = Duration.zero;
-  int _snoozesLeft = 0;
+
+  /// Snoozes left, tracked **per break kind**.
+  ///
+  /// The two kinds run independent, interleavable cycles: snoozing a long
+  /// break pushes it past the merge window, letting an already-due micro
+  /// break fire in the gap. With one shared counter, that micro cycle's
+  /// completion refilled the budget the pending long break had already been
+  /// spending — so a 3-snooze budget could be stretched to 5.
+  final Map<BreakKind, int> _snoozesLeft = {};
   int _consecutiveSkips = 0;
   bool _strictNow = false;
 
@@ -106,8 +114,20 @@ class BreakEngine {
   Stream<EnginePhase> get phases => _phaseController.stream;
   Stream<EngineEvent> get events => _eventController.stream;
 
-  /// Whether the current break cycle still has snoozes left.
-  bool get canSnooze => _snoozesLeft > 0;
+  /// Whether the break cycle currently in play still has snoozes left.
+  bool get canSnooze => _snoozesLeftFor(_activeKind) > 0;
+
+  int _snoozesLeftFor(BreakKind kind) =>
+      _snoozesLeft[kind] ?? _config.snoozeBudget;
+
+  /// Restores every kind's budget. Used at construction and wherever a
+  /// genuinely fresh scheduling epoch begins (resume, config change) — never
+  /// as a side effect of merely rescheduling a timer.
+  void _refillSnoozes() {
+    for (final kind in BreakKind.values) {
+      _snoozesLeft[kind] = _config.snoozeBudget;
+    }
+  }
 
   /// Whether the consecutive-skip budget still allows skipping a break.
   bool get canSkip => _consecutiveSkips < _config.skipBudget;
@@ -132,7 +152,7 @@ class BreakEngine {
       _Mode.inBreak => InBreak(
         kind: _activeKind,
         remaining: _clampZero(_breakEndsAt - now),
-        snoozesLeft: _snoozesLeft,
+        snoozesLeft: _snoozesLeftFor(_activeKind),
         strict: _strictNow,
       ),
       _Mode.deferred => Deferred(
@@ -206,12 +226,13 @@ class BreakEngine {
   /// Returns false when the budget is exhausted (strict mode holds).
   bool snooze() {
     if (_mode != _Mode.warning && _mode != _Mode.inBreak) return false;
-    if (_snoozesLeft <= 0) return false;
-    _snoozesLeft -= 1;
+    final left = _snoozesLeftFor(_activeKind);
+    if (left <= 0) return false;
+    _snoozesLeft[_activeKind] = left - 1;
     final now = _clock.elapsed();
     _setDue(_activeKind, now + _config.snoozeLength);
     _mode = _Mode.monitoring;
-    _emit(BreakSnoozed(_clock.now(), _activeKind, snoozesLeft: _snoozesLeft));
+    _emit(BreakSnoozed(_clock.now(), _activeKind, snoozesLeft: left - 1));
     _publishPhase();
     return true;
   }
@@ -264,6 +285,7 @@ class BreakEngine {
       final now = _clock.elapsed();
       _resetDue(BreakKind.micro, from: now);
       _resetDue(BreakKind.long, from: now);
+      _refillSnoozes();
       _mode = _Mode.monitoring;
       // Time spent paused is not rest to be credited.
       _awayFloor = now;
@@ -293,6 +315,9 @@ class BreakEngine {
     final now = _clock.elapsed();
     _resetDue(BreakKind.micro, from: now);
     _resetDue(BreakKind.long, from: now);
+    // New settings may raise or lower snoozeBudget; restart both budgets so
+    // the counters can never exceed the freshly-configured ceiling.
+    _refillSnoozes();
     if (_mode != _Mode.inBreak) _mode = _Mode.monitoring;
     _publishPhase();
   }
@@ -410,6 +435,7 @@ class BreakEngine {
       final now = _clock.elapsed();
       _resetDue(BreakKind.micro, from: now);
       _resetDue(BreakKind.long, from: now);
+      _refillSnoozes();
       _mode = _Mode.monitoring;
       // Time spent paused is not rest to be credited.
       _awayFloor = now;
@@ -424,7 +450,7 @@ class BreakEngine {
   void _startBreak(Duration now) {
     _mode = _Mode.inBreak;
     _breakEndsAt = now + _config.breakDuration(_activeKind);
-    _strictNow = _snoozesLeft <= 0 && _config.strictMode;
+    _strictNow = _snoozesLeftFor(_activeKind) <= 0 && _config.strictMode;
     _emit(BreakStarted(_clock.now(), _activeKind, strict: _strictNow));
   }
 
@@ -444,9 +470,16 @@ class BreakEngine {
   /// A long break always resets the micro timer too.
   void _finishCycle(BreakKind kind, Duration now) {
     _resetDue(kind, from: now);
-    if (kind == BreakKind.long) _resetDue(BreakKind.micro, from: now);
+    _snoozesLeft[kind] = _config.snoozeBudget;
+    // A long break rests the eyes too, so it restarts the micro cycle — and
+    // a restarted cycle gets its budget back. Only *this* path may refill the
+    // micro budget; a micro cycle finishing must never touch the long one's,
+    // which may be mid-snooze while its break sits pending.
+    if (kind == BreakKind.long) {
+      _resetDue(BreakKind.micro, from: now);
+      _snoozesLeft[BreakKind.micro] = _config.snoozeBudget;
+    }
     _mode = _Mode.monitoring;
-    _snoozesLeft = _config.snoozeBudget;
     _strictNow = false;
     // Rest up to this point is settled; nothing before it may be credited
     // again.
@@ -466,9 +499,12 @@ class BreakEngine {
 
   Duration _nextDue() => _nextKind() == BreakKind.long ? _longDue : _microDue;
 
+  /// Reschedules [kind]'s timer. Deliberately free of side effects: this used
+  /// to refill the snooze budget, which meant any micro reschedule silently
+  /// rearmed a pending long break's snoozes. Budget changes now live only at
+  /// real cycle boundaries.
   void _resetDue(BreakKind kind, {required Duration from}) {
     _setDue(kind, from + _config.interval(kind));
-    if (kind == BreakKind.micro) _snoozesLeft = _config.snoozeBudget;
   }
 
   void _setDue(BreakKind kind, Duration due) {
