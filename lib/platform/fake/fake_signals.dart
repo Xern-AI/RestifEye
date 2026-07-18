@@ -3,6 +3,7 @@ import 'dart:async';
 import '../interfaces/autostart.dart';
 import '../interfaces/context_signals.dart';
 import '../interfaces/idle_monitor.dart';
+import '../interfaces/presentation_signals.dart';
 import '../interfaces/session_signals.dart';
 import '../interfaces/tray_indicator.dart';
 
@@ -34,6 +35,16 @@ class FakeContextSignals implements ContextSignals {
 
   @override
   Future<bool> isBusy() async => busy;
+}
+
+class FakePresentationSignals implements PresentationSignals {
+  PresentationState state = PresentationState.idle;
+
+  void setPresenting(bool value, {String? byApp}) =>
+      state = PresentationState(active: value, byApp: byApp);
+
+  @override
+  Future<PresentationState> sample() async => state;
 }
 
 class FakeAutostart implements Autostart {

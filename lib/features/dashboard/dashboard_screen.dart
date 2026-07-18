@@ -75,9 +75,16 @@ class _NextBreakCard extends ConsumerWidget {
         null,
       ),
       Deferred() => ('Break waiting', 'until your call ends', null),
-      Paused(:final byUser) => (
+      Paused(:final reason, :final byApp) => (
         'Paused',
-        byUser ? 'by you' : 'outside work hours',
+        switch (reason) {
+          PauseReason.user => 'by you',
+          PauseReason.workHours => 'outside work hours',
+          PauseReason.media =>
+            byApp == null
+                ? 'while something is playing'
+                : 'while $byApp is playing',
+        },
         null,
       ),
       null => ('Starting up', '…', null),

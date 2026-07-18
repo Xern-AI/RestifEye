@@ -33,7 +33,8 @@ class TestHarness {
        overlay = FakeOverlayController(),
        idle = FakeIdleMonitor(),
        session = FakeSessionSignals(),
-       context = FakeContextSignals() {
+       context = FakeContextSignals(),
+       presentation = FakePresentationSignals() {
     engine = BreakEngine(
       clock: clock,
       config: config,
@@ -45,6 +46,7 @@ class TestHarness {
       idleMonitor: idle,
       sessionSignals: session,
       sampler: ContextSampler(context),
+      presentation: PresentationSampler(presentation),
       breakLog: BreakLogRepository(db),
       settings: SettingsRepository(db),
       recorder: ActivityRecorder(ActivityRepository(db).insertSlice),
@@ -65,6 +67,7 @@ class TestHarness {
   final FakeIdleMonitor idle;
   final FakeSessionSignals session;
   final FakeContextSignals context;
+  final FakePresentationSignals presentation;
   final FakeTrayIndicator tray = FakeTrayIndicator();
   final SilentSoundPlayer sounds = SilentSoundPlayer();
   late final BreakEngine engine;

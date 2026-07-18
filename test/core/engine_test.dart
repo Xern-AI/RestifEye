@@ -345,6 +345,115 @@ void main() {
     );
   });
 
+  group('media pause', () {
+    const playing = TickInput(presenting: true, presentingApp: 'mpv');
+
+    test('a fullscreen video pauses scheduling outright', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 5));
+      rig.run(const Duration(minutes: 1), playing);
+
+      final phase = rig.engine.phase;
+      expect(phase, isA<Paused>());
+      expect((phase as Paused).reason, PauseReason.media);
+      expect(phase.byApp, 'mpv');
+      expect(phase.byUser, isFalse, reason: 'must not light up the UI toggle');
+      expect(rig.eventsOf<EnginePausedByMedia>().single.byApp, 'mpv');
+    });
+
+    test('no break fires during a two-hour film', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 5));
+      rig.run(const Duration(hours: 2), playing);
+
+      expect(rig.eventsOf<BreakStarted>(), isEmpty);
+      expect(rig.engine.phase, isA<Paused>());
+    });
+
+    // The whole point of the deferral cap is that a break can only be pushed
+    // so far. Media pause deliberately has no cap — a cap would guarantee the
+    // interruption the feature exists to prevent.
+    test('the media pause is not subject to the deferral cap', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 19), playing);
+      rig.run(const Duration(minutes: 30), playing);
+      expect(rig.eventsOf<BreakStarted>(), isEmpty);
+      expect(rig.eventsOf<BreakDeferred>(), isEmpty);
+    });
+
+    test('timers are not reset when the video ends', () {
+      final rig = Rig();
+      // 15 min of work, then a 40 min film. 5 min of the interval remain.
+      rig.run(const Duration(minutes: 15));
+      rig.run(const Duration(minutes: 40), playing);
+      expect(rig.engine.phase, isA<Paused>());
+
+      // Resuming must not restart the 20 min interval: the break is already
+      // overdue, so it arrives after the short re-warn lead, not 20 min later.
+      rig.run(const Duration(seconds: 1));
+      expect(rig.engine.phase, isA<Warning>());
+      rig.run(const Duration(seconds: 20));
+      expect(
+        rig.engine.phase,
+        isA<InBreak>(),
+        reason: 'an overdue break resumes promptly, not on a fresh interval',
+      );
+    });
+
+    // Watching counts as screen time: the interval keeps running down during
+    // the film, it just never fires. So a short video does not push the next
+    // break back, and a long one leaves it overdue (covered above). What must
+    // never happen is the interval *restarting*, which would let a film buy
+    // the user a fresh 20 minutes.
+    test('a film consumes interval time rather than resetting it', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 5));
+      rig.run(const Duration(minutes: 10), playing);
+      rig.run(const Duration(seconds: 1));
+
+      final phase = rig.engine.phase;
+      expect(phase, isA<Monitoring>());
+      // 15 min of the 20 min interval have elapsed; ~5 remain.
+      expect((phase as Monitoring).microIn.inSeconds, closeTo(299, 3));
+    });
+
+    test('film time is never credited as a natural break', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 5));
+      // Watching a film without touching the keyboard looks exactly like
+      // being idle. It is not rest, and must not earn a credited break.
+      var idle = Duration.zero;
+      for (var i = 0; i < 60 * 30; i++) {
+        idle += const Duration(seconds: 1);
+        rig.clock.advance(const Duration(seconds: 1));
+        rig.engine.tick(
+          TickInput(idle: idle, presenting: true, presentingApp: 'mpv'),
+        );
+      }
+      rig.run(const Duration(seconds: 1));
+      expect(rig.eventsOf<BreakCredited>(), isEmpty);
+    });
+
+    test('a break already on screen is left to finish', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 20, seconds: 5));
+      expect(rig.engine.phase, isA<InBreak>());
+
+      // Going fullscreen mid-break must not abandon it — that would log a
+      // BreakEscaped the user never earned.
+      rig.run(const Duration(seconds: 5), playing);
+      expect(rig.engine.phase, isA<InBreak>());
+      expect(rig.eventsOf<BreakEscaped>(), isEmpty);
+    });
+
+    test('a user pause outranks a media pause', () {
+      final rig = Rig();
+      rig.engine.setPausedByUser(true);
+      rig.run(const Duration(minutes: 1), playing);
+      expect((rig.engine.phase as Paused).reason, PauseReason.user);
+    });
+  });
+
   group('busy deferral', () {
     test('a due break defers while the mic is in use', () {
       final rig = Rig();

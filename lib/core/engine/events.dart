@@ -64,6 +64,16 @@ class EnginePausedByWorkHours extends EngineEvent {
   const EnginePausedByWorkHours(super.at);
 }
 
+/// Scheduling is on hold because something on screen must not be
+/// interrupted — a fullscreen video, a presentation, a game.
+class EnginePausedByMedia extends EngineEvent {
+  const EnginePausedByMedia(super.at, {this.byApp});
+
+  /// The app holding the inhibitor, when the desktop tells us. Null is
+  /// normal, not an error.
+  final String? byApp;
+}
+
 class EngineResumed extends EngineEvent {
   const EngineResumed(super.at);
 }

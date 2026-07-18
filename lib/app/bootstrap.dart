@@ -20,6 +20,7 @@ import '../platform/linux/gnome_tray_support.dart';
 import '../platform/linux/linux_break_notifier.dart';
 import '../platform/linux/linux_context_signals.dart';
 import '../platform/linux/linux_idle_monitor.dart';
+import '../platform/linux/linux_presentation_signals.dart';
 import '../platform/linux/linux_session_signals.dart';
 import '../platform/linux/linux_sound_player.dart';
 import '../platform/linux/sni_tray.dart';
@@ -150,16 +151,28 @@ Future<BootResult> bootstrap() async {
     ).maybeCheck(),
   );
 
-  final service = EngineService(
-    engine: engine,
-    clock: clock,
-    idleMonitor: LinuxIdleMonitor(sessionBus),
-    sessionSignals: LinuxSessionSignals(session: sessionBus, system: systemBus),
-    sampler: ContextSampler(LinuxContextSignals()),
-    breakLog: breakLogRepo,
-    settings: settings,
-    recorder: ActivityRecorder(activityRepo.insertSlice),
-  )..start();
+  final service =
+      EngineService(
+          engine: engine,
+          clock: clock,
+          idleMonitor: LinuxIdleMonitor(sessionBus),
+          sessionSignals: LinuxSessionSignals(
+            session: sessionBus,
+            system: systemBus,
+          ),
+          sampler: ContextSampler(LinuxContextSignals()),
+          presentation: PresentationSampler(
+            LinuxPresentationSignals(session: sessionBus, system: systemBus),
+          ),
+          breakLog: breakLogRepo,
+          settings: settings,
+          recorder: ActivityRecorder(activityRepo.insertSlice),
+        )
+        ..pauseDuringMedia = await settings.getFlag(
+          SettingsRepository.flagPauseDuringMedia,
+          fallback: true,
+        )
+        ..start();
 
   return (
     db: db,

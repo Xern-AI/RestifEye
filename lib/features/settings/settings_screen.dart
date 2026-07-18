@@ -134,6 +134,21 @@ class SettingsScreen extends ConsumerWidget {
                   .read(generalSettingsProvider.notifier)
                   .setFullscreenOverlay(v),
             ),
+            SwitchListTile(
+              secondary: const Icon(Icons.movie_outlined),
+              title: const Text('Pause for video'),
+              subtitle: const Text(
+                'Hold breaks while a full-screen video or presentation is '
+                'playing, and resume when it ends. Background music keeps '
+                'breaks running.',
+              ),
+              value:
+                  ref.watch(generalSettingsProvider).value?.pauseDuringMedia ??
+                  true,
+              onChanged: (v) => ref
+                  .read(generalSettingsProvider.notifier)
+                  .setPauseDuringMedia(v),
+            ),
             const _SectionHeader('Work hours'),
             _WorkHoursTile(config: config, onChanged: notifier.update),
             _WorkDaysTile(config: config, onChanged: notifier.update),

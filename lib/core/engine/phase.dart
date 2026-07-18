@@ -57,14 +57,35 @@ class Deferred extends EnginePhase {
   final Duration recheckIn;
 }
 
-/// Outside work hours, or paused by the user.
-class Paused extends EnginePhase {
-  const Paused({required this.byUser, this.until});
+/// Why the engine is holding all scheduling.
+enum PauseReason {
+  /// The user asked for it (indefinitely, or until [Paused.until]).
+  user,
 
-  final bool byUser;
+  /// The clock is outside the configured work window.
+  workHours,
+
+  /// Something on screen must not be interrupted — a fullscreen video, a
+  /// presentation, anything holding an idle inhibitor.
+  media,
+}
+
+/// Outside work hours, paused by the user, or held back for media.
+class Paused extends EnginePhase {
+  const Paused({required this.reason, this.until, this.byApp});
+
+  final PauseReason reason;
+
+  /// For [PauseReason.media], the app holding breaks back, when the desktop
+  /// names it. Null is common and must not be treated as an error.
+  final String? byApp;
 
   /// Wall-clock moment a timed pause lapses and breaks resume by themselves.
-  /// Null for an open-ended pause (and always null outside work hours, which
-  /// ends on its own schedule).
+  /// Null for an open-ended pause (and always null for the automatic reasons,
+  /// which end on their own schedule).
   final DateTime? until;
+
+  /// Only a user pause is reflected in the UI's pause toggle — the automatic
+  /// reasons must not make the toggle look switched on.
+  bool get byUser => reason == PauseReason.user;
 }

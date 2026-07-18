@@ -13,6 +13,8 @@ class TickInput {
     this.idle = Duration.zero,
     this.locked = false,
     this.busy = false,
+    this.presenting = false,
+    this.presentingApp,
   });
 
   /// Time since the last user input.
@@ -23,6 +25,15 @@ class TickInput {
 
   /// Microphone/camera in use, or Do Not Disturb enabled.
   final bool busy;
+
+  /// Something on screen must not be interrupted — a fullscreen video, a
+  /// presentation, a game. Distinct from [busy]: [busy] *defers* a break by
+  /// up to `deferCap`, while this *pauses* scheduling outright, because a
+  /// film runs far longer than any sane deferral cap.
+  final bool presenting;
+
+  /// Which app is presenting, when the desktop tells us.
+  final String? presentingApp;
 }
 
 /// Deterministic break scheduler. Pure Dart: no timers, no I/O — the caller
@@ -109,6 +120,8 @@ class BreakEngine {
   Duration _awayFloor = Duration.zero;
   bool _pausedByUser = false;
   bool _pausedByHours = false;
+  bool _pausedByMedia = false;
+  String? _presentingApp;
 
   BreakConfig get config => _config;
   Stream<EnginePhase> get phases => _phaseController.stream;
@@ -133,10 +146,16 @@ class BreakEngine {
   bool get canSkip => _consecutiveSkips < _config.skipBudget;
 
   EnginePhase get phase {
+    // Order is precedence: an explicit user pause outranks the automatic
+    // reasons, and work hours outrank media (no point reporting "video
+    // playing" at 2 a.m. on a Sunday when the engine is off anyway).
     if (_pausedByUser) {
-      return Paused(byUser: true, until: _pausedUntil);
+      return Paused(reason: PauseReason.user, until: _pausedUntil);
     }
-    if (_pausedByHours) return const Paused(byUser: false);
+    if (_pausedByHours) return const Paused(reason: PauseReason.workHours);
+    if (_pausedByMedia) {
+      return Paused(reason: PauseReason.media, byApp: _presentingApp);
+    }
     final now = _clock.elapsed();
     return switch (_mode) {
       _Mode.monitoring => Monitoring(
@@ -167,7 +186,9 @@ class BreakEngine {
     // The phase is published on every tick, even while paused: consumers
     // (the window takeover above all) re-derive their state from it, so a
     // silent engine would let them drift out of sync.
-    if (_updateUserPause() || _updateWorkHoursPause()) {
+    if (_updateUserPause() ||
+        _updateWorkHoursPause() ||
+        _updateMediaPause(input)) {
       _publishPhase();
       return;
     }
@@ -422,6 +443,53 @@ class BreakEngine {
     _emit(BreakEscaped(_clock.now(), _activeKind));
     _finishCycle(_activeKind, _clock.elapsed());
   }
+
+  /// Holds all scheduling while something on screen must not be interrupted.
+  ///
+  /// Unlike the busy/deferral path this has no cap: a film is two hours, and
+  /// a cap would simply guarantee the interruption it exists to prevent.
+  bool _updateMediaPause(TickInput input) {
+    if (input.presenting && !_pausedByMedia) {
+      // A break already on screen is left to finish. The video is behind the
+      // overlay anyway, and abandoning it here would log a BreakEscaped the
+      // user did not earn. The pause takes effect on the next cycle instead.
+      if (_mode == _Mode.inBreak) return false;
+      _pausedByMedia = true;
+      _presentingApp = input.presentingApp;
+      _emit(EnginePausedByMedia(_clock.now(), byApp: input.presentingApp));
+    } else if (!input.presenting && _pausedByMedia) {
+      _pausedByMedia = false;
+      _presentingApp = null;
+      final now = _clock.elapsed();
+      // Timers are deliberately NOT reset. Two hours of fullscreen video is
+      // still two hours of screen time; restarting the interval would mean a
+      // long film buys the user zero breaks. The schedule simply resumes
+      // where it left off.
+      //
+      // Sitting through a film is not rest either, so nothing before this
+      // moment may be credited as an away span.
+      _awayFloor = now;
+      _awayBegan = null;
+      _awayWasLocked = false;
+      final due = _nextDue();
+      if (now >= due - _config.warningLead) {
+        // Already due (usually well past it). Give the short heads-up rather
+        // than seizing the screen the instant the credits roll.
+        _activeKind = _nextKind();
+        _cycleDue = due;
+        _rewarn(now);
+      } else {
+        _mode = _Mode.monitoring;
+      }
+      _emit(EngineResumed(_clock.now()));
+    } else if (_pausedByMedia && input.presentingApp != _presentingApp) {
+      _presentingApp = input.presentingApp; // one player handed off to another
+    }
+    return _pausedByMedia;
+  }
+
+  /// Which app is currently holding breaks back, when the desktop says.
+  String? get presentingApp => _presentingApp;
 
   bool _updateWorkHoursPause() {
     final within = _config.isWithinWorkHours(_clock.now());

@@ -307,6 +307,7 @@ class GeneralSettings {
     required this.updateCheck,
     required this.fullscreenOverlay,
     required this.sounds,
+    required this.pauseDuringMedia,
   });
 
   final bool autostart;
@@ -314,16 +315,21 @@ class GeneralSettings {
   final bool fullscreenOverlay;
   final bool sounds;
 
+  /// Hold breaks while a fullscreen video or presentation is running.
+  final bool pauseDuringMedia;
+
   GeneralSettings copyWith({
     bool? autostart,
     bool? updateCheck,
     bool? fullscreenOverlay,
     bool? sounds,
+    bool? pauseDuringMedia,
   }) => GeneralSettings(
     autostart: autostart ?? this.autostart,
     updateCheck: updateCheck ?? this.updateCheck,
     fullscreenOverlay: fullscreenOverlay ?? this.fullscreenOverlay,
     sounds: sounds ?? this.sounds,
+    pauseDuringMedia: pauseDuringMedia ?? this.pauseDuringMedia,
   );
 }
 
@@ -350,8 +356,13 @@ class GeneralSettingsNotifier extends AsyncNotifier<GeneralSettings> {
         SettingsRepository.flagSounds,
         fallback: true,
       ),
+      pauseDuringMedia: await settings.getFlag(
+        SettingsRepository.flagPauseDuringMedia,
+        fallback: true,
+      ),
     );
     ref.read(soundPlayerProvider).enabled = general.sounds;
+    ref.read(engineServiceProvider).pauseDuringMedia = general.pauseDuringMedia;
     return general;
   }
 
@@ -378,6 +389,15 @@ class GeneralSettingsNotifier extends AsyncNotifier<GeneralSettings> {
       SettingsRepository.flagSounds,
       enabled,
       (s) => s.copyWith(sounds: enabled),
+    );
+  }
+
+  Future<void> setPauseDuringMedia(bool enabled) async {
+    ref.read(engineServiceProvider).pauseDuringMedia = enabled;
+    await _persist(
+      SettingsRepository.flagPauseDuringMedia,
+      enabled,
+      (s) => s.copyWith(pauseDuringMedia: enabled),
     );
   }
 

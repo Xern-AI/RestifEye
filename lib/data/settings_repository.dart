@@ -21,6 +21,7 @@ class SettingsRepository {
   static const flagAutostartApplied = 'autostart_default_applied';
   static const flagHideNoticeShown = 'hide_notice_shown';
   static const flagSounds = 'sounds_enabled';
+  static const flagPauseDuringMedia = 'pause_during_media';
 
   Future<BreakConfig> loadConfig() async {
     final raw = await _read(_configKey);

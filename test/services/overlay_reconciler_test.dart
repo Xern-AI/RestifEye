@@ -26,8 +26,9 @@ void main() {
         monitoring,
         Warning(kind: BreakKind.micro, startsIn: Duration(seconds: 30)),
         Deferred(kind: BreakKind.long, recheckIn: Duration(minutes: 5)),
-        Paused(byUser: true),
-        Paused(byUser: false),
+        Paused(reason: PauseReason.user),
+        Paused(reason: PauseReason.workHours),
+        Paused(reason: PauseReason.media),
       ];
       for (final phase in phases) {
         expect(

@@ -7,6 +7,7 @@ import '../core/models/activity.dart';
 import '../data/break_log_repository.dart';
 import '../data/settings_repository.dart';
 import '../platform/interfaces/idle_monitor.dart';
+import '../platform/interfaces/presentation_signals.dart';
 import '../platform/interfaces/session_signals.dart';
 import 'activity_recorder.dart';
 import 'context_sampler.dart';
@@ -21,10 +22,15 @@ class EngineService {
     required this._idleMonitor,
     required this._sessionSignals,
     required this._sampler,
+    required this._presentation,
     required this._breakLog,
     required this._settings,
     required this._recorder,
   });
+
+  /// Whether the media pause is honored. Toggled from Settings; read on
+  /// every tick so a change takes effect without restarting the engine.
+  bool pauseDuringMedia = true;
 
   /// How close a break must be before busy-probing is worth its cost.
   static const _busyRelevanceWindow = Duration(seconds: 90);
@@ -36,6 +42,7 @@ class EngineService {
   final IdleMonitor _idleMonitor;
   final SessionSignals _sessionSignals;
   final ContextSampler _sampler;
+  final PresentationSampler _presentation;
   final BreakLogRepository _breakLog;
   final SettingsRepository _settings;
   final ActivityRecorder _recorder;
@@ -71,8 +78,20 @@ class EngineService {
       };
       final now = _clock.now();
       await _sampler.refreshIfNeeded(relevant: relevant, now: now);
+      if (pauseDuringMedia) await _presentation.refresh(now);
+      final presenting = pauseDuringMedia
+          ? _presentation.value
+          : PresentationState.idle;
 
-      engine.tick(TickInput(idle: idle, locked: _away, busy: _sampler.value));
+      engine.tick(
+        TickInput(
+          idle: idle,
+          locked: _away,
+          busy: _sampler.value,
+          presenting: presenting.active,
+          presentingApp: presenting.byApp,
+        ),
+      );
 
       _recorder.observe(now, _sliceKind(idle));
       if (now.difference(_lastFlush) >= _flushEvery) {
