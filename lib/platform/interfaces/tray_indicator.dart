@@ -24,6 +24,12 @@ abstract interface class TrayIndicator {
   /// Reflects the engine's paused state in the menu.
   Future<void> setPaused(bool paused);
 
+  /// Swaps the icon while running, with the hover text that explains it.
+  ///
+  /// The text is not decoration: an icon that turns red without saying why
+  /// is just a source of anxiety in the corner of the screen.
+  Future<void> setIcon(List<TrayPixmap> icons, {required String tooltip});
+
   /// Menu selections and icon activations.
   Stream<TrayAction> get actions;
 

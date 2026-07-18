@@ -164,6 +164,20 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (v) =>
                   ref.read(generalSettingsProvider.notifier).setSounds(v),
             ),
+            SwitchListTile(
+              secondary: const Icon(Icons.sentiment_satisfied_outlined),
+              title: const Text('Expressive tray icon'),
+              subtitle: const Text(
+                'Let the tray icon\'s face and colour reflect how your day '
+                'is going. Hover it to read what it means.',
+              ),
+              value:
+                  ref.watch(generalSettingsProvider).value?.moodIndicator ??
+                  true,
+              onChanged: (v) => ref
+                  .read(generalSettingsProvider.notifier)
+                  .setMoodIndicator(v),
+            ),
             const _TrayTile(),
             SwitchListTile(
               secondary: const Icon(Icons.rocket_launch_outlined),

@@ -30,6 +30,7 @@ import '../services/activity_recorder.dart';
 import '../services/context_sampler.dart';
 import '../services/engine_service.dart';
 import '../services/exercise_picker.dart';
+import '../services/mood_service.dart';
 import '../services/notification_coordinator.dart';
 import '../services/rollup_service.dart';
 import '../services/update_service.dart';
@@ -69,6 +70,8 @@ typedef BootResult = ({
   TrayIndicator tray,
   SoundPlayer sounds,
   TrayHostSupport traySupport,
+  MoodService mood,
+  bool moodIndicator,
 });
 
 /// Builds the real object graph: database, engine, Linux adapters,
@@ -174,6 +177,14 @@ Future<BootResult> bootstrap() async {
         )
         ..start();
 
+  final mood = MoodService(
+    engine: engine,
+    clock: clock,
+    settings: settings,
+    activity: activityRepo,
+  );
+  await mood.start();
+
   return (
     db: db,
     service: service,
@@ -184,6 +195,11 @@ Future<BootResult> bootstrap() async {
     tray: SniTrayIndicator(sessionBus),
     sounds: sounds,
     traySupport: traySupport,
+    mood: mood,
+    moodIndicator: await settings.getFlag(
+      SettingsRepository.flagMoodIndicator,
+      fallback: true,
+    ),
   );
 }
 

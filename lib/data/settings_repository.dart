@@ -21,6 +21,11 @@ class SettingsRepository {
   static const flagAutostartApplied = 'autostart_default_applied';
   static const flagHideNoticeShown = 'hide_notice_shown';
   static const flagSounds = 'sounds_enabled';
+  static const flagMoodIndicator = 'mood_indicator_enabled';
+
+  /// Rolling window of recent break responses, comma-separated, behind the
+  /// tray mood. Not a flag — see [readValue]/[writeValue].
+  static const keyMoodRecent = 'mood_recent';
   static const flagPauseDuringMedia = 'pause_during_media';
 
   Future<BreakConfig> loadConfig() async {

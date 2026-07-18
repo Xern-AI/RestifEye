@@ -33,6 +33,15 @@ class WindowTakeover with WindowListener implements OverlayController {
   /// chaining one closure per tick costs nothing over time.
   Future<void> _queue = Future.value();
 
+  /// Whether the window was on screen before a break took it over.
+  ///
+  /// A break has to show the window; ending one used to just drop fullscreen
+  /// and always-on-top, leaving the app sitting in the user's face until they
+  /// dismissed it manually. Every break therefore ended with a chore. The
+  /// window now goes back to whatever it was doing beforehand — which for the
+  /// normal case (app closed to tray) means it disappears on its own.
+  bool _wasVisibleBeforeBreak = true;
+
   @override
   Future<void> init() async {
     await windowManager.ensureInitialized();
@@ -69,7 +78,13 @@ class WindowTakeover with WindowListener implements OverlayController {
   }
 
   Future<void> _transition(BreakWindowState desired) async {
+    final entering = desired.inBreak && !_current.inBreak;
+    final leaving = !desired.inBreak && _current.inBreak;
+
     if (desired.inBreak) {
+      // Sampled before `show()`, and only on the way in, so a mid-break
+      // re-assertion (windowed → fullscreen) cannot overwrite it with `true`.
+      if (entering) _wasVisibleBeforeBreak = await _isVisible();
       await windowManager.show();
       // Set these unconditionally in both directions — a previous break may
       // have left them on, and a windowed break must clear them.
@@ -79,8 +94,23 @@ class WindowTakeover with WindowListener implements OverlayController {
     } else {
       await windowManager.setAlwaysOnTop(false);
       await windowManager.setFullScreen(false);
+      // Put the window back the way we found it. Guarded on `leaving` so
+      // `forceRestore()` — which exists for when our idea of the state is
+      // wrong — can never hide a window the user opened themselves.
+      if (leaving && !_wasVisibleBeforeBreak) await windowManager.hide();
     }
     _current = desired;
+  }
+
+  /// Treats an unreadable visibility as "was on screen": the failure mode of
+  /// guessing wrong is a window left open, which the user can close. Guessing
+  /// the other way would hide a window they were using.
+  Future<bool> _isVisible() async {
+    try {
+      return await windowManager.isVisible();
+    } on Object {
+      return true;
+    }
   }
 
   /// Closing the window hides it — the engine keeps running. Quitting is

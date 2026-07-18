@@ -2,6 +2,7 @@ import 'dart:io';
 
 import '../platform/interfaces/overlay_controller.dart';
 import '../platform/interfaces/tray_indicator.dart';
+import 'mood_service.dart';
 import 'engine_service.dart';
 
 /// The single way out of the app, shared by the tray menu and Ctrl+Q.
@@ -14,12 +15,16 @@ class AppLifecycle {
     required this.overlay,
     required this.service,
     required this.tray,
+    this.mood,
     this.exitProcess = exit,
   });
 
   final OverlayController overlay;
   final EngineService service;
   final TrayIndicator tray;
+
+  /// Null in tests and on the paths that never start it.
+  final MoodService? mood;
 
   /// Injected so tests can quit without killing the test runner.
   final void Function(int code) exitProcess;
@@ -33,6 +38,7 @@ class AppLifecycle {
     _quitting = true;
     try {
       await tray.dispose();
+      await mood?.dispose();
       await service.dispose();
       await overlay.destroyWindow();
     } finally {

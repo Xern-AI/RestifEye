@@ -67,8 +67,22 @@ class FakeTrayIndicator implements TrayIndicator {
   @override
   Future<void> init({required List<TrayPixmap> icons}) async {}
 
+  List<TrayPixmap> icons = const [];
+  String tooltip = '';
+  int iconUpdates = 0;
+
   @override
   Future<void> setPaused(bool value) async => paused = value;
+
+  @override
+  Future<void> setIcon(
+    List<TrayPixmap> value, {
+    required String tooltip,
+  }) async {
+    icons = value;
+    this.tooltip = tooltip;
+    iconUpdates++;
+  }
 
   @override
   Stream<TrayAction> get actions => _controller.stream;

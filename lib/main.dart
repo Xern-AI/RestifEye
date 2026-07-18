@@ -5,10 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
 import 'app/bootstrap.dart';
-import 'app/tray_icons.dart';
+import 'app/tray_face.dart';
 import 'platform/interfaces/tray_indicator.dart';
 import 'services/app_lifecycle.dart';
 import 'services/providers.dart';
+import 'services/tray_mood_presenter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +19,7 @@ Future<void> main() async {
     overlay: boot.overlay,
     service: boot.service,
     tray: boot.tray,
+    mood: boot.mood,
   );
 
   final container = ProviderContainer(
@@ -52,10 +54,20 @@ Future<void> _wireTray(
   AppLifecycle lifecycle,
 ) async {
   try {
-    await boot.tray.init(icons: await loadTrayPixmaps());
+    await boot.tray.init(icons: await renderTrayFace(boot.mood.current));
   } on Exception {
     return; // no status area / no bus — the app works without it
   }
+
+  // The face only starts moving once there is a tray to draw it on.
+  final presenter = TrayMoodPresenter(
+    tray: boot.tray,
+    moods: boot.mood.moods,
+    enabled: boot.moodIndicator,
+    initial: boot.mood.current,
+  );
+  container.read(trayMoodPresenterProvider).presenter = presenter;
+  await presenter.start();
 
   boot.tray.actions.listen((action) async {
     switch (action) {

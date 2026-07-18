@@ -18,6 +18,7 @@ import '../platform/interfaces/tray_support.dart';
 import 'advice_engine.dart';
 import 'app_lifecycle.dart';
 import 'engine_service.dart';
+import 'tray_mood_presenter.dart';
 import 'exercise_picker.dart';
 
 /// Concrete instances are created in the bootstrap (or in tests) and
@@ -308,6 +309,7 @@ class GeneralSettings {
     required this.fullscreenOverlay,
     required this.sounds,
     required this.pauseDuringMedia,
+    required this.moodIndicator,
   });
 
   final bool autostart;
@@ -318,18 +320,23 @@ class GeneralSettings {
   /// Hold breaks while a fullscreen video or presentation is running.
   final bool pauseDuringMedia;
 
+  /// Let the tray icon's expression reflect how the day is going.
+  final bool moodIndicator;
+
   GeneralSettings copyWith({
     bool? autostart,
     bool? updateCheck,
     bool? fullscreenOverlay,
     bool? sounds,
     bool? pauseDuringMedia,
+    bool? moodIndicator,
   }) => GeneralSettings(
     autostart: autostart ?? this.autostart,
     updateCheck: updateCheck ?? this.updateCheck,
     fullscreenOverlay: fullscreenOverlay ?? this.fullscreenOverlay,
     sounds: sounds ?? this.sounds,
     pauseDuringMedia: pauseDuringMedia ?? this.pauseDuringMedia,
+    moodIndicator: moodIndicator ?? this.moodIndicator,
   );
 }
 
@@ -358,6 +365,10 @@ class GeneralSettingsNotifier extends AsyncNotifier<GeneralSettings> {
       ),
       pauseDuringMedia: await settings.getFlag(
         SettingsRepository.flagPauseDuringMedia,
+        fallback: true,
+      ),
+      moodIndicator: await settings.getFlag(
+        SettingsRepository.flagMoodIndicator,
         fallback: true,
       ),
     );
@@ -401,6 +412,19 @@ class GeneralSettingsNotifier extends AsyncNotifier<GeneralSettings> {
     );
   }
 
+  Future<void> setMoodIndicator(bool enabled) async {
+    final presenter = ref.read(trayMoodPresenterProvider).presenter;
+    if (presenter != null) {
+      presenter.enabled = enabled;
+      await presenter.refresh();
+    }
+    await _persist(
+      SettingsRepository.flagMoodIndicator,
+      enabled,
+      (s) => s.copyWith(moodIndicator: enabled),
+    );
+  }
+
   Future<void> _persist(
     String flag,
     bool value,
@@ -414,3 +438,16 @@ class GeneralSettingsNotifier extends AsyncNotifier<GeneralSettings> {
     state = AsyncData(apply(await future));
   }
 }
+
+/// Holds the live tray presenter, which only exists once a tray host has
+/// been found. Null on desktops without a status area, so every consumer
+/// must cope with its absence.
+///
+/// A mutable holder rather than a StateProvider: Riverpod 3 dropped
+/// StateProvider, and nothing rebuilds on this changing — Settings just needs
+/// a handle to push the toggle through to.
+class TrayMoodPresenterHolder {
+  TrayMoodPresenter? presenter;
+}
+
+final trayMoodPresenterProvider = Provider((ref) => TrayMoodPresenterHolder());
