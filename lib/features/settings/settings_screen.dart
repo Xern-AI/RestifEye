@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/models/break_config.dart';
+import '../../core/models/exercise.dart';
 import '../../platform/interfaces/tray_support.dart';
 import '../../services/providers.dart';
 
@@ -149,6 +150,8 @@ class SettingsScreen extends ConsumerWidget {
                   .read(generalSettingsProvider.notifier)
                   .setPauseDuringMedia(v),
             ),
+            const _SectionHeader('Exercises'),
+            const _IntensityTile(),
             const _SectionHeader('Work hours'),
             _WorkHoursTile(config: config, onChanged: notifier.update),
             _WorkDaysTile(config: config, onChanged: notifier.update),
@@ -273,6 +276,45 @@ class _TrayTile extends ConsumerWidget {
                     )
                   : Text(action),
             ),
+    );
+  }
+}
+
+/// How demanding an exercise the user is willing to be shown.
+///
+/// A ceiling rather than a preference: the point is that heavier exercises
+/// are impossible in some rooms, and an overlay suggesting the impossible
+/// teaches people to dismiss overlays.
+class _IntensityTile extends ConsumerWidget {
+  const _IntensityTile();
+
+  static const _labels = {
+    ExerciseIntensity.soft: ('Seated only', 'Nothing anyone would notice'),
+    ExerciseIntensity.medium: (
+      'Up to stretches',
+      'Standing stretches and a walk',
+    ),
+    ExerciseIntensity.heavy: ('Anything', 'Includes squats, lunges and jacks'),
+  };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final value =
+        ref.watch(generalSettingsProvider).value?.maxIntensity ??
+        ExerciseIntensity.medium;
+    return ListTile(
+      leading: const Icon(Icons.fitness_center_outlined),
+      title: const Text('Most demanding exercise'),
+      subtitle: Text(_labels[value]!.$2),
+      trailing: SegmentedButton<ExerciseIntensity>(
+        segments: [
+          for (final entry in _labels.entries)
+            ButtonSegment(value: entry.key, label: Text(entry.value.$1)),
+        ],
+        selected: {value},
+        onSelectionChanged: (s) =>
+            ref.read(generalSettingsProvider.notifier).setMaxIntensity(s.first),
+      ),
     );
   }
 }

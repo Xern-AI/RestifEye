@@ -36,68 +36,37 @@ class _ExerciseFigureState extends State<ExerciseFigure>
         animation: _controller,
         builder: (context, _) {
           final t = _controller.value;
-          final painter = switch (widget.art) {
-            ExerciseArt.eyesFarNear => EyeArtPainter(
-              t: t,
-              mode: EyeMode.farNear,
-              scheme: scheme,
-            ),
-            ExerciseArt.eyesPalming => EyeArtPainter(
-              t: t,
-              mode: EyeMode.palming,
-              scheme: scheme,
-            ),
-            ExerciseArt.eyesFigureEight => EyeArtPainter(
-              t: t,
-              mode: EyeMode.figureEight,
-              scheme: scheme,
-            ),
-            ExerciseArt.eyesBlink => EyeArtPainter(
-              t: t,
-              mode: EyeMode.blink,
-              scheme: scheme,
-            ),
-            ExerciseArt.headRoll => BodyArtPainter(
-              t: t,
-              mode: BodyMode.headRoll,
-              scheme: scheme,
-            ),
-            ExerciseArt.chinTuck => BodyArtPainter(
-              t: t,
-              mode: BodyMode.chinTuck,
-              scheme: scheme,
-            ),
-            ExerciseArt.shoulders => BodyArtPainter(
-              t: t,
-              mode: BodyMode.shoulders,
-              scheme: scheme,
-            ),
-            ExerciseArt.wrists => BodyArtPainter(
-              t: t,
-              mode: BodyMode.wrists,
-              scheme: scheme,
-            ),
-            ExerciseArt.posture => BodyArtPainter(
-              t: t,
-              mode: BodyMode.posture,
-              scheme: scheme,
-            ),
-            ExerciseArt.sideStretch => BodyArtPainter(
-              t: t,
-              mode: BodyMode.sideStretch,
-              scheme: scheme,
-            ),
-            ExerciseArt.walk => BodyArtPainter(
-              t: t,
-              mode: BodyMode.walk,
-              scheme: scheme,
-            ),
-            ExerciseArt.breathe => BodyArtPainter(
-              t: t,
-              mode: BodyMode.breathe,
-              scheme: scheme,
-            ),
+          // One line per art, and still exhaustively checked: the switch
+          // yields the *mode*, and the painter is chosen from its type. The
+          // previous form repeated the painter construction in every arm,
+          // which was twelve near-identical blocks before the deck grew.
+          final mode = switch (widget.art) {
+            ExerciseArt.eyesFarNear => EyeMode.farNear,
+            ExerciseArt.eyesPalming => EyeMode.palming,
+            ExerciseArt.eyesFigureEight => EyeMode.figureEight,
+            ExerciseArt.eyesBlink => EyeMode.blink,
+            ExerciseArt.headRoll => BodyMode.headRoll,
+            ExerciseArt.chinTuck => BodyMode.chinTuck,
+            ExerciseArt.shoulders => BodyMode.shoulders,
+            ExerciseArt.wrists => BodyMode.wrists,
+            ExerciseArt.posture => BodyMode.posture,
+            ExerciseArt.sideStretch => BodyMode.sideStretch,
+            ExerciseArt.walk => BodyMode.walk,
+            ExerciseArt.breathe => BodyMode.breathe,
+            ExerciseArt.neckTilt => BodyMode.neckTilt,
+            ExerciseArt.chestOpen => BodyMode.chestOpen,
+            ExerciseArt.torsoTwist => BodyMode.torsoTwist,
+            ExerciseArt.forwardFold => BodyMode.forwardFold,
+            ExerciseArt.calfRaise => BodyMode.calfRaise,
+            ExerciseArt.armCircles => BodyMode.armCircles,
+            ExerciseArt.squat => BodyMode.squat,
+            ExerciseArt.lunge => BodyMode.lunge,
+            ExerciseArt.marchInPlace => BodyMode.marchInPlace,
+            ExerciseArt.jumpingJacks => BodyMode.jumpingJacks,
           };
+          final painter = mode is EyeMode
+              ? EyeArtPainter(t: t, mode: mode, scheme: scheme)
+              : BodyArtPainter(t: t, mode: mode as BodyMode, scheme: scheme);
           return CustomPaint(size: Size.square(widget.size), painter: painter);
         },
       ),

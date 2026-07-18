@@ -6,6 +6,7 @@ import 'package:dbus/dbus.dart';
 import '../core/clock.dart';
 import '../core/engine/engine.dart';
 import '../core/models/break_config.dart';
+import '../core/models/exercise.dart';
 import '../data/activity_repository.dart';
 import '../data/break_log_repository.dart';
 import '../data/database.dart';
@@ -83,6 +84,9 @@ Future<BootResult> bootstrap() async {
   final config = isDevMode ? _devConfig : await settings.loadConfig();
   final snapshot = isDevMode ? null : await settings.loadSnapshot();
   final optOuts = await settings.loadExerciseOptOuts();
+  final maxIntensityName = await settings.readValue(
+    SettingsRepository.keyMaxIntensity,
+  );
 
   final clock = SystemClock();
   final engine = BreakEngine(
@@ -190,7 +194,13 @@ Future<BootResult> bootstrap() async {
     service: service,
     overlay: overlay,
     config: config,
-    picker: ExercisePicker(optOuts: optOuts),
+    picker: ExercisePicker(
+      optOuts: optOuts,
+      maxIntensity: ExerciseIntensity.values.firstWhere(
+        (v) => v.name == maxIntensityName,
+        orElse: () => ExerciseIntensity.medium,
+      ),
+    ),
     autostart: autostart,
     tray: SniTrayIndicator(sessionBus),
     sounds: sounds,

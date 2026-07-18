@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/engine/phase.dart';
 import '../core/models/activity.dart';
 import '../core/models/break_config.dart';
+import '../core/models/exercise.dart';
 import '../data/activity_repository.dart';
 import '../data/break_log_repository.dart';
 import '../data/database.dart';
@@ -310,6 +311,7 @@ class GeneralSettings {
     required this.sounds,
     required this.pauseDuringMedia,
     required this.moodIndicator,
+    required this.maxIntensity,
   });
 
   final bool autostart;
@@ -323,6 +325,9 @@ class GeneralSettings {
   /// Let the tray icon's expression reflect how the day is going.
   final bool moodIndicator;
 
+  /// The most demanding exercise the user wants to be offered.
+  final ExerciseIntensity maxIntensity;
+
   GeneralSettings copyWith({
     bool? autostart,
     bool? updateCheck,
@@ -330,6 +335,7 @@ class GeneralSettings {
     bool? sounds,
     bool? pauseDuringMedia,
     bool? moodIndicator,
+    ExerciseIntensity? maxIntensity,
   }) => GeneralSettings(
     autostart: autostart ?? this.autostart,
     updateCheck: updateCheck ?? this.updateCheck,
@@ -337,6 +343,7 @@ class GeneralSettings {
     sounds: sounds ?? this.sounds,
     pauseDuringMedia: pauseDuringMedia ?? this.pauseDuringMedia,
     moodIndicator: moodIndicator ?? this.moodIndicator,
+    maxIntensity: maxIntensity ?? this.maxIntensity,
   );
 }
 
@@ -371,8 +378,12 @@ class GeneralSettingsNotifier extends AsyncNotifier<GeneralSettings> {
         SettingsRepository.flagMoodIndicator,
         fallback: true,
       ),
+      maxIntensity: _intensityFrom(
+        await settings.readValue(SettingsRepository.keyMaxIntensity),
+      ),
     );
     ref.read(soundPlayerProvider).enabled = general.sounds;
+    ref.read(exercisePickerProvider).maxIntensity = general.maxIntensity;
     ref.read(engineServiceProvider).pauseDuringMedia = general.pauseDuringMedia;
     return general;
   }
@@ -425,6 +436,14 @@ class GeneralSettingsNotifier extends AsyncNotifier<GeneralSettings> {
     );
   }
 
+  Future<void> setMaxIntensity(ExerciseIntensity value) async {
+    ref.read(exercisePickerProvider).maxIntensity = value;
+    await ref
+        .read(settingsRepositoryProvider)
+        .writeValue(SettingsRepository.keyMaxIntensity, value.name);
+    await _update((s) => s.copyWith(maxIntensity: value));
+  }
+
   Future<void> _persist(
     String flag,
     bool value,
@@ -446,6 +465,12 @@ class GeneralSettingsNotifier extends AsyncNotifier<GeneralSettings> {
 /// A mutable holder rather than a StateProvider: Riverpod 3 dropped
 /// StateProvider, and nothing rebuilds on this changing — Settings just needs
 /// a handle to push the toggle through to.
+/// Medium by default: standing stretches suit most desks, while the heavy
+/// exercises are opt-in because nobody should be shown squats in an office
+/// they cannot do them in.
+ExerciseIntensity _intensityFrom(String? raw) => ExerciseIntensity.values
+    .firstWhere((v) => v.name == raw, orElse: () => ExerciseIntensity.medium);
+
 class TrayMoodPresenterHolder {
   TrayMoodPresenter? presenter;
 }

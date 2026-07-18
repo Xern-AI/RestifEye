@@ -53,4 +53,54 @@ void main() {
     // 8 long exercises with recent-penalty: immediate repeats should be rare.
     expect(repeats, lessThan(20));
   });
+  test('never exceeds the intensity ceiling', () {
+    final picker = ExercisePicker(
+      maxIntensity: ExerciseIntensity.soft,
+      random: Random(7),
+    );
+    for (var i = 0; i < 200; i++) {
+      expect(picker.pick(BreakKind.long).intensity, ExerciseIntensity.soft);
+    }
+  });
+
+  test('a raised ceiling unlocks the heavier exercises', () {
+    final picker = ExercisePicker(
+      maxIntensity: ExerciseIntensity.heavy,
+      random: Random(3),
+    );
+    final seen = {
+      for (var i = 0; i < 400; i++) picker.pick(BreakKind.long).intensity,
+    };
+    expect(seen, contains(ExerciseIntensity.heavy));
+  });
+
+  // The ceiling is a physical constraint; an opt-out is a preference. When
+  // they collide the preference has to yield, or there is nothing to show.
+  test('the ceiling outranks opt-outs when they leave nothing', () {
+    final softIds = exerciseDeck
+        .where(
+          (e) =>
+              e.tier == BreakKind.long && e.intensity == ExerciseIntensity.soft,
+        )
+        .map((e) => e.id)
+        .toSet();
+    final picker = ExercisePicker(
+      optOuts: softIds,
+      maxIntensity: ExerciseIntensity.soft,
+      random: Random(11),
+    );
+    expect(picker.pick(BreakKind.long).intensity, ExerciseIntensity.soft);
+  });
+
+  test('lowering the ceiling mid-session takes effect immediately', () {
+    final picker = ExercisePicker(
+      maxIntensity: ExerciseIntensity.heavy,
+      random: Random(5),
+    );
+    picker.pick(BreakKind.long);
+    picker.maxIntensity = ExerciseIntensity.soft;
+    for (var i = 0; i < 100; i++) {
+      expect(picker.pick(BreakKind.long).intensity, ExerciseIntensity.soft);
+    }
+  });
 }

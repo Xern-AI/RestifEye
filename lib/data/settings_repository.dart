@@ -23,6 +23,9 @@ class SettingsRepository {
   static const flagSounds = 'sounds_enabled';
   static const flagMoodIndicator = 'mood_indicator_enabled';
 
+  /// Ceiling on exercise intensity, stored as an [ExerciseIntensity] name.
+  static const keyMaxIntensity = 'max_exercise_intensity';
+
   /// Rolling window of recent break responses, comma-separated, behind the
   /// tray mood. Not a flag — see [readValue]/[writeValue].
   static const keyMoodRecent = 'mood_recent';
