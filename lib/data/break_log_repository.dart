@@ -57,7 +57,9 @@ class BreakLogRepository {
         action: BreakAction.credited,
         valueMs: awayFor.inMilliseconds,
       ),
-      EnginePausedByWorkHours() || EngineResumed() => null,
+      EnginePausedByWorkHours() ||
+      EnginePausedByMedia() ||
+      EngineResumed() => null,
     };
     if (row == null) return Future.value();
     return _db

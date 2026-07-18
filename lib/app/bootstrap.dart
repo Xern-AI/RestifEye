@@ -6,6 +6,7 @@ import 'package:dbus/dbus.dart';
 import '../core/clock.dart';
 import '../core/engine/engine.dart';
 import '../core/models/break_config.dart';
+import '../core/models/exercise.dart';
 import '../data/activity_repository.dart';
 import '../data/break_log_repository.dart';
 import '../data/database.dart';
@@ -20,6 +21,7 @@ import '../platform/linux/gnome_tray_support.dart';
 import '../platform/linux/linux_break_notifier.dart';
 import '../platform/linux/linux_context_signals.dart';
 import '../platform/linux/linux_idle_monitor.dart';
+import '../platform/linux/linux_presentation_signals.dart';
 import '../platform/linux/linux_session_signals.dart';
 import '../platform/linux/linux_sound_player.dart';
 import '../platform/linux/sni_tray.dart';
@@ -29,6 +31,7 @@ import '../services/activity_recorder.dart';
 import '../services/context_sampler.dart';
 import '../services/engine_service.dart';
 import '../services/exercise_picker.dart';
+import '../services/mood_service.dart';
 import '../services/notification_coordinator.dart';
 import '../services/rollup_service.dart';
 import '../services/update_service.dart';
@@ -68,6 +71,8 @@ typedef BootResult = ({
   TrayIndicator tray,
   SoundPlayer sounds,
   TrayHostSupport traySupport,
+  MoodService mood,
+  bool moodIndicator,
 });
 
 /// Builds the real object graph: database, engine, Linux adapters,
@@ -79,6 +84,9 @@ Future<BootResult> bootstrap() async {
   final config = isDevMode ? _devConfig : await settings.loadConfig();
   final snapshot = isDevMode ? null : await settings.loadSnapshot();
   final optOuts = await settings.loadExerciseOptOuts();
+  final maxIntensityName = await settings.readValue(
+    SettingsRepository.keyMaxIntensity,
+  );
 
   final clock = SystemClock();
   final engine = BreakEngine(
@@ -150,27 +158,58 @@ Future<BootResult> bootstrap() async {
     ).maybeCheck(),
   );
 
-  final service = EngineService(
+  final service =
+      EngineService(
+          engine: engine,
+          clock: clock,
+          idleMonitor: LinuxIdleMonitor(sessionBus),
+          sessionSignals: LinuxSessionSignals(
+            session: sessionBus,
+            system: systemBus,
+          ),
+          sampler: ContextSampler(LinuxContextSignals()),
+          presentation: PresentationSampler(
+            LinuxPresentationSignals(session: sessionBus, system: systemBus),
+          ),
+          breakLog: breakLogRepo,
+          settings: settings,
+          recorder: ActivityRecorder(activityRepo.insertSlice),
+        )
+        ..pauseDuringMedia = await settings.getFlag(
+          SettingsRepository.flagPauseDuringMedia,
+          fallback: true,
+        )
+        ..start();
+
+  final mood = MoodService(
     engine: engine,
     clock: clock,
-    idleMonitor: LinuxIdleMonitor(sessionBus),
-    sessionSignals: LinuxSessionSignals(session: sessionBus, system: systemBus),
-    sampler: ContextSampler(LinuxContextSignals()),
-    breakLog: breakLogRepo,
     settings: settings,
-    recorder: ActivityRecorder(activityRepo.insertSlice),
-  )..start();
+    activity: activityRepo,
+  );
+  await mood.start();
 
   return (
     db: db,
     service: service,
     overlay: overlay,
     config: config,
-    picker: ExercisePicker(optOuts: optOuts),
+    picker: ExercisePicker(
+      optOuts: optOuts,
+      maxIntensity: ExerciseIntensity.values.firstWhere(
+        (v) => v.name == maxIntensityName,
+        orElse: () => ExerciseIntensity.medium,
+      ),
+    ),
     autostart: autostart,
     tray: SniTrayIndicator(sessionBus),
     sounds: sounds,
     traySupport: traySupport,
+    mood: mood,
+    moodIndicator: await settings.getFlag(
+      SettingsRepository.flagMoodIndicator,
+      fallback: true,
+    ),
   );
 }
 

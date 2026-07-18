@@ -90,6 +90,12 @@ class SniTrayIndicator implements TrayIndicator {
   Future<void> setPaused(bool paused) async => _menu?.setPaused(paused);
 
   @override
+  Future<void> setIcon(
+    List<TrayPixmap> icons, {
+    required String tooltip,
+  }) async => _item?.update(icons: icons, tooltip: tooltip);
+
+  @override
   Future<void> dispose() async {
     await _watcherSub?.cancel();
     final item = _item;
@@ -102,17 +108,30 @@ class SniTrayIndicator implements TrayIndicator {
 
 /// org.kde.StatusNotifierItem at /StatusNotifierItem.
 class _SniItemObject extends DBusObject {
-  _SniItemObject({required this.icons, required this.onActivate})
+  _SniItemObject({required this._icons, required this.onActivate})
     : super(DBusObjectPath('/StatusNotifierItem'));
 
   static const _iface = 'org.kde.StatusNotifierItem';
 
-  final List<TrayPixmap> icons;
+  List<TrayPixmap> _icons;
+  String _tooltip = 'Running — breaks on schedule';
   final void Function() onActivate;
+
+  /// Swaps the icon and hover text, then tells the host to re-read them.
+  ///
+  /// The property change alone is invisible: SNI hosts cache both and only
+  /// refetch when signalled, so without these emissions the icon would never
+  /// visibly change.
+  void update({required List<TrayPixmap> icons, required String tooltip}) {
+    _icons = icons;
+    _tooltip = tooltip;
+    emitSignal(_iface, 'NewIcon');
+    emitSignal(_iface, 'NewToolTip');
+  }
 
   DBusValue get _pixmaps => DBusArray(
     DBusSignature('(iiay)'),
-    icons.map(
+    _icons.map(
       (p) => DBusStruct([
         DBusInt32(p.width),
         DBusInt32(p.height),
@@ -134,12 +153,13 @@ class _SniItemObject extends DBusObject {
     'AttentionIconName': const DBusString(''),
     'AttentionIconPixmap': DBusArray(DBusSignature('(iiay)'), const []),
     'AttentionMovieName': const DBusString(''),
-    // Hovering the icon must say plainly which app it is.
+    // Hovering the icon must say plainly which app it is, and — since the
+    // icon now carries an expression — what that expression means.
     'ToolTip': DBusStruct([
       const DBusString(''),
       DBusArray(DBusSignature('(iiay)'), const []),
       const DBusString(Brand.appName),
-      const DBusString('Running — breaks on schedule'),
+      DBusString(_tooltip),
     ]),
     'ItemIsMenu': const DBusBoolean(false),
     'Menu': DBusObjectPath('/MenuBar'),

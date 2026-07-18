@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/engine/phase.dart';
 import '../core/models/activity.dart';
 import '../core/models/break_config.dart';
+import '../core/models/exercise.dart';
 import '../data/activity_repository.dart';
 import '../data/break_log_repository.dart';
 import '../data/database.dart';
@@ -18,6 +19,7 @@ import '../platform/interfaces/tray_support.dart';
 import 'advice_engine.dart';
 import 'app_lifecycle.dart';
 import 'engine_service.dart';
+import 'tray_mood_presenter.dart';
 import 'exercise_picker.dart';
 
 /// Concrete instances are created in the bootstrap (or in tests) and
@@ -307,6 +309,9 @@ class GeneralSettings {
     required this.updateCheck,
     required this.fullscreenOverlay,
     required this.sounds,
+    required this.pauseDuringMedia,
+    required this.moodIndicator,
+    required this.maxIntensity,
   });
 
   final bool autostart;
@@ -314,16 +319,31 @@ class GeneralSettings {
   final bool fullscreenOverlay;
   final bool sounds;
 
+  /// Hold breaks while a fullscreen video or presentation is running.
+  final bool pauseDuringMedia;
+
+  /// Let the tray icon's expression reflect how the day is going.
+  final bool moodIndicator;
+
+  /// The most demanding exercise the user wants to be offered.
+  final ExerciseIntensity maxIntensity;
+
   GeneralSettings copyWith({
     bool? autostart,
     bool? updateCheck,
     bool? fullscreenOverlay,
     bool? sounds,
+    bool? pauseDuringMedia,
+    bool? moodIndicator,
+    ExerciseIntensity? maxIntensity,
   }) => GeneralSettings(
     autostart: autostart ?? this.autostart,
     updateCheck: updateCheck ?? this.updateCheck,
     fullscreenOverlay: fullscreenOverlay ?? this.fullscreenOverlay,
     sounds: sounds ?? this.sounds,
+    pauseDuringMedia: pauseDuringMedia ?? this.pauseDuringMedia,
+    moodIndicator: moodIndicator ?? this.moodIndicator,
+    maxIntensity: maxIntensity ?? this.maxIntensity,
   );
 }
 
@@ -350,8 +370,21 @@ class GeneralSettingsNotifier extends AsyncNotifier<GeneralSettings> {
         SettingsRepository.flagSounds,
         fallback: true,
       ),
+      pauseDuringMedia: await settings.getFlag(
+        SettingsRepository.flagPauseDuringMedia,
+        fallback: true,
+      ),
+      moodIndicator: await settings.getFlag(
+        SettingsRepository.flagMoodIndicator,
+        fallback: true,
+      ),
+      maxIntensity: _intensityFrom(
+        await settings.readValue(SettingsRepository.keyMaxIntensity),
+      ),
     );
     ref.read(soundPlayerProvider).enabled = general.sounds;
+    ref.read(exercisePickerProvider).maxIntensity = general.maxIntensity;
+    ref.read(engineServiceProvider).pauseDuringMedia = general.pauseDuringMedia;
     return general;
   }
 
@@ -381,6 +414,36 @@ class GeneralSettingsNotifier extends AsyncNotifier<GeneralSettings> {
     );
   }
 
+  Future<void> setPauseDuringMedia(bool enabled) async {
+    ref.read(engineServiceProvider).pauseDuringMedia = enabled;
+    await _persist(
+      SettingsRepository.flagPauseDuringMedia,
+      enabled,
+      (s) => s.copyWith(pauseDuringMedia: enabled),
+    );
+  }
+
+  Future<void> setMoodIndicator(bool enabled) async {
+    final presenter = ref.read(trayMoodPresenterProvider).presenter;
+    if (presenter != null) {
+      presenter.enabled = enabled;
+      await presenter.refresh();
+    }
+    await _persist(
+      SettingsRepository.flagMoodIndicator,
+      enabled,
+      (s) => s.copyWith(moodIndicator: enabled),
+    );
+  }
+
+  Future<void> setMaxIntensity(ExerciseIntensity value) async {
+    ref.read(exercisePickerProvider).maxIntensity = value;
+    await ref
+        .read(settingsRepositoryProvider)
+        .writeValue(SettingsRepository.keyMaxIntensity, value.name);
+    await _update((s) => s.copyWith(maxIntensity: value));
+  }
+
   Future<void> _persist(
     String flag,
     bool value,
@@ -394,3 +457,22 @@ class GeneralSettingsNotifier extends AsyncNotifier<GeneralSettings> {
     state = AsyncData(apply(await future));
   }
 }
+
+/// Holds the live tray presenter, which only exists once a tray host has
+/// been found. Null on desktops without a status area, so every consumer
+/// must cope with its absence.
+///
+/// A mutable holder rather than a StateProvider: Riverpod 3 dropped
+/// StateProvider, and nothing rebuilds on this changing — Settings just needs
+/// a handle to push the toggle through to.
+/// Medium by default: standing stretches suit most desks, while the heavy
+/// exercises are opt-in because nobody should be shown squats in an office
+/// they cannot do them in.
+ExerciseIntensity _intensityFrom(String? raw) => ExerciseIntensity.values
+    .firstWhere((v) => v.name == raw, orElse: () => ExerciseIntensity.medium);
+
+class TrayMoodPresenterHolder {
+  TrayMoodPresenter? presenter;
+}
+
+final trayMoodPresenterProvider = Provider((ref) => TrayMoodPresenterHolder());

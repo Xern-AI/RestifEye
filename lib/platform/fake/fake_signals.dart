@@ -3,6 +3,7 @@ import 'dart:async';
 import '../interfaces/autostart.dart';
 import '../interfaces/context_signals.dart';
 import '../interfaces/idle_monitor.dart';
+import '../interfaces/presentation_signals.dart';
 import '../interfaces/session_signals.dart';
 import '../interfaces/tray_indicator.dart';
 
@@ -36,6 +37,16 @@ class FakeContextSignals implements ContextSignals {
   Future<bool> isBusy() async => busy;
 }
 
+class FakePresentationSignals implements PresentationSignals {
+  PresentationState state = PresentationState.idle;
+
+  void setPresenting(bool value, {String? byApp}) =>
+      state = PresentationState(active: value, byApp: byApp);
+
+  @override
+  Future<PresentationState> sample() async => state;
+}
+
 class FakeAutostart implements Autostart {
   bool enabled = false;
 
@@ -56,8 +67,22 @@ class FakeTrayIndicator implements TrayIndicator {
   @override
   Future<void> init({required List<TrayPixmap> icons}) async {}
 
+  List<TrayPixmap> icons = const [];
+  String tooltip = '';
+  int iconUpdates = 0;
+
   @override
   Future<void> setPaused(bool value) async => paused = value;
+
+  @override
+  Future<void> setIcon(
+    List<TrayPixmap> value, {
+    required String tooltip,
+  }) async {
+    icons = value;
+    this.tooltip = tooltip;
+    iconUpdates++;
+  }
 
   @override
   Stream<TrayAction> get actions => _controller.stream;

@@ -1,34 +1,49 @@
 import '../platform/interfaces/context_signals.dart';
+import '../platform/interfaces/presentation_signals.dart';
+import 'polled_value.dart';
 
 /// Rate-limits busy checks: `pw-dump` is too heavy to run every second,
 /// and busy state only matters when a break is close.
 class ContextSampler {
-  ContextSampler(this._signals, {this.ttl = const Duration(seconds: 5)});
+  ContextSampler(ContextSignals signals, {Duration ttl = _defaultTtl})
+    : _cache = PolledValue(probe: signals.isBusy, initial: false, ttl: ttl);
 
-  final ContextSignals _signals;
-  final Duration ttl;
+  static const _defaultTtl = Duration(seconds: 5);
 
-  bool _value = false;
-  DateTime? _sampledAt;
-  Future<void>? _inFlight;
+  final PolledValue<bool> _cache;
 
-  bool get value => _value;
+  Duration get ttl => _cache.ttl;
+  bool get value => _cache.value;
 
   /// Refreshes when [relevant] and the cached value is older than [ttl].
   /// Never runs two probes concurrently.
   Future<void> refreshIfNeeded({
     required bool relevant,
     required DateTime now,
-  }) {
-    if (!relevant) return Future.value();
-    final age = _sampledAt == null ? null : now.difference(_sampledAt!);
-    if (age != null && age < ttl) return Future.value();
-    return _inFlight ??= _signals
-        .isBusy()
-        .then((busy) {
-          _value = busy;
-          _sampledAt = now;
-        })
-        .whenComplete(() => _inFlight = null);
-  }
+  }) => _cache.refreshIfNeeded(relevant: relevant, now: now);
+}
+
+/// Rate-limits "is something playing fullscreen" checks.
+///
+/// Unlike [ContextSampler] this is polled **unconditionally**, not only when
+/// a break is close: the pause has to engage while the film is playing, which
+/// is exactly when no break is near. The probe is two D-Bus calls — far
+/// cheaper than the process spawn behind the busy check — so the constant
+/// cadence is affordable.
+class PresentationSampler {
+  PresentationSampler(
+    PresentationSignals signals, {
+    Duration ttl = const Duration(seconds: 5),
+  }) : _cache = PolledValue(
+         probe: signals.sample,
+         initial: PresentationState.idle,
+         ttl: ttl,
+       );
+
+  final PolledValue<PresentationState> _cache;
+
+  PresentationState get value => _cache.value;
+
+  Future<void> refresh(DateTime now) =>
+      _cache.refreshIfNeeded(relevant: true, now: now);
 }

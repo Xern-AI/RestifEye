@@ -168,6 +168,80 @@ void main() {
       expect((rig.engine.phase as InBreak).snoozesLeft, 3);
     });
 
+    // Regression: the budget used to be one global counter shared by two
+    // independently-scheduled cycles. Snoozing a long break pushes it past
+    // `_microDue + mergeWindow`, so the *micro* break (already due) fires
+    // next; completing that micro cycle refilled the shared counter, handing
+    // the still-pending long break a fresh budget on top of what it had
+    // already spent. Users reported snoozing a 3-budget long break 5 times.
+    test('a micro cycle does not refill a pending long break\'s budget', () {
+      // micro 20 / long 21 — the long lands inside the 2 min merge window,
+      // so it is the kind that comes due first and absorbs the micro.
+      final rig = Rig(
+        config: const BreakConfig(
+          microInterval: Duration(minutes: 20),
+          longInterval: Duration(minutes: 21),
+        ),
+      );
+      rig.run(const Duration(minutes: 21, seconds: 5));
+      final started = rig.engine.phase as InBreak;
+      expect(started.kind, BreakKind.long, reason: 'long absorbs the micro');
+
+      // Snooze #1 of 3 on the long break.
+      expect(rig.engine.snooze(), isTrue);
+
+      // The long is now at +2 min, past micro's merge window, so the overdue
+      // micro takes over and runs to completion.
+      rig.run(const Duration(seconds: 5));
+      expect((rig.engine.phase as InBreak).kind, BreakKind.micro);
+      rig.run(const Duration(seconds: 25)); // micro completes (20 s)
+
+      // Back to the long break. It must remember it already spent one snooze.
+      rig.run(const Duration(minutes: 2, seconds: 5));
+      final resumed = rig.engine.phase as InBreak;
+      expect(resumed.kind, BreakKind.long);
+      expect(
+        resumed.snoozesLeft,
+        2,
+        reason: 'the long break spent one snooze before the micro interrupted',
+      );
+
+      // Only two snoozes may remain — the third attempt must fail.
+      expect(rig.engine.snooze(), isTrue);
+      rig.run(const Duration(minutes: 2, seconds: 5));
+      expect(rig.engine.snooze(), isTrue);
+      rig.run(const Duration(minutes: 2, seconds: 5));
+      expect(
+        rig.engine.snooze(),
+        isFalse,
+        reason: 'budget of 3 is spent; a 4th snooze must be refused',
+      );
+      expect((rig.engine.phase as InBreak).strict, isTrue);
+    });
+
+    test('each break kind carries its own snooze budget', () {
+      final rig = Rig(
+        config: const BreakConfig(
+          microInterval: Duration(minutes: 20),
+          longInterval: Duration(minutes: 60),
+        ),
+      );
+      // Spend two snoozes on a micro break, then let it complete.
+      rig.run(const Duration(minutes: 20, seconds: 5));
+      expect(rig.engine.snooze(), isTrue);
+      rig.run(const Duration(minutes: 2, seconds: 5));
+      expect(rig.engine.snooze(), isTrue);
+      rig.run(const Duration(minutes: 2, seconds: 5));
+      expect((rig.engine.phase as InBreak).snoozesLeft, 1);
+      rig.run(const Duration(seconds: 25)); // completes
+
+      // The long break is untouched by the micro's spending.
+      rig.run(const Duration(minutes: 36));
+      final long = rig.engine.phase as InBreak;
+      expect(long.kind, BreakKind.long);
+      expect(long.snoozesLeft, 3);
+    });
+
     test('skip from the warning cancels the cycle and reschedules', () {
       final rig = Rig();
       rig.run(const Duration(minutes: 19, seconds: 40));
@@ -269,6 +343,115 @@ void main() {
         expect(rig.engine.phase, isA<InBreak>());
       },
     );
+  });
+
+  group('media pause', () {
+    const playing = TickInput(presenting: true, presentingApp: 'mpv');
+
+    test('a fullscreen video pauses scheduling outright', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 5));
+      rig.run(const Duration(minutes: 1), playing);
+
+      final phase = rig.engine.phase;
+      expect(phase, isA<Paused>());
+      expect((phase as Paused).reason, PauseReason.media);
+      expect(phase.byApp, 'mpv');
+      expect(phase.byUser, isFalse, reason: 'must not light up the UI toggle');
+      expect(rig.eventsOf<EnginePausedByMedia>().single.byApp, 'mpv');
+    });
+
+    test('no break fires during a two-hour film', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 5));
+      rig.run(const Duration(hours: 2), playing);
+
+      expect(rig.eventsOf<BreakStarted>(), isEmpty);
+      expect(rig.engine.phase, isA<Paused>());
+    });
+
+    // The whole point of the deferral cap is that a break can only be pushed
+    // so far. Media pause deliberately has no cap — a cap would guarantee the
+    // interruption the feature exists to prevent.
+    test('the media pause is not subject to the deferral cap', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 19), playing);
+      rig.run(const Duration(minutes: 30), playing);
+      expect(rig.eventsOf<BreakStarted>(), isEmpty);
+      expect(rig.eventsOf<BreakDeferred>(), isEmpty);
+    });
+
+    test('timers are not reset when the video ends', () {
+      final rig = Rig();
+      // 15 min of work, then a 40 min film. 5 min of the interval remain.
+      rig.run(const Duration(minutes: 15));
+      rig.run(const Duration(minutes: 40), playing);
+      expect(rig.engine.phase, isA<Paused>());
+
+      // Resuming must not restart the 20 min interval: the break is already
+      // overdue, so it arrives after the short re-warn lead, not 20 min later.
+      rig.run(const Duration(seconds: 1));
+      expect(rig.engine.phase, isA<Warning>());
+      rig.run(const Duration(seconds: 20));
+      expect(
+        rig.engine.phase,
+        isA<InBreak>(),
+        reason: 'an overdue break resumes promptly, not on a fresh interval',
+      );
+    });
+
+    // Watching counts as screen time: the interval keeps running down during
+    // the film, it just never fires. So a short video does not push the next
+    // break back, and a long one leaves it overdue (covered above). What must
+    // never happen is the interval *restarting*, which would let a film buy
+    // the user a fresh 20 minutes.
+    test('a film consumes interval time rather than resetting it', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 5));
+      rig.run(const Duration(minutes: 10), playing);
+      rig.run(const Duration(seconds: 1));
+
+      final phase = rig.engine.phase;
+      expect(phase, isA<Monitoring>());
+      // 15 min of the 20 min interval have elapsed; ~5 remain.
+      expect((phase as Monitoring).microIn.inSeconds, closeTo(299, 3));
+    });
+
+    test('film time is never credited as a natural break', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 5));
+      // Watching a film without touching the keyboard looks exactly like
+      // being idle. It is not rest, and must not earn a credited break.
+      var idle = Duration.zero;
+      for (var i = 0; i < 60 * 30; i++) {
+        idle += const Duration(seconds: 1);
+        rig.clock.advance(const Duration(seconds: 1));
+        rig.engine.tick(
+          TickInput(idle: idle, presenting: true, presentingApp: 'mpv'),
+        );
+      }
+      rig.run(const Duration(seconds: 1));
+      expect(rig.eventsOf<BreakCredited>(), isEmpty);
+    });
+
+    test('a break already on screen is left to finish', () {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 20, seconds: 5));
+      expect(rig.engine.phase, isA<InBreak>());
+
+      // Going fullscreen mid-break must not abandon it — that would log a
+      // BreakEscaped the user never earned.
+      rig.run(const Duration(seconds: 5), playing);
+      expect(rig.engine.phase, isA<InBreak>());
+      expect(rig.eventsOf<BreakEscaped>(), isEmpty);
+    });
+
+    test('a user pause outranks a media pause', () {
+      final rig = Rig();
+      rig.engine.setPausedByUser(true);
+      rig.run(const Duration(minutes: 1), playing);
+      expect((rig.engine.phase as Paused).reason, PauseReason.user);
+    });
   });
 
   group('busy deferral', () {
