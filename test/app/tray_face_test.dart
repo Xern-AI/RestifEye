@@ -8,10 +8,38 @@ import 'package:restifeye/app/tray_face.dart';
 import 'package:restifeye/core/mood/mood.dart';
 
 void main() {
-  test('every mood renders valid pixmaps at both sizes', () async {
+  test('offers no size too small to render the face legibly', () async {
+    final pixmaps = await renderTrayFace(Mood.good);
+    expect(
+      pixmaps.map((p) => p.width),
+      everyElement(greaterThanOrEqualTo(22)),
+      reason:
+          'below 22 px the strokes fall under a pixel; a host that takes '
+          'the first entry rather than the best fit would draw mush',
+    );
+    expect(pixmaps.length, greaterThan(2));
+  });
+
+  test('the face very nearly fills the pixmap', () async {
+    // Regression: the tray face inherited the launcher icon's 6.25% margin,
+    // which the panel then padded again — the icon rendered visibly smaller
+    // than every other status icon.
+    final p = (await renderTrayFace(
+      Mood.good,
+    )).firstWhere((p) => p.width == 48);
+    int alphaAt(int x, int y) => p.argb32[(y * p.width + x) * 4];
+    final mid = p.height ~/ 2;
+    expect(
+      alphaAt(2, mid),
+      greaterThan(0),
+      reason: 'two pixels in from the edge should already be inside the face',
+    );
+  });
+
+  test('every mood renders valid pixmaps at every offered size', () async {
     for (final mood in Mood.values) {
       final pixmaps = await renderTrayFace(mood);
-      expect(pixmaps.length, 2, reason: '$mood should render 24 and 48 px');
+      expect(pixmaps, isNotEmpty, reason: '$mood rendered nothing');
       for (final p in pixmaps) {
         expect(p.argb32.length, p.width * p.height * 4);
         // A face must actually be drawn: some pixel has to be opaque.

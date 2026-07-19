@@ -35,6 +35,7 @@ class TrayMoodPresenter {
   bool enabled;
 
   StreamSubscription<Mood>? _sub;
+  Timer? _demo;
 
   /// Seeded from the service rather than defaulting to cheerful: the mood is
   /// computed before a tray host is found, so starting at `good` would show a
@@ -63,6 +64,20 @@ class TrayMoodPresenter {
     }
   }
 
+  /// Dev-only (`RESTIFEYE_DEV=1`): walks every mood on a short loop so the
+  /// colours, faces and pulse can actually be watched.
+  ///
+  /// This exists because the feature is otherwise almost impossible to
+  /// inspect: real moods move on the scale of hours, and the honest answer to
+  /// "is the icon updating?" was previously to skip breaks for twenty minutes
+  /// and hope. Not wired into release builds.
+  void startDemo({Duration every = const Duration(seconds: 5)}) {
+    var i = 0;
+    _demo = Timer.periodic(every, (_) {
+      unawaited(show(Mood.values[i++ % Mood.values.length]));
+    });
+  }
+
   /// Re-asserts the current mood — used when the setting is toggled.
   Future<void> refresh() => enabled ? _apply(_mood) : _apply(Mood.good);
 
@@ -76,5 +91,8 @@ class TrayMoodPresenter {
     }
   }
 
-  Future<void> dispose() async => _sub?.cancel();
+  Future<void> dispose() async {
+    _demo?.cancel();
+    await _sub?.cancel();
+  }
 }

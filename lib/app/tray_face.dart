@@ -79,9 +79,20 @@ enum TrayEyes { open, happy, closed, droopy }
 
 enum TrayMouth { grin, smile, flat, frown }
 
-/// Sizes the tray asks for. 24 px covers most panels, 48 px covers HiDPI;
-/// the host picks whichever fits.
-const _traySizes = [24, 48];
+/// Sizes offered to the host, which picks the closest to its panel height
+/// and scales it.
+///
+/// Only 24 and 48 were offered at first. A GNOME panel asking for 22 or 32
+/// then had to rescale, and a rescaled 24 px face is exactly the soft, small
+/// smudge that made the icon look shrunken next to its neighbours. Rendering
+/// is a few hundred microseconds per size and happens on mood changes, so
+/// covering the common panel heights outright is the cheaper trade.
+///
+/// Starts at 22, not 16: at 16 px the strokes fall below a pixel and the face
+/// turns to mush, and a host that naively takes the first entry rather than
+/// the best fit would land on exactly that. Every size offered here has to be
+/// one we would be happy to see drawn.
+const _traySizes = [22, 24, 32, 48, 64];
 
 /// Renders [mood] into the ARGB32 pixmaps the StatusNotifierItem protocol
 /// expects, at every size a host might want.
@@ -103,9 +114,10 @@ Future<TrayPixmap> _render(MoodFace face, int size, double scale) async {
   final canvas = Canvas(recorder);
   final s = size.toDouble();
 
-  // The pulse scales the face about its centre. Clamped so a frame can never
-  // grow past the pixmap and get clipped into a square.
-  final factor = scale.clamp(0.8, 1.06);
+  // The pulse scales the face about its centre. The upper clamp is tied to
+  // the inset below: at 1.04 the face exactly fills the pixmap, and anything
+  // beyond would clip its rounded corners into a hard square.
+  final factor = scale.clamp(0.85, 1.04);
   canvas
     ..translate(s / 2, s / 2)
     ..scale(factor)
@@ -129,9 +141,16 @@ Future<TrayPixmap> _render(MoodFace face, int size, double scale) async {
 }
 
 void _paintFace(Canvas canvas, MoodFace face, double s) {
-  // All geometry is a fraction of the canvas so 24 px and 48 px are the same
-  // drawing, not two hand-tuned ones.
-  final inset = s * 0.0625; // matches the app icon's 8/128 margin
+  // All geometry is a fraction of the canvas, so every size is the same
+  // drawing rather than several hand-tuned ones.
+  //
+  // Nearly full bleed. The app icon's 6.25% margin is right for a launcher,
+  // where the icon sits alone in generous padding, and wrong for a tray,
+  // where the host adds its own padding on top — stacking the two is what
+  // made this render visibly smaller than every other status icon. 4% is
+  // just enough to keep the rounded corners from touching the edge, and
+  // leaves the headroom the pulse scales into.
+  final inset = s * 0.04;
   final rect = Rect.fromLTWH(inset, inset, s - inset * 2, s - inset * 2);
   final body = Paint()..color = face.background;
   canvas.drawRRect(

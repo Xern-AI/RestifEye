@@ -68,6 +68,8 @@ Future<void> _wireTray(
   );
   container.read(trayMoodPresenterProvider).presenter = presenter;
   await presenter.start();
+  // Dev builds cycle the moods so the tray effects can be seen at all.
+  if (isDevMode) presenter.startDemo();
 
   boot.tray.actions.listen((action) async {
     switch (action) {

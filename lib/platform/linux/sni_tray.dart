@@ -146,7 +146,14 @@ class _SniItemObject extends DBusObject {
     'Title': const DBusString(Brand.appName),
     'Status': const DBusString('Active'),
     'WindowId': const DBusUint32(0),
-    'IconName': const DBusString(Brand.appId),
+    // Deliberately empty. The SNI spec has hosts prefer IconName and only
+    // fall back to IconPixmap when it is blank, so naming a themed icon here
+    // meant the shell drew the installed hicolor SVG and never once looked at
+    // the pixmaps — the mood colours and the pulse were computed, pushed, and
+    // silently discarded. It also rendered small, because that SVG carries a
+    // 6.25% transparent inset. The pixmaps are the icon; nothing else may
+    // outrank them.
+    'IconName': const DBusString(''),
     'IconPixmap': _pixmaps,
     'OverlayIconName': const DBusString(''),
     'OverlayIconPixmap': DBusArray(DBusSignature('(iiay)'), const []),
