@@ -28,13 +28,35 @@ class MoodTracker {
 
   Mood get current => _steady;
 
+  /// Adopts [mood] as the settled state, skipping hysteresis.
+  ///
+  /// Hysteresis smooths *transitions*, and a first reading is not one. Left
+  /// to escalate into its own restored history the tracker would start every
+  /// launch cheerful and then turn red a few minutes later with nothing
+  /// having happened — a colour change the user cannot connect to anything
+  /// they did, which is worse than the warning arriving honestly at startup.
+  void settle(Mood mood) {
+    if (mood.isTransient) return; // a moment is not a settled state
+    _steady = mood;
+    _pending = null;
+    _pendingCount = 0;
+  }
+
   /// Feeds one sample and returns the mood to display.
   Mood update(Mood raw) {
     // "In a break" and "paused" describe the moment, not the pattern. They
     // show through immediately and are not subject to hysteresis, because
     // the icon lagging three ticks behind the break the user is looking at
     // would just be wrong.
-    if (raw.isTransient) return raw;
+    //
+    // A half-finished escalation does not survive one, either: the samples
+    // on the far side of a break describe a different situation, and the
+    // break itself is usually what changed it.
+    if (raw.isTransient) {
+      _pending = null;
+      _pendingCount = 0;
+      return raw;
+    }
 
     if (raw == _steady) {
       _pending = null;

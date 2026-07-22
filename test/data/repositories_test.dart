@@ -220,5 +220,39 @@ void main() {
       expect(counts.escaped, 1);
       expect(counts.snoozes, 1);
     });
+
+    group('lastRestAt', () {
+      test('is null until the user has actually rested', () async {
+        final repo = BreakLogRepository(db);
+        final at = DateTime(2026, 7, 10, 10);
+        await repo.record(BreakStarted(at, BreakKind.micro, strict: false));
+        await repo.record(BreakEscaped(at, BreakKind.micro));
+        await repo.record(BreakSkipped(at, BreakKind.micro, skipsLeft: 1));
+
+        expect(await repo.lastRestAt(), isNull);
+      });
+
+      test('is the newest completed or credited break, across days', () async {
+        final repo = BreakLogRepository(db);
+        final yesterday = DateTime(2026, 7, 9, 17);
+        final rested = DateTime(2026, 7, 10, 11, 15);
+
+        await repo.record(BreakCompleted(yesterday, BreakKind.long));
+        await repo.record(
+          BreakCredited(
+            rested,
+            BreakKind.micro,
+            BreakOutcome.creditedIdle,
+            const Duration(minutes: 4),
+          ),
+        );
+        // Refusing a break later is not resting.
+        await repo.record(
+          BreakEscaped(rested.add(const Duration(hours: 1)), BreakKind.micro),
+        );
+
+        expect(await repo.lastRestAt(), rested);
+      });
+    });
   });
 }

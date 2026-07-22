@@ -1,0 +1,151 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:restifeye/platform/interfaces/overlay_controller.dart';
+import 'package:restifeye/platform/linux/window_ops.dart';
+import 'package:restifeye/platform/linux/window_takeover.dart';
+import 'package:window_manager/window_manager.dart';
+
+/// Records the order window calls land in — the only thing that has ever
+/// gone wrong here.
+class FakeWindowOps implements WindowOps {
+  final List<String> calls = [];
+
+  bool visible = false;
+
+  /// Whether the renderer claims a frame is in flight. Unmapping the window
+  /// while this is true is what killed the process on Wayland.
+  @override
+  bool isRendering = false;
+
+  @override
+  Future<void> prepare({
+    required String title,
+    required WindowListener on,
+  }) async => calls.add('prepare');
+
+  @override
+  Future<void> show() async {
+    visible = true;
+    calls.add('show');
+  }
+
+  @override
+  Future<void> hide() async {
+    visible = false;
+    calls.add('hide');
+  }
+
+  @override
+  Future<void> focus() async => calls.add('focus');
+
+  @override
+  Future<void> setFullScreen(bool value) async =>
+      calls.add('fullscreen:$value');
+
+  @override
+  Future<void> setAlwaysOnTop(bool value) async => calls.add('onTop:$value');
+
+  @override
+  Future<bool> isVisible() async => visible;
+
+  @override
+  Future<void> destroy() async => calls.add('destroy');
+}
+
+const _break = BreakWindowState(inBreak: true, strict: false, fullscreen: true);
+
+void main() {
+  late FakeWindowOps ops;
+  late WindowTakeover takeover;
+
+  setUp(() {
+    ops = FakeWindowOps();
+    takeover = WindowTakeover(ops: ops);
+  });
+
+  group('restoring visibility after a break', () {
+    test('a break started from the tray ends back in the tray', () async {
+      await takeover.apply(_break);
+      expect(ops.visible, isTrue, reason: 'a break has to show the window');
+
+      await takeover.apply(BreakWindowState.normal);
+      expect(ops.visible, isFalse);
+    });
+
+    test('a window the user had open is left open', () async {
+      ops.visible = true;
+      await takeover.apply(_break);
+      await takeover.apply(BreakWindowState.normal);
+
+      expect(ops.calls, isNot(contains('hide')));
+      expect(ops.visible, isTrue);
+    });
+  });
+
+  group('unmapping is deferred until the renderer is quiet', () {
+    // The regression this whole gate exists for: hiding the window while the
+    // toolkit still has a frame to draw destroys the surface underneath it
+    // and takes the process down with SIGSEGV.
+    test('a busy renderer postpones the hide instead of crashing', () async {
+      await takeover.apply(_break);
+
+      ops.isRendering = true; // the exercise illustration is still animating
+      await takeover.apply(BreakWindowState.normal);
+
+      expect(ops.calls, isNot(contains('hide')));
+      expect(
+        ops.calls,
+        containsAll(<String>['onTop:false', 'fullscreen:false']),
+        reason: 'presentation is dropped immediately; only the unmap waits',
+      );
+    });
+
+    test('the next reconciliation tick performs the deferred hide', () async {
+      await takeover.apply(_break);
+      ops.isRendering = true;
+      await takeover.apply(BreakWindowState.normal);
+
+      ops.isRendering = false; // the break screen is gone, frames stop
+      await takeover.apply(BreakWindowState.normal); // 1 Hz re-assertion
+
+      expect(ops.visible, isFalse);
+      expect(ops.calls.where((c) => c == 'hide'), hasLength(1));
+    });
+
+    test('a new break supersedes a hide that never happened', () async {
+      await takeover.apply(_break);
+      ops.isRendering = true;
+      await takeover.apply(BreakWindowState.normal);
+
+      ops.isRendering = false;
+      await takeover.apply(_break); // next break arrives first
+
+      expect(ops.visible, isTrue);
+      expect(ops.calls, isNot(contains('hide')));
+    });
+
+    test('opening the window cancels a pending hide', () async {
+      await takeover.apply(_break);
+      ops.isRendering = true;
+      await takeover.apply(BreakWindowState.normal);
+
+      await takeover.presentWindow();
+      ops.isRendering = false;
+      await takeover.apply(BreakWindowState.normal);
+
+      expect(
+        ops.visible,
+        isTrue,
+        reason: 'the window must not vanish out from under the user',
+      );
+    });
+  });
+
+  test('forceRestore drops break presentation but never hides', () async {
+    await takeover.apply(_break);
+
+    await takeover.forceRestore();
+
+    expect(ops.calls, isNot(contains('hide')));
+    expect(ops.visible, isTrue, reason: 'the escape hatch leaves a window');
+  });
+}

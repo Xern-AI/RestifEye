@@ -186,6 +186,7 @@ Future<BootResult> bootstrap() async {
     clock: clock,
     settings: settings,
     activity: activityRepo,
+    breaks: breakLogRepo,
   );
   await mood.start();
 

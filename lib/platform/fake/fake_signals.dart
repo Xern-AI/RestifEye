@@ -71,6 +71,11 @@ class FakeTrayIndicator implements TrayIndicator {
   String tooltip = '';
   int iconUpdates = 0;
 
+  /// Every tooltip written, in order — the icon itself is pixels, but the
+  /// tooltip names the mood, so this is the record of what the tray was
+  /// actually told and when.
+  final List<String> tooltips = [];
+
   @override
   Future<void> setPaused(bool value) async => paused = value;
 
@@ -81,6 +86,7 @@ class FakeTrayIndicator implements TrayIndicator {
   }) async {
     icons = value;
     this.tooltip = tooltip;
+    tooltips.add(tooltip);
     iconUpdates++;
   }
 

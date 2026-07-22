@@ -7,7 +7,9 @@ import '../core/engine/phase.dart';
 import '../core/mood/mood.dart';
 import '../core/mood/mood_rules.dart';
 import '../core/mood/mood_tracker.dart';
+import '../core/mood/mood_window.dart';
 import '../data/activity_repository.dart';
+import '../data/break_log_repository.dart';
 import '../data/settings_repository.dart';
 
 /// Works out how the app should feel about the user's day, and publishes it.
@@ -21,6 +23,7 @@ class MoodService {
     required this._clock,
     required this._settings,
     required this._activity,
+    required this._breaks,
     this._rules = const MoodRules(),
     MoodTracker? tracker,
   }) : _tracker = tracker ?? MoodTracker(escalateAfter: _escalateAfter);
@@ -29,19 +32,24 @@ class MoodService {
   /// this means a worsening mood has to persist for minutes, not seconds.
   static const _escalateAfter = 3;
 
-  /// Screen time is a database read, so it is refreshed on a slow cadence
-  /// rather than on every recompute.
-  static const _screenTimeEvery = Duration(minutes: 1);
+  /// The heartbeat. Screen time is a database read, so it is refreshed on a
+  /// slow cadence rather than on every recompute — and since responses now
+  /// expire out of the window with nothing but time passing, this is also
+  /// what lets a mood clear itself when the user simply stops misbehaving.
+  static const _recomputeEvery = Duration(minutes: 1);
 
   final BreakEngine _engine;
   final Clock _clock;
   final SettingsRepository _settings;
   final ActivityRepository _activity;
+  final BreakLogRepository _breaks;
   final MoodRules _rules;
   final MoodTracker _tracker;
 
   final _moods = StreamController<Mood>.broadcast();
-  final List<BreakResponse> _recent = [];
+
+  /// Replaced once at [start] by whatever survived from the last session.
+  MoodWindow _window = MoodWindow();
 
   StreamSubscription<EngineEvent>? _eventSub;
   StreamSubscription<EnginePhase>? _phaseSub;
@@ -57,7 +65,12 @@ class MoodService {
   Mood get current => _tracker.current;
 
   Future<void> start() async {
-    _recent.addAll(await _loadRecent());
+    _window = MoodWindow.decode(
+      await _settings.readValue(SettingsRepository.keyMoodRecent),
+      now: _clock.now(),
+      size: _rules.window,
+    );
+    _lastRestAt = await _lastRest();
 
     _eventSub = _engine.events.listen(_onEvent);
 
@@ -73,11 +86,26 @@ class MoodService {
     });
 
     await _refreshScreenTime();
-    _timer = Timer.periodic(_screenTimeEvery, (_) async {
+    _timer = Timer.periodic(_recomputeEvery, (_) async {
       await _refreshScreenTime();
       _recompute();
     });
+
+    // Start from what the restored history actually says instead of
+    // escalating into it over the next few minutes.
+    _tracker.settle(_rawMood());
     _recompute();
+  }
+
+  /// The last completed or credited break on record, or null if there has
+  /// never been one. Read from the log rather than kept in memory, so a
+  /// restart cannot claim the user has just rested.
+  Future<DateTime?> _lastRest() async {
+    try {
+      return await _breaks.lastRestAt();
+    } on Object {
+      return null; // no history is not an emergency; it is just no opinion
+    }
   }
 
   void _onEvent(EngineEvent event) {
@@ -90,13 +118,9 @@ class MoodService {
     };
     if (response == null) return;
 
-    if (response == BreakResponse.honored) _lastRestAt = _clock.now();
-    _recent.add(response);
-    // Only the window is ever consulted, so only the window is kept — this
-    // list must not grow for the lifetime of the process.
-    while (_recent.length > _rules.window) {
-      _recent.removeAt(0);
-    }
+    final now = _clock.now();
+    if (response == BreakResponse.honored) _lastRestAt = now;
+    _window.record(response, now);
     unawaited(_saveRecent());
     _recompute();
   }
@@ -110,24 +134,28 @@ class MoodService {
     }
   }
 
-  void _recompute() {
+  /// What the rules say right now, before hysteresis.
+  Mood _rawMood() {
     final now = _clock.now();
-    final raw = computeMood(
+    return computeMood(
       MoodInputs(
-        recent: List.unmodifiable(_recent),
+        recent: _window.responsesAt(now),
         screenTime: _screenTime,
-        // Before the first break of the session there is no "last rest" to
-        // measure from, so fatigue is judged on screen time alone rather
-        // than on an invented age.
+        // With no rest ever recorded, the stretch is however long the user
+        // has been at the screen — which is the honest lower bound, not an
+        // invented one.
         sinceLastRest: _lastRestAt == null
-            ? Duration.zero
+            ? _screenTime
             : now.difference(_lastRestAt!),
         inBreak: _inBreak,
         paused: _paused,
       ),
       rules: _rules,
     );
-    final mood = _tracker.update(raw);
+  }
+
+  void _recompute() {
+    final mood = _tracker.update(_rawMood());
     if (mood == _published) return; // only publish real changes
     _published = mood;
     if (!_moods.isClosed) _moods.add(mood);
@@ -135,18 +163,10 @@ class MoodService {
 
   /// The window survives a restart: a mood that resets to cheerful on every
   /// launch would mean the icon never says anything true after a reboot, and
-  /// would make restarting a way to clear a warning.
-  Future<List<BreakResponse>> _loadRecent() async {
-    final raw = await _settings.readValue(SettingsRepository.keyMoodRecent);
-    if (raw == null || raw.isEmpty) return const [];
-    final byName = {for (final r in BreakResponse.values) r.name: r};
-    return [for (final name in raw.split(',')) ?byName[name]];
-  }
-
-  Future<void> _saveRecent() => _settings.writeValue(
-    SettingsRepository.keyMoodRecent,
-    _recent.map((r) => r.name).join(','),
-  );
+  /// would make restarting a way to clear a warning. Responses carry their
+  /// timestamps, so what survives is only what is still recent.
+  Future<void> _saveRecent() =>
+      _settings.writeValue(SettingsRepository.keyMoodRecent, _window.encode());
 
   Future<void> dispose() async {
     _timer?.cancel();
