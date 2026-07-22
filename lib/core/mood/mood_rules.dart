@@ -1,13 +1,14 @@
 import 'mood.dart';
+import 'mood_window.dart';
 
-/// What happened to a break the user was offered.
-enum BreakResponse { honored, snoozed, skipped, escaped }
+export 'mood_window.dart' show BreakResponse;
 
 /// Everything the mood rules are allowed to see.
 ///
 /// Deliberately a *rolling window* of recent responses rather than day
 /// totals: judging on totals means one bad morning colours the icon red
-/// until midnight, and a good afternoon can never earn its way back.
+/// until midnight, and a good afternoon can never earn its way back. See
+/// [MoodWindow] for how that window is bounded.
 class MoodInputs {
   const MoodInputs({
     this.recent = const [],
@@ -36,7 +37,7 @@ class MoodInputs {
 /// place instead of being scattered through the branches below.
 class MoodRules {
   const MoodRules({
-    this.window = 5,
+    this.window = MoodWindow.defaultSize,
     this.ignoringMisses = 3,
     this.slippingMisses = 2,
     this.slippingSnoozes = 3,
