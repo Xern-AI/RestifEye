@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/app.dart';
 import 'app/bootstrap.dart';
 import 'app/tray_face.dart';
+import 'core/mood/mood.dart';
 import 'platform/interfaces/tray_indicator.dart';
 import 'services/app_lifecycle.dart';
 import 'services/providers.dart';
@@ -53,8 +54,12 @@ Future<void> _wireTray(
   ProviderContainer container,
   AppLifecycle lifecycle,
 ) async {
+  // The very first icon already honours the setting: with the indicator off
+  // the tray shows the neutral brand face, never a mood the user asked not
+  // to see.
+  final initial = boot.moodIndicator ? boot.mood.current : Mood.good;
   try {
-    await boot.tray.init(icons: await renderTrayFace(boot.mood.current));
+    await boot.tray.init(icons: await renderTrayFace(initial));
   } on Exception {
     return; // no status area / no bus — the app works without it
   }

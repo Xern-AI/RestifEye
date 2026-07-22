@@ -37,29 +37,36 @@ class TrayMoodPresenter {
   StreamSubscription<Mood>? _sub;
   Timer? _demo;
 
+  /// Serializes icon writes. Rendering a face is five images with an await
+  /// apiece, so two updates in flight together used to interleave and finish
+  /// in either order — leaving the tray showing whichever mood happened to
+  /// render last rather than whichever mood is current.
+  Future<void> _queue = Future.value();
+
   /// Seeded from the service rather than defaulting to cheerful: the mood is
   /// computed before a tray host is found, so starting at `good` would show a
   /// smile to someone the app had already concluded was skipping breaks.
   Mood _mood;
 
-  /// Guards against two pulses overlapping — the second would otherwise race
-  /// the first and leave the icon on whichever frame happened to land last.
-  int _pulseToken = 0;
+  /// Identifies the newest intent. Anything rendered for an older one is
+  /// dropped rather than written, so a superseded pulse can never be the
+  /// last thing the tray hears about.
+  int _token = 0;
 
   Future<void> start() async {
     _sub = _moods.listen((mood) => unawaited(show(mood)));
-    await _apply(_mood);
+    await refresh();
   }
 
   /// Renders [mood] and plays the acknowledgement pulse.
   Future<void> show(Mood mood) async {
     _mood = mood;
-    if (!enabled) return _apply(Mood.good);
+    if (!enabled) return refresh();
 
-    final token = ++_pulseToken;
+    final token = ++_token;
     for (final scale in _pulse) {
-      if (token != _pulseToken) return; // superseded by a newer mood
-      await _apply(mood, scale: scale);
+      if (token != _token) return; // superseded by a newer mood
+      await _apply(mood, token, scale: scale);
       if (scale != _pulse.last) await Future<void>.delayed(_frameGap);
     }
   }
@@ -78,17 +85,28 @@ class TrayMoodPresenter {
     });
   }
 
-  /// Re-asserts the current mood — used when the setting is toggled.
-  Future<void> refresh() => enabled ? _apply(_mood) : _apply(Mood.good);
+  /// Re-asserts the current mood — at startup, and when the setting is
+  /// toggled. Supersedes any pulse still in flight: this is the newest word
+  /// on what the icon should be.
+  Future<void> refresh() => _apply(enabled ? _mood : Mood.good, ++_token);
 
-  Future<void> _apply(Mood mood, {double scale = 1}) async {
-    try {
-      final icons = await renderTrayFace(mood, scale: scale);
-      await _tray.setIcon(icons, tooltip: MoodFace.of(mood).tooltip);
-    } on Object {
+  Future<void> _apply(Mood mood, int token, {double scale = 1}) =>
+      _enqueue(() async {
+        final icons = await renderTrayFace(mood, scale: scale);
+        // Rendering five sizes takes long enough for the mood to have moved
+        // on. Writing this frame now would leave the tray showing a mood we
+        // already know is stale, and the next real change might be minutes
+        // away.
+        if (token != _token) return;
+        await _tray.setIcon(icons, tooltip: MoodFace.of(mood).tooltip);
+      });
+
+  Future<void> _enqueue(Future<void> Function() write) {
+    _queue = _queue.then((_) => write()).catchError((Object _) {
       // No tray host, or a host that went away mid-update. The icon is a
       // nicety; nothing here may be allowed to disturb the engine.
-    }
+    });
+    return _queue;
   }
 
   Future<void> dispose() async {
