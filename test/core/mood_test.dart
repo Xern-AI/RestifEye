@@ -78,21 +78,63 @@ void main() {
           const MoodInputs(
             recent: [honored, honored],
             sinceLastRest: Duration(hours: 2),
+            screenTime: Duration(hours: 3),
           ),
         ),
         Mood.tired,
       );
     });
 
-    test('a long day reads as tired even when fully compliant', () {
+    // Cumulative screen time used to be enough on its own, which meant that
+    // after six hours the icon read tired for the rest of the day — five
+    // seconds after a completed break included. A mood nobody can clear by
+    // doing the right thing teaches people to ignore the icon.
+    test('a break clears tiredness, however long the day has been', () {
       expect(
         computeMood(
           const MoodInputs(
             recent: [honored, honored, honored, honored],
-            screenTime: Duration(hours: 7),
+            screenTime: Duration(hours: 9),
+            sinceLastRest: Duration(minutes: 2),
           ),
         ),
-        Mood.tired,
+        Mood.great,
+      );
+    });
+
+    test('a long day makes tiredness arrive sooner', () {
+      const stretch = MoodInputs(
+        recent: [honored, honored],
+        sinceLastRest: Duration(minutes: 50),
+        screenTime: Duration(hours: 7),
+      );
+      expect(computeMood(stretch), Mood.tired);
+
+      expect(
+        computeMood(
+          const MoodInputs(
+            recent: [honored, honored],
+            sinceLastRest: Duration(minutes: 50),
+            screenTime: Duration(hours: 2),
+          ),
+        ),
+        Mood.great,
+        reason: 'the same stretch early in the day is unremarkable',
+      );
+    });
+
+    // Otherwise resting at five in the evening reads as a sixteen-hour
+    // stretch at nine the next morning.
+    test('a stretch cannot exceed the time spent at the screen today', () {
+      expect(
+        computeMood(
+          const MoodInputs(
+            recent: [honored],
+            sinceLastRest: Duration(hours: 16),
+            screenTime: Duration(minutes: 15),
+          ),
+        ),
+        Mood.great,
       );
     });
 

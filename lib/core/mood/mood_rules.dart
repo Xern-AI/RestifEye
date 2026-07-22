@@ -26,7 +26,8 @@ class MoodInputs {
   final Duration screenTime;
 
   /// Time since the last break that actually happened (completed or
-  /// credited).
+  /// credited). With none on record, how long the user has been at the
+  /// screen — the honest lower bound on the current stretch.
   final Duration sinceLastRest;
 
   final bool inBreak;
@@ -43,6 +44,7 @@ class MoodRules {
     this.slippingSnoozes = 3,
     this.greatHonorRate = 0.8,
     this.tiredAfterRest = const Duration(minutes: 90),
+    this.tiredAfterRestOnLongDay = const Duration(minutes: 45),
     this.tiredAfterScreenTime = const Duration(hours: 6),
   });
 
@@ -62,10 +64,14 @@ class MoodRules {
   /// Fraction of the window that must be honored to earn [Mood.great].
   final double greatHonorRate;
 
-  /// No real rest for this long reads as tired...
+  /// No real rest for this long reads as tired.
   final Duration tiredAfterRest;
 
-  /// ...as does a long day, even a compliant one.
+  /// The same, once the day is already long — the bar drops rather than the
+  /// icon latching. See [_fatigueOr].
+  final Duration tiredAfterRestOnLongDay;
+
+  /// How much screen time makes a day "long".
   final Duration tiredAfterScreenTime;
 }
 
@@ -111,9 +117,29 @@ Mood computeMood(MoodInputs inputs, {MoodRules rules = const MoodRules()}) {
 
 /// Tiredness outranks "fine" and "great" but not the behavioural warnings:
 /// someone taking every break on a nine-hour day is still doing well, but
-/// the icon should say the day has been long.
+/// the icon should say when they have been at it too long without a rest.
+///
+/// Tiredness is a *stretch*, never a total. Reading it off cumulative screen
+/// time meant that once a day passed six hours the icon stayed tired for the
+/// rest of it — including five seconds after a completed break, with a
+/// tooltip asking for the break the user had just taken. A mood that cannot
+/// be cleared by doing the right thing teaches people to ignore the icon,
+/// which is the only thing it has.
+///
+/// A long day still counts, by lowering the bar rather than latching: after
+/// [MoodRules.tiredAfterScreenTime] at the screen it takes only
+/// [MoodRules.tiredAfterRestOnLongDay] without rest to read as tired. The app
+/// gets more insistent as the day wears on, and a break still answers it.
 Mood _fatigueOr(Mood base, MoodInputs inputs, MoodRules rules) {
-  final overdue = inputs.sinceLastRest >= rules.tiredAfterRest;
   final longDay = inputs.screenTime >= rules.tiredAfterScreenTime;
-  return overdue || longDay ? Mood.tired : base;
+  final threshold = longDay
+      ? rules.tiredAfterRestOnLongDay
+      : rules.tiredAfterRest;
+  // Nobody can have been at the screen longer than they have been at the
+  // screen today: without this, resting yesterday evening would read as a
+  // sixteen-hour stretch at nine the next morning.
+  final atScreenSinceRest = inputs.sinceLastRest < inputs.screenTime
+      ? inputs.sinceLastRest
+      : inputs.screenTime;
+  return atScreenSinceRest >= threshold ? Mood.tired : base;
 }

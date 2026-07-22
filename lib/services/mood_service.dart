@@ -141,10 +141,11 @@ class MoodService {
       MoodInputs(
         recent: _window.responsesAt(now),
         screenTime: _screenTime,
-        // With no rest on record there is nothing to measure from, and an
-        // invented age would be a judgement made up out of nothing.
+        // With no rest ever recorded, the stretch is however long the user
+        // has been at the screen — which is the honest lower bound, not an
+        // invented one.
         sinceLastRest: _lastRestAt == null
-            ? Duration.zero
+            ? _screenTime
             : now.difference(_lastRestAt!),
         inBreak: _inBreak,
         paused: _paused,
