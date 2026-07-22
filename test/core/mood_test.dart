@@ -173,6 +173,41 @@ void main() {
       expect(tracker.update(Mood.ignoring), Mood.ignoring);
     });
 
+    // Launching cheerful and turning red three minutes later, with nothing
+    // having happened in between, is a colour change the user cannot connect
+    // to anything they did.
+    test('a restored mood is adopted at once, not escalated into', () {
+      final tracker = MoodTracker(escalateAfter: 3)..settle(Mood.slipping);
+
+      expect(tracker.current, Mood.slipping);
+      expect(tracker.update(Mood.slipping), Mood.slipping);
+    });
+
+    test('settling ignores a transient mood', () {
+      final tracker = MoodTracker(initial: Mood.tired)..settle(Mood.resting);
+
+      expect(
+        tracker.current,
+        Mood.tired,
+        reason: 'a moment is not a settled state',
+      );
+    });
+
+    test('a half-finished escalation does not survive a break', () {
+      final tracker = MoodTracker(escalateAfter: 3);
+      tracker.update(Mood.slipping);
+      tracker.update(Mood.slipping);
+
+      tracker.update(Mood.resting); // the user takes the break
+
+      expect(tracker.update(Mood.slipping), Mood.good);
+      expect(
+        tracker.update(Mood.slipping),
+        Mood.good,
+        reason: 'the count restarts on the far side of the break',
+      );
+    });
+
     test('transient moods pass through without disturbing the steady one', () {
       final tracker = MoodTracker(initial: Mood.slipping);
       expect(tracker.update(Mood.resting), Mood.resting);

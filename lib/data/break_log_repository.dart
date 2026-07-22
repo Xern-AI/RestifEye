@@ -77,6 +77,26 @@ class BreakLogRepository {
   /// One-shot version of [watchDayCounts], for rollups.
   Future<BreakCounts> countsFor(DateTime day) => watchDayCounts(day).first;
 
+  /// When the user last actually rested — a break they completed, or one
+  /// credited to them for stepping away.
+  ///
+  /// The tray mood needs this at launch. Holding it only in memory meant a
+  /// restart claimed the user had just rested, so the app could not tell a
+  /// long unbroken stretch from a fresh session for the next hour and a half.
+  Future<DateTime?> lastRestAt() async {
+    final query = _db.select(_db.breakEventRows)
+      ..where(
+        (t) => t.action.isIn([
+          BreakAction.completed.index,
+          BreakAction.credited.index,
+        ]),
+      )
+      ..orderBy([(t) => OrderingTerm.desc(t.at)])
+      ..limit(1);
+    final row = await query.getSingleOrNull();
+    return row?.at;
+  }
+
   /// Outcome counts for the day containing [day] (local time).
   Stream<BreakCounts> watchDayCounts(DateTime day) {
     final from = DateTime(day.year, day.month, day.day);

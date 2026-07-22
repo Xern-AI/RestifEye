@@ -9,6 +9,7 @@ import '../core/mood/mood_rules.dart';
 import '../core/mood/mood_tracker.dart';
 import '../core/mood/mood_window.dart';
 import '../data/activity_repository.dart';
+import '../data/break_log_repository.dart';
 import '../data/settings_repository.dart';
 
 /// Works out how the app should feel about the user's day, and publishes it.
@@ -22,6 +23,7 @@ class MoodService {
     required this._clock,
     required this._settings,
     required this._activity,
+    required this._breaks,
     this._rules = const MoodRules(),
     MoodTracker? tracker,
   }) : _tracker = tracker ?? MoodTracker(escalateAfter: _escalateAfter);
@@ -40,6 +42,7 @@ class MoodService {
   final Clock _clock;
   final SettingsRepository _settings;
   final ActivityRepository _activity;
+  final BreakLogRepository _breaks;
   final MoodRules _rules;
   final MoodTracker _tracker;
 
@@ -67,6 +70,7 @@ class MoodService {
       now: _clock.now(),
       size: _rules.window,
     );
+    _lastRestAt = await _lastRest();
 
     _eventSub = _engine.events.listen(_onEvent);
 
@@ -86,7 +90,22 @@ class MoodService {
       await _refreshScreenTime();
       _recompute();
     });
+
+    // Start from what the restored history actually says instead of
+    // escalating into it over the next few minutes.
+    _tracker.settle(_rawMood());
     _recompute();
+  }
+
+  /// The last completed or credited break on record, or null if there has
+  /// never been one. Read from the log rather than kept in memory, so a
+  /// restart cannot claim the user has just rested.
+  Future<DateTime?> _lastRest() async {
+    try {
+      return await _breaks.lastRestAt();
+    } on Object {
+      return null; // no history is not an emergency; it is just no opinion
+    }
   }
 
   void _onEvent(EngineEvent event) {
@@ -115,15 +134,15 @@ class MoodService {
     }
   }
 
-  void _recompute() {
+  /// What the rules say right now, before hysteresis.
+  Mood _rawMood() {
     final now = _clock.now();
-    final raw = computeMood(
+    return computeMood(
       MoodInputs(
         recent: _window.responsesAt(now),
         screenTime: _screenTime,
-        // Before the first break of the session there is no "last rest" to
-        // measure from, so fatigue is judged on screen time alone rather
-        // than on an invented age.
+        // With no rest on record there is nothing to measure from, and an
+        // invented age would be a judgement made up out of nothing.
         sinceLastRest: _lastRestAt == null
             ? Duration.zero
             : now.difference(_lastRestAt!),
@@ -132,7 +151,10 @@ class MoodService {
       ),
       rules: _rules,
     );
-    final mood = _tracker.update(raw);
+  }
+
+  void _recompute() {
+    final mood = _tracker.update(_rawMood());
     if (mood == _published) return; // only publish real changes
     _published = mood;
     if (!_moods.isClosed) _moods.add(mood);
