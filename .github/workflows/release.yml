@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   build:
-    name: Build AppImage + RPM
+    name: Build AppImage + DEB + RPM
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -40,6 +40,11 @@ jobs:
           chmod +x packaging/appimage/build-appimage.sh
           packaging/appimage/build-appimage.sh
 
+      - name: Build DEB
+        run: |
+          chmod +x packaging/deb/build-deb.sh
+          packaging/deb/build-deb.sh
+
       - name: Build RPM
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -59,4 +64,5 @@ jobs:
             --title "RestifEye $GITHUB_REF_NAME" \
             --generate-notes \
             build/appimage/RestifEye-*-x86_64.AppImage \
+            build/deb/restifeye_*_amd64.deb \
             build/rpm/RPMS/x86_64/RestifEye-*.rpm

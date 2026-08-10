@@ -4,329 +4,53 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RestifEye — break reminders that respect your flow</title>
-<meta name="description" content="A free, open-source break and eye-rest reminder for Linux. Meeting-aware, Wayland-native, all data local. AppImage & RPM.">
+<meta name="description" content="A free break and eye-rest reminder for Linux. Meeting-aware, Wayland-native, all data stays local. Download as AppImage, DEB, or RPM.">
 <meta property="og:title" content="RestifEye — break reminders that respect your flow">
-<meta property="og:description" content="Free, open-source break reminders for Linux. Never mid-meeting. All data local.">
+<meta property="og:description" content="Free break reminders for Linux. Never mid-meeting. All data local.">
 <meta property="og:type" content="website">
+<meta property="og:image" content="og.png">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
-<style>
-  :root {
-    --primary: #00695C;
-    --on-primary: #FFFFFF;
-    --primary-container: #74F8E5;
-    --on-primary-container: #00201C;
-    --surface: #F7FBF9;
-    --on-surface: #161D1B;
-    --on-surface-variant: #3F4946;
-    --surface-container: #ECF2EF;
-    --surface-container-high: #E2E9E6;
-    --outline: rgba(111, 121, 118, .28);
-    --shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,32,28,.06);
-    --radius: 24px;
-    --radius-sm: 14px;
-    --hero-glow-1: rgba(0,137,123,.14);
-    --hero-glow-2: rgba(116,248,229,.18);
-
-    /* One spacing scale. Every gap on the page is a step on it — the page
-       previously picked margins ad hoc (8/20/28/36/40/72), which is what made
-       the vertical rhythm feel arbitrary. */
-    --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
-    --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --primary: #53DBC9;
-      --on-primary: #00382F;
-      --primary-container: #005045;
-      --on-primary-container: #74F8E5;
-      --surface: #0C1210;
-      --on-surface: #DDE4E1;
-      --on-surface-variant: #AEB9B5;
-      --surface-container: #161E1B;
-      --surface-container-high: #1E2724;
-      --outline: rgba(137, 147, 143, .25);
-      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
-      --hero-glow-1: rgba(83,219,201,.09);
-      --hero-glow-2: rgba(0,80,69,.35);
-    }
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
-    *, *::before, *::after { animation: none !important; transition: none !important; }
-  }
-  body {
-    font-family: system-ui, "Segoe UI", Roboto, "Cantarell", sans-serif;
-    background: var(--surface);
-    color: var(--on-surface);
-    line-height: 1.65;
-    -webkit-font-smoothing: antialiased;
-  }
-  /* Headings must not inherit body leading (1.65) — that is prose spacing and
-     it made every h3 on the page look loose and unanchored to its paragraph.
-     Weight 650 was also a synthetic weight no system font actually ships. */
-  h1, h2, h3 {
-    line-height: 1.2;
-    letter-spacing: -.02em;
-    text-wrap: balance;
-    font-weight: 700;
-  }
-  /* padding-inline, NOT the padding shorthand. The sections are themselves
-     `.wrap` elements, and `.wrap` (0,1,0) outranks `section` (0,0,1) — so a
-     shorthand here silently zeroed every section's vertical padding, which is
-     why the page's vertical rhythm collapsed and headings crowded the block
-     above them. Separate longhands mean the two rules no longer collide. */
-  .wrap { max-width: 1040px; margin: 0 auto; padding-inline: var(--s-5); }
-
-  /* ---- Nav ---- */
-  .nav {
-    position: sticky; top: 0; z-index: 10;
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-    background: color-mix(in srgb, var(--surface) 78%, transparent);
-    border-bottom: 1px solid var(--outline);
-  }
-  .nav-inner {
-    display: flex; align-items: center; gap: 12px;
-    max-width: 1040px; margin: 0 auto; padding: 12px 24px;
-  }
-  .nav-inner img { display: block; width: 30px; height: 30px; }
-  .nav-inner strong { font-size: 1.05rem; letter-spacing: -.01em; line-height: 1; }
-  .nav-links { margin-left: auto; display: flex; gap: 4px; align-items: center; }
-  .nav-links a {
-    color: var(--on-surface-variant); text-decoration: none;
-    font-size: .9rem; font-weight: 500; padding: 8px 12px; border-radius: 100px;
-  }
-  .nav-links a:hover { background: var(--surface-container-high); color: var(--on-surface); }
-  .nav-links a.nav-cta {
-    background: var(--primary); color: var(--on-primary); font-weight: 600;
-  }
-  .nav-links a.nav-cta:hover { filter: brightness(1.08); }
-  @media (max-width: 560px) { .nav-links a:not(.nav-cta) { display: none; } }
-
-  /* ---- Hero ---- */
-  .hero {
-    position: relative; overflow: hidden;
-    padding-block: var(--s-9) var(--s-8); text-align: center;
-  }
-  .hero::before, .hero::after {
-    content: ""; position: absolute; border-radius: 50%; filter: blur(80px);
-    pointer-events: none;
-  }
-  .hero::before { width: 480px; height: 480px; background: var(--hero-glow-1); top: -160px; left: -120px; }
-  .hero::after { width: 520px; height: 520px; background: var(--hero-glow-2); bottom: -220px; right: -140px; }
-  .hero > .wrap { position: relative; }
-    /* display:block + auto margins: an inline image sits on the text baseline,
-     which added a phantom descender gap under the mark and threw the hero's
-     vertical centring off. */
-  .hero img.mark {
-    display: block; width: 88px; height: 88px;
-    margin: 0 auto var(--s-5); filter: drop-shadow(0 6px 18px rgba(0,105,92,.25));
-  }
-  .eyebrow {
-    display: inline-block; font-size: .8rem; font-weight: 600; letter-spacing: .06em;
-    text-transform: uppercase; color: var(--primary);
-    background: color-mix(in srgb, var(--primary) 10%, transparent);
-    border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
-    padding: 5px 14px; border-radius: 100px; margin-bottom: var(--s-4);
-  }
-  h1 {
-    font-size: clamp(2.3rem, 5.5vw, 3.6rem);
-    letter-spacing: -0.03em; line-height: 1.08; max-width: 760px; margin: 0 auto;
-  }
-  h1 em { font-style: normal; color: var(--primary); }
-  .tagline {
-    font-size: clamp(1.05rem, 2vw, 1.25rem); color: var(--on-surface-variant);
-    margin: var(--s-5) auto 0; max-width: 62ch;
-  }
-  .cta { margin-top: var(--s-7); display: flex; gap: var(--s-3); justify-content: center; flex-wrap: wrap; }
-  .btn {
-    display: inline-flex; align-items: center; gap: 10px;
-    padding: 15px 30px; border-radius: 100px;
-    text-decoration: none; font-weight: 600; font-size: 1rem;
-    transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
-  }
-  .btn:hover { filter: brightness(1.07); transform: translateY(-1px); }
-  .btn:active { transform: translateY(0); }
-  .btn:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
-  .btn-filled { background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow); }
-  .btn-tonal { background: var(--primary-container); color: var(--on-primary-container); }
-  .note { margin-top: var(--s-4); font-size: .875rem; color: var(--on-surface-variant); }
-  .trust {
-    margin-top: var(--s-6); display: flex; gap: var(--s-2) var(--s-5); justify-content: center;
-    flex-wrap: wrap; font-size: .85rem; color: var(--on-surface-variant);
-  }
-  .trust span::before { content: "✓"; color: var(--primary); font-weight: 700; margin-right: 7px; }
-
-  /* ---- Hero mock ---- */
-  .mock {
-    margin: 64px auto 0; max-width: 720px; text-align: left;
-    background: var(--surface-container); border: 1px solid var(--outline);
-    border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
-  }
-  .mock-bar {
-    display: flex; align-items: center; gap: 8px;
-    padding: 12px 18px; border-bottom: 1px solid var(--outline);
-  }
-  .mock-bar i { width: 11px; height: 11px; border-radius: 50%; background: var(--outline); display: inline-block; }
-  .mock-bar b { margin-left: 8px; font-size: .8rem; font-weight: 600; color: var(--on-surface-variant); }
-  .mock-body { padding: 26px; display: grid; gap: 16px; }
-  .mock-primary {
-    background: var(--primary-container); color: var(--on-primary-container);
-    border-radius: var(--radius-sm); padding: 20px 22px;
-    display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  }
-  .mock-primary small { font-size: .8rem; font-weight: 600; opacity: .8; display: block; }
-  .mock-primary .big { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
-  .mock-primary .sub { font-size: .85rem; opacity: .75; }
-  .mock-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  @media (max-width: 560px) { .mock-row { grid-template-columns: 1fr; } }
-  .mock-stat {
-    background: var(--surface); border: 1px solid var(--outline);
-    border-radius: var(--radius-sm); padding: 14px 16px;
-  }
-  .mock-stat small { font-size: .75rem; color: var(--on-surface-variant); display: block; }
-  .mock-stat b { font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; }
-
-  /* ---- Sections ---- */
-  section { padding-block: var(--s-9); }
-  .kicker {
-    font-size: .8rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-    color: var(--primary); margin-bottom: var(--s-2);
-  }
-  /* A clear step down from h1 (3.6rem) so the hierarchy reads at a glance. */
-  h2 { font-size: clamp(1.75rem, 3.2vw, 2.4rem); }
-  .section-intro { color: var(--on-surface-variant); max-width: 62ch; margin-top: var(--s-3); }
-
-  .grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: var(--s-4); margin-top: var(--s-7);
-  }
-  .card {
-    background: var(--surface-container); border: 1px solid var(--outline);
-    border-radius: var(--radius); padding: 28px;
-    transition: transform .18s ease, box-shadow .18s ease;
-  }
-  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
-  .card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: var(--s-2); }
-  .card p { font-size: .95rem; color: var(--on-surface-variant); }
-  .card .glyph {
-    width: 44px; height: 44px; display: grid; place-items: center;
-    font-size: 1.35rem; border-radius: 14px; margin-bottom: 16px;
-    background: color-mix(in srgb, var(--primary) 12%, transparent);
-  }
-
-  /* ---- How it works ---- */
-  .steps { margin-top: var(--s-7); display: grid; gap: 0; }
-  .step {
-    display: grid; grid-template-columns: 56px 1fr; gap: 18px;
-    padding: 22px 0; border-bottom: 1px solid var(--outline);
-  }
-  .step:last-child { border-bottom: none; }
-  .step-num {
-    width: 44px; height: 44px; border-radius: 50%;
-    display: grid; place-items: center; font-weight: 700;
-    background: var(--primary-container); color: var(--on-primary-container);
-  }
-  .step h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: var(--s-1); }
-  .step p { color: var(--on-surface-variant); font-size: .95rem; max-width: 640px; }
-
-  /* ---- Install ---- */
-  .install-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--s-4); margin-top: var(--s-7); }
-  .install-card {
-    background: var(--surface-container); border: 1px solid var(--outline);
-    border-radius: var(--radius); padding: 28px;
-  }
-  .install-card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: var(--s-1); }
-  .install-card .tag {
-    display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .05em;
-    text-transform: uppercase; color: var(--primary); margin-bottom: 12px;
-  }
-  .install-card p { font-size: .9rem; color: var(--on-surface-variant); margin-bottom: 14px; }
-  pre {
-    background: var(--surface-container-high); border: 1px solid var(--outline);
-    border-radius: var(--radius-sm); padding: 16px 18px; overflow-x: auto;
-    font-size: .85rem; line-height: 1.6;
-  }
-  code { font-family: ui-monospace, "JetBrains Mono", "Fira Code", Menlo, monospace; }
-  p > code, li > code {
-    background: var(--surface-container-high); border-radius: 6px; padding: 2px 7px; font-size: .88em;
-  }
-
-  /* ---- FAQ ---- */
-  .faq { margin-top: 36px; display: grid; gap: 12px; }
-  details {
-    background: var(--surface-container); border: 1px solid var(--outline);
-    border-radius: var(--radius-sm); padding: 18px 22px;
-  }
-  summary { cursor: pointer; font-weight: 600; font-size: .98rem; }
-  summary::marker { color: var(--primary); }
-  details p { margin-top: 10px; color: var(--on-surface-variant); font-size: .93rem; }
-
-  /* ---- Banner + footer ---- */
-  .banner {
-    margin: 88px 0 0; border-radius: var(--radius);
-    background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 70%, #003b33));
-    color: var(--on-primary); padding: 56px 40px; text-align: center;
-  }
-  .banner h2 { color: inherit; }
-  .banner p { opacity: .85; margin: 12px auto 28px; max-width: 520px; }
-  .banner .btn { background: var(--surface); color: var(--on-surface); }
-  footer {
-    margin-top: 80px; padding: 44px 0 56px; border-top: 1px solid var(--outline);
-    font-size: .875rem; color: var(--on-surface-variant);
-  }
-  .footer-inner { display: flex; gap: 16px 32px; flex-wrap: wrap; justify-content: space-between; align-items: center; }
-  footer a { color: var(--primary); text-decoration: none; }
-  footer a:hover { text-decoration: underline; }
-  .footer-fine { margin-top: 18px; font-size: .8rem; opacity: .8; }
-  a:focus-visible, summary:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; border-radius: 4px; }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <nav class="nav" aria-label="Primary">
-  <div class="nav-inner">
-    <img src="icon.svg" alt="" width="28" height="28">
-    <strong>RestifEye</strong>
-    <div class="nav-links">
+  <div class="nav-in">
+    <a href="/" class="nav-brand"><img src="icon.svg" alt="" width="28" height="28"><span>RestifEye</span></a>
+    <div class="nav-r">
       <a href="#features">Features</a>
       <a href="#how">How it works</a>
-      <a href="#install">Install</a>
+      <a href="#download">Download</a>
       <a href="#faq">FAQ</a>
-      <a href="https://github.com/Xern-AI/restifeye" rel="noopener">GitHub</a>
-      <a class="nav-cta" href="https://github.com/Xern-AI/restifeye/releases/latest">Download</a>
+      <a href="https://github.com/Xern-AI/RestifEye" rel="noopener">GitHub</a>
+      <a class="nav-cta" href="#download">Get RestifEye</a>
     </div>
   </div>
 </nav>
 
 <header class="hero">
   <div class="wrap">
-    <img class="mark" src="icon.svg" alt="RestifEye logo" width="88" height="88">
-    <p class="eyebrow">Free &amp; open source · Linux-first</p>
+    <img class="mark" src="icon.svg" alt="RestifEye logo" width="80" height="80">
+    <p class="badge">Free for Linux · by Xernai</p>
     <h1>Break reminders that <em>respect your flow</em></h1>
-    <p class="tagline">RestifEye protects your eyes and your back without wrecking your focus —
-      it waits for meetings to end, credits the breaks you already took, and always warns before it acts.</p>
-    <div class="cta">
-      <a class="btn btn-filled" href="https://github.com/Xern-AI/restifeye/releases/latest">Download for Linux</a>
-      <a class="btn btn-tonal" href="https://github.com/Xern-AI/restifeye">View source</a>
+    <p class="tagline">RestifEye protects your eyes and your back without wrecking your focus — it waits for meetings to end, credits the breaks you already took, and always warns before it acts.</p>
+    <div class="hero-cta">
+      <a id="hero-dl" class="btn btn-pri" href="#download">Download for Linux</a>
+      <a class="btn btn-sec" href="https://github.com/Xern-AI/RestifEye" rel="noopener">View on GitHub</a>
     </div>
-    <p class="note">AppImage &amp; RPM · Fedora-first, runs on most distributions · GPL-3.0</p>
+    <p class="note">AppImage · DEB · RPM&ensp;—&ensp;<span class="version-badge"></span></p>
     <div class="trust" role="list">
       <span role="listitem">No account</span>
       <span role="listitem">No telemetry</span>
       <span role="listitem">All data stays local</span>
       <span role="listitem">Wayland-native</span>
     </div>
-
-    <div class="mock" role="img" aria-label="Preview of the RestifEye dashboard showing the next break countdown and today's statistics">
+    <div class="mock" role="img" aria-label="Preview of the RestifEye dashboard">
       <div class="mock-bar"><i></i><i></i><i></i><b>RestifEye</b></div>
       <div class="mock-body">
-        <div class="mock-primary">
-          <div>
-            <small>NEXT EYE BREAK</small>
-            <span class="big">12:47</span>
-          </div>
+        <div class="mock-card">
+          <div><small>NEXT EYE BREAK</small><span class="big">12:47</span></div>
           <span class="sub">Long break in 38:12</span>
         </div>
         <div class="mock-row">
@@ -343,36 +67,35 @@
   <section id="features" class="wrap">
     <p class="kicker">Why RestifEye</p>
     <h2>Strict enough to matter.<br>Polite enough to keep.</h2>
-    <p class="section-intro">Most break apps get uninstalled the first time they interrupt a call.
-      RestifEye is built around one idea: a reminder you don't hate is the only reminder that works.</p>
-    <div class="grid">
-      <div class="card">
-        <span class="glyph" aria-hidden="true">📅</span>
+    <p class="section-sub">Most break apps get uninstalled the first time they interrupt a call. RestifEye is built around one idea: a reminder you don't hate is the only reminder that works.</p>
+    <div class="grid rv-g">
+      <div class="card rv">
+        <span class="ico" aria-hidden="true">📅</span>
         <h3>Never interrupts a meeting</h3>
         <p>Microphone or camera in use? Do&nbsp;Not&nbsp;Disturb on? Breaks wait — up to a hard cap, so waiting can't quietly become skipping.</p>
       </div>
-      <div class="card">
-        <span class="glyph" aria-hidden="true">🚶</span>
+      <div class="card rv">
+        <span class="ico" aria-hidden="true">🚶</span>
         <h3>Credits breaks you already took</h3>
         <p>Walked away, locked your screen, suspended? That was your break. RestifEye notices and never nags for rest you already had.</p>
       </div>
-      <div class="card">
-        <span class="glyph" aria-hidden="true">🔔</span>
+      <div class="card rv">
+        <span class="ico" aria-hidden="true">🔔</span>
         <h3>Everything from the notification</h3>
         <p>A 30-second heads-up before every break with <strong>Start now</strong>, <strong>Snooze</strong>, and <strong>Skip</strong> right in the notification — decide without breaking focus.</p>
       </div>
-      <div class="card">
-        <span class="glyph" aria-hidden="true">💪</span>
+      <div class="card rv">
+        <span class="ico" aria-hidden="true">💪</span>
         <h3>Strict, but fair</h3>
-        <p>Snooze and skip budgets you control. When they run out, the break happens — with an illustrated eye or movement exercise, full-screen or windowed, your choice.</p>
+        <p>Snooze and skip budgets you control. When they run out, the break happens — with an illustrated eye or movement exercise, full-screen or windowed.</p>
       </div>
-      <div class="card">
-        <span class="glyph" aria-hidden="true">📊</span>
+      <div class="card rv">
+        <span class="ico" aria-hidden="true">📊</span>
         <h3>Local analytics &amp; advice</h3>
-        <p>Screen time, focus stretches, and break compliance — weekly, monthly, yearly — with practical advice computed from your own patterns, on your own machine.</p>
+        <p>Screen time, focus stretches, and break compliance — weekly, monthly, yearly — with practical advice computed from your own patterns, on your machine.</p>
       </div>
-      <div class="card">
-        <span class="glyph" aria-hidden="true">🔒</span>
+      <div class="card rv">
+        <span class="ico" aria-hidden="true">🔒</span>
         <h3>Private by architecture</h3>
         <p>No accounts, no cloud, no telemetry. One optional weekly update check against GitHub — that is the entire network story, and you can turn it off.</p>
       </div>
@@ -383,29 +106,29 @@
     <p class="kicker">How it works</p>
     <h2>Out of your way, until it shouldn't be</h2>
     <div class="steps">
-      <div class="step">
-        <div class="step-num" aria-hidden="true">1</div>
+      <div class="step rv">
+        <div class="step-n" aria-hidden="true">1</div>
         <div>
           <h3>It starts with your computer</h3>
           <p>RestifEye launches at login and sits quietly in your tray. Eye breaks every 20 minutes, movement breaks every 50 — every interval is yours to tune.</p>
         </div>
       </div>
-      <div class="step">
-        <div class="step-num" aria-hidden="true">2</div>
+      <div class="step rv">
+        <div class="step-n" aria-hidden="true">2</div>
         <div>
           <h3>A heads-up, not an ambush</h3>
           <p>30 seconds before each break you get a notification. Start it now, snooze it, or skip it — within the budgets you set for yourself.</p>
         </div>
       </div>
-      <div class="step">
-        <div class="step-num" aria-hidden="true">3</div>
+      <div class="step rv">
+        <div class="step-n" aria-hidden="true">3</div>
         <div>
           <h3>A real break, with a real exercise</h3>
           <p>The break screen guides a short eye or stretching exercise with an animated figure. Emergencies happen: a logged 3-second hold always lets you out.</p>
         </div>
       </div>
-      <div class="step">
-        <div class="step-num" aria-hidden="true">4</div>
+      <div class="step rv">
+        <div class="step-n" aria-hidden="true">4</div>
         <div>
           <h3>Your patterns, your advice</h3>
           <p>Dashboards show screen time and focus stretches; a rule engine turns four weeks of history into concrete, judgment-free suggestions.</p>
@@ -414,62 +137,79 @@
     </div>
   </section>
 
-  <section id="install" class="wrap">
-    <p class="kicker">Install</p>
+  <section id="download" class="wrap">
+    <p class="kicker">Download</p>
     <h2>Running in under a minute</h2>
-    <div class="install-cards">
-      <div class="install-card">
+    <p class="section-sub">Pick the format that matches your system. Not sure? The AppImage works on every Linux distribution.</p>
+    <div class="dl-cards rv-g">
+      <div class="dl-card rv">
         <span class="tag">Any distribution</span>
         <h3>AppImage</h3>
         <p>Download, make executable, run. No root, no dependencies.</p>
         <pre><code>chmod +x RestifEye-*-x86_64.AppImage
 ./RestifEye-*-x86_64.AppImage</code></pre>
+        <a class="btn btn-pri btn-sm" data-dl="appimage" href="https://github.com/Xern-AI/RestifEye/releases/latest">
+          Download AppImage <span class="dl-size"></span>
+        </a>
       </div>
-      <div class="install-card">
-        <span class="tag">Fedora / RPM-based</span>
+      <div class="dl-card rv">
+        <span class="tag">Ubuntu · Debian · Mint · Pop!_OS</span>
+        <h3>DEB package</h3>
+        <p>Integrates with your app menu, icon theme, and system updates.</p>
+        <pre><code>sudo apt install ./restifeye_*_amd64.deb</code></pre>
+        <a class="btn btn-pri btn-sm" data-dl="deb" href="https://github.com/Xern-AI/RestifEye/releases/latest">
+          Download .deb <span class="dl-size"></span>
+        </a>
+      </div>
+      <div class="dl-card rv">
+        <span class="tag">Fedora · RHEL · openSUSE</span>
         <h3>RPM package</h3>
         <p>Integrates with your app grid, icon theme, and updates.</p>
         <pre><code>sudo dnf install ./RestifEye-*.rpm</code></pre>
+        <a class="btn btn-pri btn-sm" data-dl="rpm" href="https://github.com/Xern-AI/RestifEye/releases/latest">
+          Download .rpm <span class="dl-size"></span>
+        </a>
       </div>
     </div>
-    <p class="note" style="margin-top:22px">Get both from the
-      <a href="https://github.com/Xern-AI/restifeye/releases/latest">latest release</a>.
-      On GNOME, install the <a href="https://extensions.gnome.org/extension/615/appindicator-support/" rel="noopener">AppIndicator extension</a> to see the tray icon — KDE, XFCE, Cinnamon and MATE show it out of the box.</p>
+    <p class="note" style="margin-top:20px">
+      On GNOME, install the <a href="https://extensions.gnome.org/extension/615/appindicator-support/" rel="noopener">AppIndicator extension</a> to see the tray icon — KDE, XFCE, Cinnamon, and MATE show it out of the box.
+      Full installation guide: <a href="https://github.com/Xern-AI/RestifEye/blob/main/docs/INSTALL.md" rel="noopener">INSTALL.md</a>
+    </p>
   </section>
 
   <section id="faq" class="wrap">
     <p class="kicker">FAQ</p>
     <h2>Questions, answered honestly</h2>
     <div class="faq">
-      <details>
+      <details class="rv">
         <summary>Does it phone home?</summary>
         <p>No. There are no accounts and no telemetry. The only network request RestifEye can make is an optional weekly version check against GitHub Releases, and you can switch it off in Settings.</p>
       </details>
-      <details>
+      <details class="rv">
         <summary>Can I escape a strict break in an emergency?</summary>
         <p>Always. Hold the escape button for three seconds and the break ends. It goes on your own stats — accountability to yourself, not to us.</p>
       </details>
-      <details>
+      <details class="rv">
         <summary>Will it interrupt my presentation or call?</summary>
-        <p>No. While your microphone or camera is in use, or Do&nbsp;Not&nbsp;Disturb is on, due breaks are deferred and rechecked. A hard cap (15 minutes by default) makes sure deferral can't become denial.</p>
+        <p>No. While your microphone or camera is in use, or Do&nbsp;Not&nbsp;Disturb is on, due breaks are deferred. A hard cap (15 minutes by default) makes sure deferral can't become denial.</p>
       </details>
-      <details>
+      <details class="rv">
         <summary>How do I know it's running?</summary>
-        <p>A tray icon with a small menu (open, pause, quit). Closing the window keeps RestifEye running in the background; launching it again simply reopens the same instance.</p>
+        <p>A tray icon with a small menu (open, pause, quit). Closing the window keeps RestifEye running in the background; launching it again reopens the same instance.</p>
       </details>
-      <details>
+      <details class="rv">
         <summary>Wayland or X11?</summary>
         <p>Both. RestifEye is developed Wayland-first on Fedora GNOME and uses desktop-portal-friendly D-Bus APIs — no X11-only hacks that break on modern sessions.</p>
       </details>
-      <details>
+      <details class="rv">
         <summary>Is it really free?</summary>
-        <p>Yes — free as in GPL-3.0, forever, on Linux. A paid macOS version may fund development later; the Linux app stays free and open.</p>
+        <p>Yes — free on Linux, forever. A paid macOS and Windows version may come later; the Linux app stays free.</p>
       </details>
     </div>
   </section>
 
   <div class="wrap">
-    <div class="banner">
+    <div class="banner rv">
       <h2>Using a Mac?</h2>
       <p>A polished, paid macOS version is on the roadmap. Enough interest is exactly what gets it built.</p>
       <a class="btn" href="mailto:xernaitech@gmail.com?subject=RestifEye%20for%20Mac">Tell us you want it</a>
@@ -479,19 +219,66 @@
 
 <footer>
   <div class="wrap">
-    <div class="footer-inner">
+    <div class="footer-in">
       <p>RestifEye by Xernai</p>
       <p>
-        <a href="https://github.com/Xern-AI/restifeye/blob/main/LICENSE">GPL-3.0</a> ·
-        <a href="https://github.com/Xern-AI/restifeye/blob/main/PRIVACY.md">Privacy</a> ·
-        <a href="https://github.com/Xern-AI/restifeye/issues">Issues</a> ·
-        <a href="https://github.com/Xern-AI/restifeye/releases">Releases</a>
+        <a href="https://github.com/Xern-AI/RestifEye/blob/main/LICENSE">GPL-3.0</a> ·
+        <a href="https://github.com/Xern-AI/RestifEye/blob/main/PRIVACY.md">Privacy</a> ·
+        <a href="https://github.com/Xern-AI/RestifEye/issues">Issues</a> ·
+        <a href="https://github.com/Xern-AI/RestifEye/releases">Releases</a>
       </p>
     </div>
-    <p class="footer-fine">The RestifEye and Xernai names and logos are trademarks; forks must rebrand.
-      Not medical advice — just good habits, automated.</p>
+    <p class="footer-fine">The RestifEye and Xernai names and logos are trademarks; forks must rebrand. Not medical advice — just good habits, automated.</p>
   </div>
 </footer>
 
+<script>
+/* ── Direct downloads via GitHub Releases API ── */
+(function(){
+  var REPO='Xern-AI/RestifEye',
+      API='https://api.github.com/repos/'+REPO+'/releases/latest',
+      FB='https://github.com/'+REPO+'/releases/latest';
+
+  function fmtSize(b){return b>1048576?(b/1048576).toFixed(1)+' MB':(b/1024).toFixed(0)+' KB'}
+
+  fetch(API,{headers:{'Accept':'application/vnd.github.v3+json'}})
+    .then(function(r){if(!r.ok)throw r;return r.json()})
+    .then(function(d){
+      var a={};
+      (d.assets||[]).forEach(function(x){
+        var n=x.name.toLowerCase();
+        if(n.endsWith('.appimage'))a.appimage=x;
+        else if(n.endsWith('.deb'))a.deb=x;
+        else if(n.endsWith('.rpm'))a.rpm=x;
+      });
+      document.querySelectorAll('[data-dl]').forEach(function(el){
+        var f=el.getAttribute('data-dl'),x=a[f];
+        if(x){
+          el.href=x.browser_download_url;
+          var s=el.querySelector('.dl-size');
+          if(s)s.textContent=fmtSize(x.size);
+        }
+      });
+      var v=d.tag_name||'';
+      document.querySelectorAll('.version-badge').forEach(function(el){el.textContent=v});
+      var hero=document.getElementById('hero-dl');
+      if(hero&&a.appimage)hero.href=a.appimage.browser_download_url;
+    })
+    .catch(function(){
+      document.querySelectorAll('[data-dl]').forEach(function(el){el.href=FB});
+    });
+})();
+
+/* ── Scroll reveal ── */
+(function(){
+  var els=document.querySelectorAll('.rv');
+  if(!els.length)return;
+  if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('on')});return}
+  var obs=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('on');obs.unobserve(e.target)}});
+  },{threshold:0.08,rootMargin:'0px 0px -32px 0px'});
+  els.forEach(function(e){obs.observe(e)});
+})();
+</script>
 </body>
 </html>
