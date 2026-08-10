@@ -1,284 +1,296 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RestifEye — break reminders that respect your flow</title>
-<meta name="description" content="A free break and eye-rest reminder for Linux. Meeting-aware, Wayland-native, all data stays local. Download as AppImage, DEB, or RPM.">
-<meta property="og:title" content="RestifEye — break reminders that respect your flow">
-<meta property="og:description" content="Free break reminders for Linux. Never mid-meeting. All data local.">
-<meta property="og:type" content="website">
-<meta property="og:image" content="og.png">
-<meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RestifEye — break reminders that respect your flow</title>
+  <meta name="description"
+    content="A free break and eye-rest reminder for Linux. Meeting-aware, Wayland-native, all data stays local. Download as AppImage, DEB, or RPM.">
+  <meta property="og:title" content="RestifEye — break reminders that respect your flow">
+  <meta property="og:description" content="Free break reminders for Linux. Never mid-meeting. All data local.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<nav class="nav" aria-label="Primary">
-  <div class="nav-in">
-    <a href="/" class="nav-brand"><img src="icon.svg" alt="" width="28" height="28"><span>RestifEye</span></a>
-    <div class="nav-r">
-      <a href="#features">Features</a>
-      <a href="#how">How it works</a>
-      <a href="#download">Download</a>
-      <a href="#faq">FAQ</a>
-      <a href="https://github.com/Xern-AI/RestifEye" rel="noopener">GitHub</a>
-      <a class="nav-cta" href="#download">Get RestifEye</a>
+  <nav class="nav" aria-label="Primary">
+    <div class="nav-in">
+      <a href="/" class="nav-brand"><img src="icon.svg" alt="" width="28" height="28"><span>RestifEye</span></a>
+      <div class="nav-r">
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
+        <a href="#download">Download</a>
+        <a href="#faq">FAQ</a>
+        <a class="nav-cta" href="#download">Get RestifEye</a>
+      </div>
     </div>
-  </div>
-</nav>
+  </nav>
 
-<header class="hero">
-  <div class="wrap">
-    <img class="mark" src="icon.svg" alt="RestifEye logo" width="80" height="80">
-    <p class="badge">Free for Linux · by Xernai</p>
-    <h1>Break reminders that <em>respect your flow</em></h1>
-    <p class="tagline">RestifEye protects your eyes and your back without wrecking your focus — it waits for meetings to end, credits the breaks you already took, and always warns before it acts.</p>
-    <div class="hero-cta">
-      <a id="hero-dl" class="btn btn-pri" href="#download">Download for Linux</a>
-      <a class="btn btn-sec" href="https://github.com/Xern-AI/RestifEye" rel="noopener">View on GitHub</a>
-    </div>
-    <p class="note">AppImage · DEB · RPM&ensp;—&ensp;<span class="version-badge"></span></p>
-    <div class="trust" role="list">
-      <span role="listitem">No account</span>
-      <span role="listitem">No telemetry</span>
-      <span role="listitem">All data stays local</span>
-      <span role="listitem">Wayland-native</span>
-    </div>
-    <div class="mock" role="img" aria-label="Preview of the RestifEye dashboard">
-      <div class="mock-bar"><i></i><i></i><i></i><b>RestifEye</b></div>
-      <div class="mock-body">
-        <div class="mock-card">
-          <div><small>NEXT EYE BREAK</small><span class="big">12:47</span></div>
-          <span class="sub">Long break in 38:12</span>
-        </div>
-        <div class="mock-row">
-          <div class="mock-stat"><small>Screen time</small><b>3h 20m</b></div>
-          <div class="mock-stat"><small>Breaks taken</small><b>9</b></div>
-          <div class="mock-stat"><small>Longest focus</small><b>1h 20m</b></div>
+  <header class="hero">
+    <div class="wrap">
+      <img class="mark" src="icon.svg" alt="RestifEye logo" width="80" height="80">
+      <p class="badge">Xernai</p>
+      <h1>Break reminders that <em>respect your flow</em></h1>
+      <p class="tagline">RestifEye protects your eyes and your back without wrecking your focus — it waits for meetings
+        to end, credits the breaks you already took, and always warns before it acts.</p>
+      <div class="hero-cta">
+        <a id="hero-dl" class="btn btn-pri" href="#download">Download for Linux</a>
+        <a class="btn btn-sec" href="#features">Learn more</a>
+      </div>
+      <p class="note">AppImage · DEB · RPM&ensp;—&ensp;<span class="version-badge"></span></p>
+      <div class="trust" role="list">
+        <span role="listitem">No account</span>
+        <span role="listitem">No telemetry</span>
+        <span role="listitem">All data stays local</span>
+        <span role="listitem">Wayland-native</span>
+      </div>
+      <div class="mock" role="img" aria-label="Preview of the RestifEye dashboard">
+        <div class="mock-bar"><i></i><i></i><i></i><b>RestifEye</b></div>
+        <div class="mock-body">
+          <div class="mock-card">
+            <div><small>NEXT EYE BREAK</small><span class="big">12:47</span></div>
+            <span class="sub">Long break in 38:12</span>
+          </div>
+          <div class="mock-row">
+            <div class="mock-stat"><small>Screen time</small><b>3h 20m</b></div>
+            <div class="mock-stat"><small>Breaks taken</small><b>9</b></div>
+            <div class="mock-stat"><small>Longest focus</small><b>1h 20m</b></div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</header>
+  </header>
 
-<main>
-  <section id="features" class="wrap">
-    <p class="kicker">Why RestifEye</p>
-    <h2>Strict enough to matter.<br>Polite enough to keep.</h2>
-    <p class="section-sub">Most break apps get uninstalled the first time they interrupt a call. RestifEye is built around one idea: a reminder you don't hate is the only reminder that works.</p>
-    <div class="grid rv-g">
-      <div class="card rv">
-        <span class="ico" aria-hidden="true">📅</span>
-        <h3>Never interrupts a meeting</h3>
-        <p>Microphone or camera in use? Do&nbsp;Not&nbsp;Disturb on? Breaks wait — up to a hard cap, so waiting can't quietly become skipping.</p>
+  <main>
+    <section id="features" class="wrap">
+      <p class="kicker">Why RestifEye</p>
+      <h2>Strict enough to matter.<br>Polite enough to keep.</h2>
+      <p class="section-sub">Most break apps get uninstalled the first time they interrupt a call. RestifEye is built
+        around one idea: a reminder you don't hate is the only reminder that works.</p>
+      <div class="grid rv-g">
+        <div class="card rv">
+          <span class="ico" aria-hidden="true">📅</span>
+          <h3>Never interrupts a meeting</h3>
+          <p>Microphone or camera in use? Do&nbsp;Not&nbsp;Disturb on? Breaks wait — up to a hard cap, so waiting can't
+            quietly become skipping.</p>
+        </div>
+        <div class="card rv">
+          <span class="ico" aria-hidden="true">🚶</span>
+          <h3>Credits breaks you already took</h3>
+          <p>Walked away, locked your screen, suspended? That was your break. RestifEye notices and never nags for rest
+            you already had.</p>
+        </div>
+        <div class="card rv">
+          <span class="ico" aria-hidden="true">🔔</span>
+          <h3>Everything from the notification</h3>
+          <p>A 30-second heads-up before every break with <strong>Start now</strong>, <strong>Snooze</strong>, and
+            <strong>Skip</strong> right in the notification — decide without breaking focus.</p>
+        </div>
+        <div class="card rv">
+          <span class="ico" aria-hidden="true">💪</span>
+          <h3>Strict, but fair</h3>
+          <p>Snooze and skip budgets you control. When they run out, the break happens — with an illustrated eye or
+            movement exercise, full-screen or windowed.</p>
+        </div>
+        <div class="card rv">
+          <span class="ico" aria-hidden="true">📊</span>
+          <h3>Local analytics &amp; advice</h3>
+          <p>Screen time, focus stretches, and break compliance — weekly, monthly, yearly — with practical advice
+            computed from your own patterns, on your machine.</p>
+        </div>
+        <div class="card rv">
+          <span class="ico" aria-hidden="true">🔒</span>
+          <h3>Private by architecture</h3>
+          <p>No accounts, no cloud, no telemetry. One optional weekly update check — that is the entire network story,
+            and you can turn it off.</p>
+        </div>
       </div>
-      <div class="card rv">
-        <span class="ico" aria-hidden="true">🚶</span>
-        <h3>Credits breaks you already took</h3>
-        <p>Walked away, locked your screen, suspended? That was your break. RestifEye notices and never nags for rest you already had.</p>
-      </div>
-      <div class="card rv">
-        <span class="ico" aria-hidden="true">🔔</span>
-        <h3>Everything from the notification</h3>
-        <p>A 30-second heads-up before every break with <strong>Start now</strong>, <strong>Snooze</strong>, and <strong>Skip</strong> right in the notification — decide without breaking focus.</p>
-      </div>
-      <div class="card rv">
-        <span class="ico" aria-hidden="true">💪</span>
-        <h3>Strict, but fair</h3>
-        <p>Snooze and skip budgets you control. When they run out, the break happens — with an illustrated eye or movement exercise, full-screen or windowed.</p>
-      </div>
-      <div class="card rv">
-        <span class="ico" aria-hidden="true">📊</span>
-        <h3>Local analytics &amp; advice</h3>
-        <p>Screen time, focus stretches, and break compliance — weekly, monthly, yearly — with practical advice computed from your own patterns, on your machine.</p>
-      </div>
-      <div class="card rv">
-        <span class="ico" aria-hidden="true">🔒</span>
-        <h3>Private by architecture</h3>
-        <p>No accounts, no cloud, no telemetry. One optional weekly update check against GitHub — that is the entire network story, and you can turn it off.</p>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section id="how" class="wrap">
-    <p class="kicker">How it works</p>
-    <h2>Out of your way, until it shouldn't be</h2>
-    <div class="steps">
-      <div class="step rv">
-        <div class="step-n" aria-hidden="true">1</div>
-        <div>
-          <h3>It starts with your computer</h3>
-          <p>RestifEye launches at login and sits quietly in your tray. Eye breaks every 20 minutes, movement breaks every 50 — every interval is yours to tune.</p>
+    <section id="how" class="wrap">
+      <p class="kicker">How it works</p>
+      <h2>Out of your way, until it shouldn't be</h2>
+      <div class="steps">
+        <div class="step rv">
+          <div class="step-n" aria-hidden="true">1</div>
+          <div>
+            <h3>It starts with your computer</h3>
+            <p>RestifEye launches at login and sits quietly in your tray. Eye breaks every 20 minutes, movement breaks
+              every 50 — every interval is yours to tune.</p>
+          </div>
+        </div>
+        <div class="step rv">
+          <div class="step-n" aria-hidden="true">2</div>
+          <div>
+            <h3>A heads-up, not an ambush</h3>
+            <p>30 seconds before each break you get a notification. Start it now, snooze it, or skip it — within the
+              budgets you set for yourself.</p>
+          </div>
+        </div>
+        <div class="step rv">
+          <div class="step-n" aria-hidden="true">3</div>
+          <div>
+            <h3>A real break, with a real exercise</h3>
+            <p>The break screen guides a short eye or stretching exercise with an animated figure. Emergencies happen: a
+              logged 3-second hold always lets you out.</p>
+          </div>
+        </div>
+        <div class="step rv">
+          <div class="step-n" aria-hidden="true">4</div>
+          <div>
+            <h3>Your patterns, your advice</h3>
+            <p>Dashboards show screen time and focus stretches; a rule engine turns four weeks of history into concrete,
+              judgment-free suggestions.</p>
+          </div>
         </div>
       </div>
-      <div class="step rv">
-        <div class="step-n" aria-hidden="true">2</div>
-        <div>
-          <h3>A heads-up, not an ambush</h3>
-          <p>30 seconds before each break you get a notification. Start it now, snooze it, or skip it — within the budgets you set for yourself.</p>
-        </div>
-      </div>
-      <div class="step rv">
-        <div class="step-n" aria-hidden="true">3</div>
-        <div>
-          <h3>A real break, with a real exercise</h3>
-          <p>The break screen guides a short eye or stretching exercise with an animated figure. Emergencies happen: a logged 3-second hold always lets you out.</p>
-        </div>
-      </div>
-      <div class="step rv">
-        <div class="step-n" aria-hidden="true">4</div>
-        <div>
-          <h3>Your patterns, your advice</h3>
-          <p>Dashboards show screen time and focus stretches; a rule engine turns four weeks of history into concrete, judgment-free suggestions.</p>
-        </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section id="download" class="wrap">
-    <p class="kicker">Download</p>
-    <h2>Running in under a minute</h2>
-    <p class="section-sub">Pick the format that matches your system. Not sure? The AppImage works on every Linux distribution.</p>
-    <div class="dl-cards rv-g">
-      <div class="dl-card rv">
-        <span class="tag">Any distribution</span>
-        <h3>AppImage</h3>
-        <p>Download, make executable, run. No root, no dependencies.</p>
-        <pre><code>chmod +x RestifEye-*-x86_64.AppImage
+    <section id="download" class="wrap">
+      <p class="kicker">Download</p>
+      <h2>Running in under a minute</h2>
+      <p class="section-sub">Pick the format that matches your system. Not sure? The AppImage works on every Linux
+        distribution.</p>
+      <div class="dl-cards rv-g">
+        <div class="dl-card rv">
+          <span class="tag">Any distribution</span>
+          <h3>AppImage</h3>
+          <p>Download, make executable, run. No root, no dependencies.</p>
+          <pre><code>chmod +x RestifEye-*-x86_64.AppImage
 ./RestifEye-*-x86_64.AppImage</code></pre>
-        <a class="btn btn-pri btn-sm" data-dl="appimage" href="https://github.com/Xern-AI/RestifEye/releases/latest">
-          Download AppImage <span class="dl-size"></span>
-        </a>
+          <a class="btn btn-pri btn-sm" data-dl="appimage" href="downloads/">
+            Download AppImage <span class="dl-size"></span>
+          </a>
+        </div>
+        <div class="dl-card rv">
+          <span class="tag">Ubuntu · Debian · Mint · Pop!_OS</span>
+          <h3>DEB package</h3>
+          <p>Integrates with your app menu, icon theme, and system updates.</p>
+          <pre><code>sudo apt install ./restifeye_*_amd64.deb</code></pre>
+          <a class="btn btn-pri btn-sm" data-dl="deb" href="downloads/">
+            Download .deb <span class="dl-size"></span>
+          </a>
+        </div>
+        <div class="dl-card rv">
+          <span class="tag">Fedora · RHEL · openSUSE</span>
+          <h3>RPM package</h3>
+          <p>Integrates with your app grid, icon theme, and updates.</p>
+          <pre><code>sudo dnf install ./RestifEye-*.rpm</code></pre>
+          <a class="btn btn-pri btn-sm" data-dl="rpm" href="downloads/">
+            Download .rpm <span class="dl-size"></span>
+          </a>
+        </div>
       </div>
-      <div class="dl-card rv">
-        <span class="tag">Ubuntu · Debian · Mint · Pop!_OS</span>
-        <h3>DEB package</h3>
-        <p>Integrates with your app menu, icon theme, and system updates.</p>
-        <pre><code>sudo apt install ./restifeye_*_amd64.deb</code></pre>
-        <a class="btn btn-pri btn-sm" data-dl="deb" href="https://github.com/Xern-AI/RestifEye/releases/latest">
-          Download .deb <span class="dl-size"></span>
-        </a>
-      </div>
-      <div class="dl-card rv">
-        <span class="tag">Fedora · RHEL · openSUSE</span>
-        <h3>RPM package</h3>
-        <p>Integrates with your app grid, icon theme, and updates.</p>
-        <pre><code>sudo dnf install ./RestifEye-*.rpm</code></pre>
-        <a class="btn btn-pri btn-sm" data-dl="rpm" href="https://github.com/Xern-AI/RestifEye/releases/latest">
-          Download .rpm <span class="dl-size"></span>
-        </a>
-      </div>
-    </div>
-    <p class="note" style="margin-top:20px">
-      On GNOME, install the <a href="https://extensions.gnome.org/extension/615/appindicator-support/" rel="noopener">AppIndicator extension</a> to see the tray icon — KDE, XFCE, Cinnamon, and MATE show it out of the box.
-      Full installation guide: <a href="https://github.com/Xern-AI/RestifEye/blob/main/docs/INSTALL.md" rel="noopener">INSTALL.md</a>
-    </p>
-  </section>
-
-  <section id="faq" class="wrap">
-    <p class="kicker">FAQ</p>
-    <h2>Questions, answered honestly</h2>
-    <div class="faq">
-      <details class="rv">
-        <summary>Does it phone home?</summary>
-        <p>No. There are no accounts and no telemetry. The only network request RestifEye can make is an optional weekly version check against GitHub Releases, and you can switch it off in Settings.</p>
-      </details>
-      <details class="rv">
-        <summary>Can I escape a strict break in an emergency?</summary>
-        <p>Always. Hold the escape button for three seconds and the break ends. It goes on your own stats — accountability to yourself, not to us.</p>
-      </details>
-      <details class="rv">
-        <summary>Will it interrupt my presentation or call?</summary>
-        <p>No. While your microphone or camera is in use, or Do&nbsp;Not&nbsp;Disturb is on, due breaks are deferred. A hard cap (15 minutes by default) makes sure deferral can't become denial.</p>
-      </details>
-      <details class="rv">
-        <summary>How do I know it's running?</summary>
-        <p>A tray icon with a small menu (open, pause, quit). Closing the window keeps RestifEye running in the background; launching it again reopens the same instance.</p>
-      </details>
-      <details class="rv">
-        <summary>Wayland or X11?</summary>
-        <p>Both. RestifEye is developed Wayland-first on Fedora GNOME and uses desktop-portal-friendly D-Bus APIs — no X11-only hacks that break on modern sessions.</p>
-      </details>
-      <details class="rv">
-        <summary>Is it really free?</summary>
-        <p>Yes — free on Linux, forever. A paid macOS and Windows version may come later; the Linux app stays free.</p>
-      </details>
-    </div>
-  </section>
-
-  <div class="wrap">
-    <div class="banner rv">
-      <h2>Using a Mac?</h2>
-      <p>A polished, paid macOS version is on the roadmap. Enough interest is exactly what gets it built.</p>
-      <a class="btn" href="mailto:xernaitech@gmail.com?subject=RestifEye%20for%20Mac">Tell us you want it</a>
-    </div>
-  </div>
-</main>
-
-<footer>
-  <div class="wrap">
-    <div class="footer-in">
-      <p>RestifEye by Xernai</p>
-      <p>
-        <a href="https://github.com/Xern-AI/RestifEye/blob/main/LICENSE">GPL-3.0</a> ·
-        <a href="https://github.com/Xern-AI/RestifEye/blob/main/PRIVACY.md">Privacy</a> ·
-        <a href="https://github.com/Xern-AI/RestifEye/issues">Issues</a> ·
-        <a href="https://github.com/Xern-AI/RestifEye/releases">Releases</a>
+      <p class="note" style="margin-top:20px">
+        On GNOME, install the <a href="https://extensions.gnome.org/extension/615/appindicator-support/"
+          rel="noopener">AppIndicator extension</a> to see the tray icon — KDE, XFCE, Cinnamon, and MATE show it out of
+        the box.
       </p>
+    </section>
+
+    <section id="faq" class="wrap">
+      <p class="kicker">FAQ</p>
+      <h2>Questions, answered honestly</h2>
+      <div class="faq">
+        <details class="rv">
+          <summary>Does it phone home?</summary>
+          <p>No. There are no accounts and no telemetry. The only network request RestifEye can make is an optional
+            weekly version check, and you can switch it off in Settings.</p>
+        </details>
+        <details class="rv">
+          <summary>Can I escape a strict break in an emergency?</summary>
+          <p>Always. Hold the escape button for three seconds and the break ends. It goes on your own stats —
+            accountability to yourself, not to us.</p>
+        </details>
+        <details class="rv">
+          <summary>Will it interrupt my presentation or call?</summary>
+          <p>No. While your microphone or camera is in use, or Do&nbsp;Not&nbsp;Disturb is on, due breaks are deferred.
+            A hard cap (15 minutes by default) makes sure deferral can't become denial.</p>
+        </details>
+        <details class="rv">
+          <summary>How do I know it's running?</summary>
+          <p>A tray icon with a small menu (open, pause, quit). Closing the window keeps RestifEye running in the
+            background; launching it again reopens the same instance.</p>
+        </details>
+        <details class="rv">
+          <summary>Wayland or X11?</summary>
+          <p>Both. RestifEye is developed Wayland-first on Fedora GNOME and uses desktop-portal-friendly D-Bus APIs — no
+            X11-only hacks that break on modern sessions.</p>
+        </details>
+        <details class="rv">
+          <summary>Is it really free?</summary>
+          <p>Yes — free on Linux, forever. A paid macOS and Windows version may come later; the Linux app stays free.
+          </p>
+        </details>
+      </div>
+    </section>
+
+    <div class="wrap">
+      <div class="banner rv">
+        <h2>Using a Mac?</h2>
+        <p>A polished, paid macOS version is on the roadmap. Enough interest is exactly what gets it built.</p>
+        <a class="btn" href="mailto:xernaitech@gmail.com?subject=RestifEye%20for%20Mac">Tell us you want it</a>
+      </div>
     </div>
-    <p class="footer-fine">The RestifEye and Xernai names and logos are trademarks; forks must rebrand. Not medical advice — just good habits, automated.</p>
-  </div>
-</footer>
+  </main>
 
-<script>
-/* ── Direct downloads via GitHub Releases API ── */
-(function(){
-  var REPO='Xern-AI/RestifEye',
-      API='https://api.github.com/repos/'+REPO+'/releases/latest',
-      FB='https://github.com/'+REPO+'/releases/latest';
+  <footer>
+    <div class="wrap">
+      <div class="footer-in">
+        <p>RestifEye by Xernai</p>
+        <p>
+          <a href="mailto:xernaitech@gmail.com">Contact</a> ·
+          <a href="#download">Download</a>
+        </p>
+      </div>
+      <p class="footer-fine">The RestifEye and Xernai names and logos are trademarks. Not medical advice — just good
+        habits, automated.</p>
+    </div>
+  </footer>
 
-  function fmtSize(b){return b>1048576?(b/1048576).toFixed(1)+' MB':(b/1024).toFixed(0)+' KB'}
+  <script>
+    /* ── Direct downloads from local manifest ── */
+    (function () {
+      var BASE = 'downloads/';
+      function fmtSize(b) { if (!b) return ''; return b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : (b / 1024).toFixed(0) + ' KB' }
 
-  fetch(API,{headers:{'Accept':'application/vnd.github.v3+json'}})
-    .then(function(r){if(!r.ok)throw r;return r.json()})
-    .then(function(d){
-      var a={};
-      (d.assets||[]).forEach(function(x){
-        var n=x.name.toLowerCase();
-        if(n.endsWith('.appimage'))a.appimage=x;
-        else if(n.endsWith('.deb'))a.deb=x;
-        else if(n.endsWith('.rpm'))a.rpm=x;
-      });
-      document.querySelectorAll('[data-dl]').forEach(function(el){
-        var f=el.getAttribute('data-dl'),x=a[f];
-        if(x){
-          el.href=x.browser_download_url;
-          var s=el.querySelector('.dl-size');
-          if(s)s.textContent=fmtSize(x.size);
-        }
-      });
-      var v=d.tag_name||'';
-      document.querySelectorAll('.version-badge').forEach(function(el){el.textContent=v});
-      var hero=document.getElementById('hero-dl');
-      if(hero&&a.appimage)hero.href=a.appimage.browser_download_url;
-    })
-    .catch(function(){
-      document.querySelectorAll('[data-dl]').forEach(function(el){el.href=FB});
-    });
-})();
+      fetch(BASE + 'version.json')
+        .then(function (r) { if (!r.ok) throw r; return r.json() })
+        .then(function (d) {
+          var files = d.files || {};
+          document.querySelectorAll('[data-dl]').forEach(function (el) {
+            var f = el.getAttribute('data-dl'), info = files[f];
+            if (info && info.name) {
+              el.href = BASE + info.name;
+              var s = el.querySelector('.dl-size');
+              if (s && info.size) s.textContent = fmtSize(info.size);
+            }
+          });
+          if (d.version) {
+            document.querySelectorAll('.version-badge').forEach(function (el) { el.textContent = 'v' + d.version });
+          }
+          var hero = document.getElementById('hero-dl');
+          if (hero && files.appimage && files.appimage.name) hero.href = BASE + files.appimage.name;
+        })
+        .catch(function () { });
+    })();
 
-/* ── Scroll reveal ── */
-(function(){
-  var els=document.querySelectorAll('.rv');
-  if(!els.length)return;
-  if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('on')});return}
-  var obs=new IntersectionObserver(function(entries){
-    entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('on');obs.unobserve(e.target)}});
-  },{threshold:0.08,rootMargin:'0px 0px -32px 0px'});
-  els.forEach(function(e){obs.observe(e)});
-})();
-</script>
+    /* ── Scroll reveal ── */
+    (function () {
+      var els = document.querySelectorAll('.rv');
+      if (!els.length) return;
+      if (!('IntersectionObserver' in window)) { els.forEach(function (e) { e.classList.add('on') }); return }
+      var obs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('on'); obs.unobserve(e.target) } });
+      }, { threshold: 0.08, rootMargin: '0px 0px -32px 0px' });
+      els.forEach(function (e) { obs.observe(e) });
+    })();
+  </script>
 </body>
+
 </html>

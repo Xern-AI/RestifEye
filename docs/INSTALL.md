@@ -18,15 +18,13 @@ RestifEye is available in three formats. Pick the one that matches your system �
 
 ## Where to download
 
-Go to the [latest release page](https://github.com/Xern-AI/RestifEye/releases/latest) and download the file matching your format:
+Go to the [RestifEye website](https://restifeye.vercel.app/#download) and download the file matching your format.
 
 | Format | Filename pattern |
 |---|---|
 | AppImage | `RestifEye-<version>-x86_64.AppImage` |
 | DEB | `restifeye_<version>_amd64.deb` |
 | RPM | `RestifEye-<version>.x86_64.rpm` |
-
-You can also download directly from the [RestifEye website](https://restifeye.vercel.app).
 
 ---
 
@@ -36,7 +34,7 @@ The AppImage is a single file that contains everything RestifEye needs. No insta
 
 ### Steps
 
-1. **Download** the `.AppImage` file from the link above.
+1. **Download** the `.AppImage` file from the website.
 
 2. **Open a terminal** in the folder where you downloaded it.
    - On most desktops: right-click inside the folder → "Open in Terminal" or "Open Terminal Here".
@@ -103,7 +101,7 @@ The `.deb` package installs RestifEye system-wide with proper desktop integratio
 
 ### Steps
 
-1. **Download** the `.deb` file from the link above.
+1. **Download** the `.deb` file from the website.
 
 2. **Open a terminal** in the folder where you downloaded it.
 
@@ -145,7 +143,7 @@ The `.rpm` package works like the `.deb` but for RPM-based distributions.
 
 ### Steps
 
-1. **Download** the `.rpm` file from the link above.
+1. **Download** the `.rpm` file from the website.
 
 2. **Open a terminal** in the folder where you downloaded it.
 
@@ -184,76 +182,6 @@ sudo dnf remove RestifEye
 **openSUSE:**
 ```sh
 sudo zypper remove RestifEye
-```
-
----
-
-## Option 4: Build from source
-
-If you want the absolute latest code, or your system isn't x86_64, you can build RestifEye yourself.
-
-### Prerequisites
-
-You need the [Flutter SDK](https://docs.flutter.dev/get-started/install/linux) (stable channel) and your distribution's C/C++ build tools.
-
-**Fedora / RHEL:**
-```sh
-sudo dnf install clang cmake ninja-build gtk3-devel pkg-config
-```
-
-**Ubuntu / Debian:**
-```sh
-sudo apt install clang cmake ninja-build libgtk-3-dev pkg-config
-```
-
-**openSUSE:**
-```sh
-sudo zypper install clang cmake ninja gtk3-devel pkg-config
-```
-
-### Build
-
-```sh
-git clone https://github.com/Xern-AI/RestifEye.git
-cd RestifEye
-flutter pub get
-flutter build linux --release
-```
-
-The built app is at:
-```
-build/linux/x64/release/bundle/RestifEye
-```
-
-### Run it
-
-```sh
-build/linux/x64/release/bundle/RestifEye
-```
-
-### Install it system-wide (optional)
-
-```sh
-sudo mkdir -p /opt/RestifEye
-sudo cp -r build/linux/x64/release/bundle/* /opt/RestifEye/
-sudo ln -sf /opt/RestifEye/RestifEye /usr/bin/RestifEye
-
-# Desktop entry + icon
-sudo cp assets/linux/com.xernai.restifeye.desktop /usr/share/applications/
-sudo cp assets/linux/com.xernai.restifeye.svg /usr/share/icons/hicolor/scalable/apps/
-sudo cp assets/linux/com.xernai.restifeye.metainfo.xml /usr/share/metainfo/
-sudo update-desktop-database /usr/share/applications/ 2>/dev/null || true
-sudo gtk-update-icon-cache /usr/share/icons/hicolor/ 2>/dev/null || true
-```
-
-### Uninstalling a from-source install
-
-```sh
-sudo rm -rf /opt/RestifEye
-sudo rm /usr/bin/RestifEye
-sudo rm /usr/share/applications/com.xernai.restifeye.desktop
-sudo rm /usr/share/icons/hicolor/scalable/apps/com.xernai.restifeye.svg
-sudo rm /usr/share/metainfo/com.xernai.restifeye.metainfo.xml
 ```
 
 ---
@@ -336,5 +264,4 @@ Open RestifEye → Settings. The version is shown at the bottom.
 
 ## Getting help
 
-- **Bug reports:** [github.com/Xern-AI/RestifEye/issues](https://github.com/Xern-AI/RestifEye/issues)
-- **Source code:** [github.com/Xern-AI/RestifEye](https://github.com/Xern-AI/RestifEye)
+For bug reports or questions, email [xernaitech@gmail.com](mailto:xernaitech@gmail.com).

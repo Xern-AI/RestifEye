@@ -1,0 +1,17 @@
+{
+  "version": "0.1.1",
+  "files": {
+    "appimage": {
+      "name": "RestifEye-0.1.1-x86_64.AppImage",
+      "size": 0
+    },
+    "deb": {
+      "name": "restifeye_0.1.1_amd64.deb",
+      "size": 0
+    },
+    "rpm": {
+      "name": "RestifEye-0.1.1-1.x86_64.rpm",
+      "size": 0
+    }
+  }
+}
