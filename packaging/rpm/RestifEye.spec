@@ -3,6 +3,9 @@
 %global debug_package %{nil}
 %global __strip /bin/true
 
+# Fallback for distros that don't define _metainfodir (e.g. Ubuntu rpmbuild).
+%{!?_metainfodir:%global _metainfodir %{_datadir}/metainfo}
+
 Name:           RestifEye
 Version:        %{?pkg_version}%{!?pkg_version:0.1.0}
 Release:        1%{?dist}
