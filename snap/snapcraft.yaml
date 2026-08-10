@@ -1,0 +1,45 @@
+name: restifeye
+version: '0.1.1'
+summary: Break reminders that respect your flow
+description: |
+  RestifEye reminds you to rest your eyes and move your body at healthy
+  intervals — without being annoying. It detects when you're in a call
+  (microphone/camera) and waits. It notices when you already stepped away
+  and credits you the break. It warns 30 seconds before taking your
+  screen, and shows a simple illustrated exercise.
+  Local-only analytics and advice. No accounts, no telemetry.
+
+grade: stable
+confinement: strict
+base: core22
+architectures:
+  - build-on: amd64
+
+apps:
+  restifeye:
+    command: RestifEye
+    extensions: [gnome]
+    plugs:
+      - desktop
+      - desktop-legacy
+      - wayland
+      - x11
+      - network
+
+parts:
+  restifeye:
+    plugin: nil
+    source: .
+    override-build: |
+      flutter build linux --release
+      mkdir -p $SNAPCRAFT_PART_INSTALL/
+      cp -r build/linux/x64/release/bundle/* $SNAPCRAFT_PART_INSTALL/
+    build-snaps:
+      - flutter/latest/stable
+    build-packages:
+      - clang
+      - cmake
+      - ninja-build
+      - pkg-config
+      - libgtk-3-dev
+      - libpipewire-0.3-dev
