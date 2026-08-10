@@ -11,13 +11,23 @@ OUT="build/appimage/RestifEye-${VERSION}-x86_64.AppImage"
 [ -d "$BUNDLE" ] || { echo "error: run 'flutter build linux --release' first" >&2; exit 1; }
 
 rm -rf "$APPDIR"
-mkdir -p "$APPDIR/usr/share/icons/hicolor/scalable/apps"
+mkdir -p "$APPDIR/usr/share/icons/hicolor/scalable/apps" \
+         "$APPDIR/usr/share/metainfo"
 
 cp -r "$BUNDLE"/* "$APPDIR/"
 cp assets/linux/com.xernai.restifeye.desktop "$APPDIR/"
-cp assets/linux/com.xernai.restifeye.svg "$APPDIR/"
+
+# Top-level icon MUST be PNG for AppImageHub thumbnail generation.
+# appdir-lint warns "Icon is not in PNG format" if only SVG is present.
+cp docs/assets/icon-512.png "$APPDIR/com.xernai.restifeye.png"
+
+# Keep SVG in hicolor for desktop integration (scalable rendering).
 cp assets/linux/com.xernai.restifeye.svg \
    "$APPDIR/usr/share/icons/hicolor/scalable/apps/"
+
+# AppStream metainfo — required by AppImageHub for description/license extraction.
+cp assets/linux/com.xernai.restifeye.metainfo.xml \
+   "$APPDIR/usr/share/metainfo/"
 
 cat > "$APPDIR/AppRun" <<'EOF'
 #!/bin/sh

@@ -5,6 +5,12 @@
 #include <gdk/gdkx.h>
 #endif
 
+// GLib 2.74 introduced G_APPLICATION_DEFAULT_FLAGS. Ubuntu 22.04 ships 2.72.
+// Both constants are 0; this shim is purely a naming alias for older GLib.
+#ifndef G_APPLICATION_DEFAULT_FLAGS
+#define G_APPLICATION_DEFAULT_FLAGS G_APPLICATION_FLAGS_NONE
+#endif
+
 #include "flutter/generated_plugin_registrant.h"
 
 struct _MyApplication {
