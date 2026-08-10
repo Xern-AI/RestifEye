@@ -18,7 +18,7 @@ RestifEye is available in three formats. Pick the one that matches your system â
 
 ## Where to download
 
-Go to the [RestifEye website](https://restifeye.vercel.app/#download) and download the file matching your format.
+Go to the [RestifEye releases page](https://github.com/Xern-AI/RestifEye/releases/latest) and download the file matching your format.
 
 | Format | Filename pattern |
 |---|---|

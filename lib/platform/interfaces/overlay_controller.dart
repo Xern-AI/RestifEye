@@ -1,3 +1,7 @@
+// Copyright 2026 Xernai. All rights reserved.
+// Use of this source code is governed by the PolyForm Shield 1.0.0
+// license that can be found in the LICENSE file.
+
 /// The window presentation a given engine phase demands.
 ///
 /// Deliberately a *state*, not a pair of enter/exit commands: the window is

@@ -2,7 +2,7 @@
 <component type="desktop-application">
   <id>com.xernai.restifeye</id>
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>GPL-3.0-or-later</project_license>
+  <project_license>LicenseRef-PolyForm-Shield-1.0.0</project_license>
   <name>RestifEye</name>
   <summary>Break reminders that respect your flow</summary>
   <developer_name>Xernai</developer_name>

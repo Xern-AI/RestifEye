@@ -10,7 +10,7 @@ Name:           RestifEye
 Version:        %{?pkg_version}%{!?pkg_version:0.1.0}
 Release:        1%{?dist}
 Summary:        Break reminders that respect your flow
-License:        GPL-3.0-or-later
+License:        LicenseRef-PolyForm-Shield-1.0.0
 URL:            https://github.com/Xern-AI/restifeye
 Source0:        RestifEye-bundle.tar.gz
 BuildArch:      x86_64

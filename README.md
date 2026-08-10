@@ -1,6 +1,6 @@
 # RestifEye
 
-**Break reminders that respect your flow.** A free, open-source break and eye-rest reminder for Linux, by Xernai.
+**Break reminders that respect your flow.** A free break and eye-rest reminder for Linux, by Xernai.
 
 RestifEye nudges you to rest your eyes and move your body at healthy intervals — without being annoying and without breaking on Wayland. It notices when you're in a call and waits. It notices when you already stepped away and credits you the break. It warns you 30 seconds before taking over your screen, and when it does, it shows you one simple exercise to do.
 
@@ -24,7 +24,7 @@ Existing options are either unreliable on modern Linux (Wayland) or so pushy tha
 
 ## Install
 
-Coming with v1.0: AppImage and RPM downloads from [Releases](../../releases), plus a Fedora COPR repository. Until then, build from source below.
+Download from [Releases](../../releases) — AppImage, DEB, and RPM packages are available. See [INSTALL.md](docs/INSTALL.md) for detailed instructions.
 
 ## Building from source
 
@@ -56,4 +56,4 @@ Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). All commits re
 
 ## License & trademark
 
-Code is licensed under [GPL-3.0](LICENSE). The **RestifEye** and **Xernai** names and logos are trademarks of the project owner and may **not** be used by derivative works or forks without written permission. Forks must use a different name and branding.
+Source code is licensed under the [PolyForm Shield License 1.0.0](LICENSE). You may use, modify, and redistribute the software for any purpose **except** creating a product that competes with RestifEye. The **RestifEye** and **Xernai** names and logos are trademarks of the project owner and may **not** be used by derivative works or forks without written permission. Forks must use a different name and branding.

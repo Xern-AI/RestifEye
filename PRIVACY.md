@@ -9,4 +9,4 @@
 - RestifEye checks *whether* your microphone or camera is in use (via PipeWire) to avoid interrupting calls. It cannot and does not access audio or video content.
 - Deleting your data is as simple as deleting the folder above, or using *Settings → Reset all data*.
 
-The source code is GPL-3.0 licensed — you can verify every claim above by reading it.
+The source code is available under the [PolyForm Shield License](LICENSE) — you can verify every claim above by reading it.

@@ -1,3 +1,7 @@
+// Copyright 2026 Xernai. All rights reserved.
+// Use of this source code is governed by the PolyForm Shield 1.0.0
+// license that can be found in the LICENSE file.
+
 /// A moment in the break cycle worth hearing.
 ///
 /// Mapped to freedesktop sound-naming-spec ids by the platform adapter, so we

@@ -163,7 +163,7 @@
           <p>Download, make executable, run. No root, no dependencies.</p>
           <pre><code>chmod +x RestifEye-*-x86_64.AppImage
 ./RestifEye-*-x86_64.AppImage</code></pre>
-          <a class="btn btn-pri btn-sm" data-dl="appimage" href="downloads/">
+          <a class="btn btn-pri btn-sm" data-dl="appimage" href="https://github.com/Xern-AI/RestifEye/releases/latest">
             Download AppImage <span class="dl-size"></span>
           </a>
         </div>
@@ -172,7 +172,7 @@
           <h3>DEB package</h3>
           <p>Integrates with your app menu, icon theme, and system updates.</p>
           <pre><code>sudo apt install ./restifeye_*_amd64.deb</code></pre>
-          <a class="btn btn-pri btn-sm" data-dl="deb" href="downloads/">
+          <a class="btn btn-pri btn-sm" data-dl="deb" href="https://github.com/Xern-AI/RestifEye/releases/latest">
             Download .deb <span class="dl-size"></span>
           </a>
         </div>
@@ -181,7 +181,7 @@
           <h3>RPM package</h3>
           <p>Integrates with your app grid, icon theme, and updates.</p>
           <pre><code>sudo dnf install ./RestifEye-*.rpm</code></pre>
-          <a class="btn btn-pri btn-sm" data-dl="rpm" href="downloads/">
+          <a class="btn btn-pri btn-sm" data-dl="rpm" href="https://github.com/Xern-AI/RestifEye/releases/latest">
             Download .rpm <span class="dl-size"></span>
           </a>
         </div>
@@ -254,30 +254,70 @@
   </footer>
 
   <script>
-    /* ── Direct downloads from local manifest ── */
+    /* ── Direct downloads from GitHub Releases API ── */
     (function () {
-      var BASE = 'downloads/';
-      function fmtSize(b) { if (!b) return ''; return b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : (b / 1024).toFixed(0) + ' KB' }
+      var REPO = 'Xern-AI/RestifEye';
+      var API = 'https://api.github.com/repos/' + REPO + '/releases/latest';
+      var FALLBACK = 'https://github.com/' + REPO + '/releases/latest';
 
-      fetch(BASE + 'version.json')
-        .then(function (r) { if (!r.ok) throw r; return r.json() })
-        .then(function (d) {
-          var files = d.files || {};
+      /* Map data-dl attribute values to asset filename patterns */
+      var PATTERNS = {
+        appimage: /\.AppImage$/i,
+        deb: /\.deb$/i,
+        rpm: /\.rpm$/i
+      };
+
+      function fmtSize(b) {
+        if (!b) return '';
+        return b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : (b / 1024).toFixed(0) + ' KB';
+      }
+
+      fetch(API, { headers: { Accept: 'application/vnd.github.v3+json' } })
+        .then(function (r) { if (!r.ok) throw r; return r.json(); })
+        .then(function (release) {
+          var assets = release.assets || [];
+
+          /* Build a lookup: { appimage: {url, size}, deb: {…}, rpm: {…} } */
+          var matched = {};
+          assets.forEach(function (a) {
+            Object.keys(PATTERNS).forEach(function (key) {
+              if (PATTERNS[key].test(a.name)) {
+                matched[key] = { url: a.browser_download_url, size: a.size };
+              }
+            });
+          });
+
+          /* Wire up download buttons */
           document.querySelectorAll('[data-dl]').forEach(function (el) {
-            var f = el.getAttribute('data-dl'), info = files[f];
-            if (info && info.name) {
-              el.href = BASE + info.name;
+            var key = el.getAttribute('data-dl');
+            var info = matched[key];
+            if (info && info.url) {
+              el.href = info.url;
               var s = el.querySelector('.dl-size');
               if (s && info.size) s.textContent = fmtSize(info.size);
+            } else {
+              el.href = FALLBACK;
             }
           });
-          if (d.version) {
-            document.querySelectorAll('.version-badge').forEach(function (el) { el.textContent = 'v' + d.version });
+
+          /* Version badge */
+          var tag = (release.tag_name || '').replace(/^v/, '');
+          if (tag) {
+            document.querySelectorAll('.version-badge').forEach(function (el) {
+              el.textContent = 'v' + tag;
+            });
           }
+
+          /* Hero CTA → AppImage direct download */
           var hero = document.getElementById('hero-dl');
-          if (hero && files.appimage && files.appimage.name) hero.href = BASE + files.appimage.name;
+          if (hero && matched.appimage) hero.href = matched.appimage.url;
         })
-        .catch(function () { });
+        .catch(function () {
+          /* On API failure (rate limit, network), fall back to releases page */
+          document.querySelectorAll('[data-dl]').forEach(function (el) {
+            el.href = FALLBACK;
+          });
+        });
     })();
 
     /* ── Scroll reveal ── */
