@@ -307,7 +307,10 @@ class _IntensityTile extends ConsumerWidget {
       'Up to stretches',
       'Standing stretches and a walk',
     ),
-    ExerciseIntensity.heavy: ('Anything', 'Includes squats, lunges and jacks'),
+    ExerciseIntensity.heavy: (
+      'Anything',
+      'Adds floor work and cardio — squats, planks, skipping',
+    ),
   };
 
   @override
