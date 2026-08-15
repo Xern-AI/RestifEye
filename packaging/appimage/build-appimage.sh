@@ -19,7 +19,9 @@ cp assets/linux/com.xernai.restifeye.desktop "$APPDIR/"
 
 # Top-level icon MUST be PNG for AppImageHub thumbnail generation.
 # appdir-lint warns "Icon is not in PNG format" if only SVG is present.
-cp docs/assets/icon-512.png "$APPDIR/com.xernai.restifeye.png"
+# Lives in assets/linux/ beside the SVG it is rendered from: docs/ is not a
+# packaging input and its copy was deleted, silently breaking the release.
+cp assets/linux/com.xernai.restifeye.png "$APPDIR/com.xernai.restifeye.png"
 
 # Keep SVG in hicolor for desktop integration (scalable rendering).
 cp assets/linux/com.xernai.restifeye.svg \

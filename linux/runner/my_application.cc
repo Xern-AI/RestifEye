@@ -7,7 +7,10 @@
 
 // GLib 2.74 introduced G_APPLICATION_DEFAULT_FLAGS. Ubuntu 22.04 ships 2.72.
 // Both constants are 0; this shim is purely a naming alias for older GLib.
-#ifndef G_APPLICATION_DEFAULT_FLAGS
+// It must key off the GLib version, not #ifndef: the newer name is an enum
+// member, invisible to the preprocessor, so #ifndef always fired and forced
+// the deprecated name even on GLib >= 2.74 (-Werror build failure).
+#if !GLIB_CHECK_VERSION(2, 74, 0)
 #define G_APPLICATION_DEFAULT_FLAGS G_APPLICATION_FLAGS_NONE
 #endif
 
