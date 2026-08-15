@@ -7,6 +7,9 @@ import 'break_kind.dart';
 /// Engine configuration. Immutable; times of day are minutes since midnight
 /// so `core/` stays free of Flutter types.
 class BreakConfig {
+  static const int defaultWorkStartMinutes = 0;
+  static const int defaultWorkEndMinutes = 24 * 60;
+
   const BreakConfig({
     this.microInterval = const Duration(minutes: 20),
     this.microDuration = const Duration(seconds: 20),
@@ -19,8 +22,8 @@ class BreakConfig {
     this.deferRecheck = const Duration(minutes: 5),
     this.deferCap = const Duration(minutes: 15),
     this.idleFireThreshold = const Duration(minutes: 2),
-    this.workStartMinutes = 0,
-    this.workEndMinutes = 24 * 60,
+    this.workStartMinutes = defaultWorkStartMinutes,
+    this.workEndMinutes = defaultWorkEndMinutes,
     this.workDays = const {1, 2, 3, 4, 5, 6, 7},
     this.strictMode = true,
   }) : assert(snoozeBudget >= 0),
@@ -69,9 +72,13 @@ class BreakConfig {
   Duration breakDuration(BreakKind kind) =>
       kind == BreakKind.micro ? microDuration : longDuration;
 
+  bool get isAllDay =>
+      workStartMinutes % (24 * 60) == workEndMinutes % (24 * 60);
+
   /// Whether [now] falls inside the configured work window.
   bool isWithinWorkHours(DateTime now) {
     if (!workDays.contains(now.weekday)) return false;
+    if (isAllDay) return true;
     final minutes = now.hour * 60 + now.minute;
     if (workStartMinutes <= workEndMinutes) {
       return minutes >= workStartMinutes && minutes < workEndMinutes;

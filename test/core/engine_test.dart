@@ -790,5 +790,43 @@ void main() {
       expect(config.isWithinWorkHours(DateTime(2026, 1, 5, 5)), isTrue);
       expect(config.isWithinWorkHours(DateTime(2026, 1, 5, 12)), isFalse);
     });
+
+    test('equal start and end means all day, not a dead window', () {
+      const midnight = BreakConfig(workStartMinutes: 0, workEndMinutes: 0);
+      expect(midnight.isAllDay, isTrue);
+      expect(midnight.isWithinWorkHours(monday9am), isTrue);
+      expect(midnight.isWithinWorkHours(DateTime(2026, 1, 5, 3)), isTrue);
+
+      const nineToNine = BreakConfig(
+        workStartMinutes: 9 * 60,
+        workEndMinutes: 9 * 60,
+      );
+      expect(nineToNine.isAllDay, isTrue);
+      expect(nineToNine.isWithinWorkHours(DateTime(2026, 1, 5, 3)), isTrue);
+    });
+
+    test('default config reports an all-day window', () {
+      expect(const BreakConfig().isAllDay, isTrue);
+      expect(
+        const BreakConfig(
+          workStartMinutes: 9 * 60,
+          workEndMinutes: 17 * 60,
+        ).isAllDay,
+        isFalse,
+      );
+    });
+
+    test('resetting to the defaults restores the all-day window', () {
+      const narrowed = BreakConfig(
+        workStartMinutes: 9 * 60,
+        workEndMinutes: 17 * 60,
+      );
+      final reset = narrowed.copyWith(
+        workStartMinutes: BreakConfig.defaultWorkStartMinutes,
+        workEndMinutes: BreakConfig.defaultWorkEndMinutes,
+      );
+      expect(reset.isAllDay, isTrue);
+      expect(reset.isWithinWorkHours(DateTime(2026, 1, 5, 3)), isTrue);
+    });
   });
 }

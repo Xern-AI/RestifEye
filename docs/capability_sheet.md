@@ -22,7 +22,7 @@ RestifEye reminds you to rest your eyes and move, on a schedule that adapts to w
 - 30-second pre-break warning, always, before anything takes the screen. *Non-trivial: the warning is taken back down by whatever ends it — the break starting, a snooze, a skip, a pause, a film starting, work hours closing, a settings change. It is reconciled against the engine's live state every second rather than fired off events, so it can never be left sitting in your notification tray after the moment it was about has passed.*
 - Snooze with a strict budget, tracked separately per break kind. *Non-trivial: one shared counter let a 3-snooze budget stretch to 5 by interleaving the two cycles.*
 - Skip with its own budget of consecutive skips, reset by any break actually taken.
-- Work hours and work days: it only runs when you want it to, including overnight windows that cross midnight.
+- Work hours and work days: it only runs when you want it to, including overnight windows that cross midnight. One button resets the window back to all day. *Non-trivial: a start time equal to the end time is read as "all day", not as a zero-length window, so there is no way to narrow your hours into a state where the app silently stops working and you can't tell why.*
 - Timed pause from the dashboard — 30 min / 1 h / 2 h / 3 h / indefinite — on the wall clock, so "2 hours" survives a suspend.
 - Crash-safe: the schedule is snapshotted and restored, so a restart doesn't hand you a fresh 20 minutes.
 

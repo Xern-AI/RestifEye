@@ -425,10 +425,16 @@ class _WorkHoursTile extends StatelessWidget {
     );
   }
 
+  void _reset() => onChanged(
+    config.copyWith(
+      workStartMinutes: BreakConfig.defaultWorkStartMinutes,
+      workEndMinutes: BreakConfig.defaultWorkEndMinutes,
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
-    final allDay =
-        config.workStartMinutes == 0 && config.workEndMinutes == 24 * 60;
+    final allDay = config.isAllDay;
     return ListTile(
       leading: const Icon(Icons.schedule_outlined),
       title: const Text('Active window'),
@@ -440,16 +446,20 @@ class _WorkHoursTile extends StatelessWidget {
       ),
       trailing: Wrap(
         spacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           OutlinedButton(
             onPressed: () => _pick(context, start: true),
-            child: Text('From ${_fmt(config.workStartMinutes)}'),
+            child: Text('From ${_fmt(config.workStartMinutes % (24 * 60))}'),
           ),
           OutlinedButton(
             onPressed: () => _pick(context, start: false),
-            child: Text(
-              'To ${_fmt(config.workEndMinutes == 1440 ? 0 : config.workEndMinutes)}',
-            ),
+            child: Text('To ${_fmt(config.workEndMinutes % (24 * 60))}'),
+          ),
+          IconButton(
+            onPressed: allDay ? null : _reset,
+            icon: const Icon(Icons.restore),
+            tooltip: 'Reset to all day',
           ),
         ],
       ),
