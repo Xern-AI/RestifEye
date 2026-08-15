@@ -51,6 +51,18 @@ class DailyRollups extends Table {
   IntColumn get firstActivityMinute => integer().nullable()();
   IntColumn get lastActivityMinute => integer().nullable()();
 
+  /// v3: hands off, but watching something that held the screen awake.
+  IntColumn get watchSeconds => integer().withDefault(const Constant(0))();
+
+  /// v3: unbroken runs of work that reached the deep-work threshold.
+  IntColumn get focusRuns => integer().withDefault(const Constant(0))();
+
+  /// v3: hands-on seconds per hour of the local day, 24 comma-separated
+  /// integers. Stored as text rather than 24 columns because it is only ever
+  /// read and written whole, and null on days rolled up before v3 — those
+  /// days genuinely have no hourly detail and must not pretend to.
+  TextColumn get activeByHour => text().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {day};
 }

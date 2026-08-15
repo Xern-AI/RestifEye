@@ -8,6 +8,7 @@ import 'package:restifeye/core/models/activity.dart';
 import 'package:restifeye/core/models/break_kind.dart';
 import 'package:restifeye/data/activity_repository.dart';
 import 'package:restifeye/data/break_log_repository.dart';
+import 'package:restifeye/features/dashboard/day_shape.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -72,14 +73,14 @@ void main() {
       await cleanupHarness(tester, harness);
     });
 
-    testWidgets('renders today stats from the database, including the idle '
-        'and away time that used to be discarded', (tester) async {
+    testWidgets('renders today stats from the database, including the idle, '
+        'away and watch time that used to be discarded', (tester) async {
       final day = DateTime.now();
       final activity = ActivityRepository(harness.db);
       DateTime at(int hour, [int minute = 0]) =>
           DateTime(day.year, day.month, day.day, hour, minute);
 
-      // 1h20m hands-on, 40m at the desk but idle, 30m locked away.
+      // 1h20m hands-on, 40m idle at the desk, 30m locked away, 25m watching.
       await activity.insertSlice(
         ActivitySlice(start: at(9), end: at(10, 20), kind: SliceKind.active),
       );
@@ -88,6 +89,13 @@ void main() {
       );
       await activity.insertSlice(
         ActivitySlice(start: at(11), end: at(11, 30), kind: SliceKind.locked),
+      );
+      await activity.insertSlice(
+        ActivitySlice(
+          start: at(11, 30),
+          end: at(11, 55),
+          kind: SliceKind.watching,
+        ),
       );
 
       final breakLog = BreakLogRepository(harness.db);
@@ -104,15 +112,23 @@ void main() {
       await pumpApp(tester, const Size(1280, 800));
       await tester.pump(); // stream deliveries
 
-      expect(find.text('Active'), findsOneWidget);
-      expect(find.text('2h 0m'), findsOneWidget); // at computer: 1h20 + 40m
+      // At computer now includes watching: 1h20 + 40m + 25m.
+      expect(find.text('2h 25m'), findsOneWidget);
       expect(find.text('40m'), findsOneWidget); // idle
       expect(find.text('30m'), findsOneWidget); // away
-      // Active share of time at the computer: 80 min of 120.
-      expect(find.textContaining('67%'), findsOneWidget);
-      expect(find.text('2'), findsOneWidget); // breaks taken
+      expect(find.text('25m'), findsOneWidget); // watching
+      // Hands-on share of time at the computer: 80 min of 145.
+      expect(find.textContaining('55%'), findsOneWidget);
       // Active time and longest unbroken stretch are the same single slice.
       expect(find.text('1h 20m'), findsNWidgets(2));
+
+      // The day shape knows which hours the work landed in.
+      expect(find.byType(DayShape), findsOneWidget);
+      expect(find.text('09:00'), findsOneWidget); // busiest hour
+
+      await tester.scrollUntilVisible(find.text('Breaks'), 300);
+      expect(find.text('Followed through'), findsOneWidget);
+      expect(find.text('100%'), findsOneWidget); // nothing escaped
 
       await cleanupHarness(tester, harness);
     });

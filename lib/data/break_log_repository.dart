@@ -9,7 +9,20 @@ import 'database.dart';
 import 'tables.dart';
 
 /// Break outcome counts for one day.
-typedef BreakCounts = ({int completed, int credited, int escaped, int snoozes});
+///
+/// [escaped] and [skipped] are both misses but different ones: escaped is
+/// the 3-second hold during a break, skipped is dismissing the warning
+/// before it starts. Compliance counts only [escaped], and deliberately
+/// stays that way — the mood rules and the advice engine are calibrated on
+/// it — but the dashboard reports both, because a user who skips every
+/// warning would otherwise see a clean day.
+typedef BreakCounts = ({
+  int completed,
+  int credited,
+  int escaped,
+  int skipped,
+  int snoozes,
+});
 
 /// Persists engine events into the break log.
 class BreakLogRepository {
@@ -109,7 +122,7 @@ class BreakLogRepository {
       ..where((t) => t.at.isBiggerOrEqualValue(from))
       ..where((t) => t.at.isSmallerThanValue(to));
     return query.watch().map((rows) {
-      var completed = 0, credited = 0, escaped = 0, snoozes = 0;
+      var completed = 0, credited = 0, escaped = 0, skipped = 0, snoozes = 0;
       for (final row in rows) {
         switch (row.action) {
           case BreakAction.completed:
@@ -118,12 +131,13 @@ class BreakLogRepository {
             credited++;
           case BreakAction.escaped:
             escaped++;
+          case BreakAction.skipped:
+            skipped++;
           case BreakAction.snoozed:
             snoozes++;
           case BreakAction.warned:
           case BreakAction.started:
           case BreakAction.deferred:
-          case BreakAction.skipped:
             break;
         }
       }
@@ -131,6 +145,7 @@ class BreakLogRepository {
         completed: completed,
         credited: credited,
         escaped: escaped,
+        skipped: skipped,
         snoozes: snoozes,
       );
     });

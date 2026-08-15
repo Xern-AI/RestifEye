@@ -157,17 +157,42 @@ class AnalyticsRangeNotifier extends Notifier<AnalyticsRange> {
   void select(AnalyticsRange range) => state = range;
 }
 
+/// Where a range starts, counting back from [end].
+DateTime rangeStart(AnalyticsRange range, DateTime end) => switch (range) {
+  AnalyticsRange.week => end.subtract(const Duration(days: 7)),
+  AnalyticsRange.month => end.subtract(const Duration(days: 30)),
+  AnalyticsRange.year => DateTime(end.year - 1, end.month, end.day),
+};
+
 /// Rollups covering the selected analytics range (finished days only —
 /// today is shown live on the dashboard instead).
 final rangeRollupsProvider = StreamProvider<List<DayRollup>>((ref) {
-  final range = ref.watch(analyticsRangeProvider);
   final today = ref.watch(todayProvider);
-  final from = switch (range) {
-    AnalyticsRange.week => today.subtract(const Duration(days: 7)),
-    AnalyticsRange.month => today.subtract(const Duration(days: 30)),
-    AnalyticsRange.year => DateTime(today.year - 1, today.month, today.day),
-  };
-  return ref.watch(rollupRepositoryProvider).watchRange(from, today);
+  final range = ref.watch(analyticsRangeProvider);
+  return ref
+      .watch(rollupRepositoryProvider)
+      .watchRange(rangeStart(range, today), today);
+});
+
+/// The equally long stretch immediately before the selected range, so every
+/// figure can say whether it is moving and which way.
+final previousRangeRollupsProvider = StreamProvider<List<DayRollup>>((ref) {
+  final today = ref.watch(todayProvider);
+  final range = ref.watch(analyticsRangeProvider);
+  final from = rangeStart(range, today);
+  return ref
+      .watch(rollupRepositoryProvider)
+      .watchRange(rangeStart(range, from), from);
+});
+
+/// The last fortnight of finished days, for judging today against a typical
+/// one. Kept separate from [rangeRollupsProvider] so switching the analytics
+/// range cannot change what "typical" means on the dashboard.
+final recentRollupsProvider = StreamProvider<List<DayRollup>>((ref) {
+  final today = ref.watch(todayProvider);
+  return ref
+      .watch(rollupRepositoryProvider)
+      .watchRange(today.subtract(const Duration(days: 14)), today);
 });
 
 /// Current advice from the last four weeks of rollups.

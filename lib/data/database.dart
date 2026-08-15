@@ -58,11 +58,14 @@ class AppDatabase extends _$AppDatabase {
   factory AppDatabase.inMemory() => AppDatabase(NativeDatabase.memory());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
-  /// v1 → v2 adds the idle/away/workday-span columns to daily_rollups.
-  /// Additive and defaulted, so existing rows survive untouched: a user's
-  /// history is theirs, and an upgrade must never quietly drop it.
+  /// v1 → v2 adds the idle/away/workday-span columns to daily_rollups;
+  /// v2 → v3 adds watch time, deep-work runs and the hourly profile.
+  /// Every step is additive and defaulted, so existing rows survive
+  /// untouched: a user's history is theirs, and an upgrade must never
+  /// quietly drop it. Days rolled up before a column existed keep reading
+  /// as "no data" rather than as zero, wherever the difference matters.
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) => m.createAll(),
@@ -72,6 +75,11 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(dailyRollups, dailyRollups.awaySeconds);
         await m.addColumn(dailyRollups, dailyRollups.firstActivityMinute);
         await m.addColumn(dailyRollups, dailyRollups.lastActivityMinute);
+      }
+      if (from < 3) {
+        await m.addColumn(dailyRollups, dailyRollups.watchSeconds);
+        await m.addColumn(dailyRollups, dailyRollups.focusRuns);
+        await m.addColumn(dailyRollups, dailyRollups.activeByHour);
       }
     },
   );

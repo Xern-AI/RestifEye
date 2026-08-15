@@ -8,10 +8,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/formats.dart';
 import '../../app/theme.dart';
 import '../../core/engine/phase.dart';
+import '../../core/models/activity.dart';
 import '../../core/models/break_kind.dart';
+import '../../services/insights.dart';
 import '../../services/providers.dart';
+import 'day_shape.dart';
 
-/// Today at a glance: live next-break countdown and today's stats.
+/// Today at a glance: the live countdown, the shape the day has taken, and
+/// the numbers behind it — grouped, because a flat grid of a dozen equal
+/// cards makes the reader do the sorting.
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
@@ -29,7 +34,13 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: AppTokens.spaceSm),
             const _PauseControl(),
             const SizedBox(height: AppTokens.spaceMd),
-            const _TodayStatsRow(),
+            const _DayShapeCard(),
+            const SizedBox(height: AppTokens.spaceMd),
+            const _TimeGroup(),
+            const SizedBox(height: AppTokens.spaceMd),
+            const _FocusGroup(),
+            const SizedBox(height: AppTokens.spaceMd),
+            const _BreaksGroup(),
           ],
         ),
       ),
@@ -216,127 +227,290 @@ class _PauseControl extends ConsumerWidget {
   }
 }
 
-/// Today's numbers.
-///
-/// Idle and away time were already being recorded every second and thrown
-/// away at the aggregation step; they answer the question screen time alone
-/// cannot — how much of the day was actually spent at this machine.
-///
-/// Wraps rather than scrolls sideways, so nothing is hidden at narrow widths.
-class _TodayStatsRow extends ConsumerWidget {
-  const _TodayStatsRow();
+class _DayShapeCard extends ConsumerWidget {
+  const _DayShapeCard();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(todaySliceStatsProvider).value;
-    final counts = ref.watch(todayBreakCountsProvider).value;
-
-    String dur(Duration? d) => d == null ? '-' : formatHoursMinutes(d);
-
-    final span = switch ((stats?.firstActivity, stats?.lastActivity)) {
-      (final DateTime first, final DateTime last) =>
-        '${formatMinuteOfDay(first.hour * 60 + first.minute)}'
-            ' - ${formatMinuteOfDay(last.hour * 60 + last.minute)}',
-      _ => '-',
-    };
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Three across when there is room, two when there is not.
-        final columns = constraints.maxWidth >= 720 ? 3 : 2;
-        final width =
-            (constraints.maxWidth - AppTokens.spaceMd * (columns - 1)) /
-            columns;
-
-        return Wrap(
-          spacing: AppTokens.spaceMd,
-          runSpacing: AppTokens.spaceMd,
-          children: [
-            for (final card in [
-              (
-                label: 'Active',
-                value: dur(stats?.screenTime),
-                hint: 'Typing and clicking',
-              ),
-              (
-                label: 'At computer',
-                value: dur(stats?.atComputer),
-                hint: stats == null
-                    ? null
-                    : '${formatPercent(stats.activeRatio)} of it active',
-              ),
-              (
-                label: 'Idle',
-                value: dur(stats?.idleTime),
-                hint: 'Here, but hands off',
-              ),
-              (
-                label: 'Away',
-                value: dur(stats?.awayTime),
-                hint: 'Locked or suspended',
-              ),
-              (
-                label: 'Longest focus',
-                value: dur(stats?.longestStretch),
-                hint: 'Unbroken stretch',
-              ),
-              (
-                label: 'Breaks taken',
-                value: counts == null
-                    ? '-'
-                    : '${counts.completed + counts.credited}',
-                hint: span == '-' ? null : 'Day ran $span',
-              ),
-            ])
-              SizedBox(
-                width: width,
-                child: _StatCard(
-                  label: card.label,
-                  value: card.value,
-                  hint: card.hint,
-                ),
-              ),
-          ],
-        );
-      },
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppTokens.spaceLg),
+        child: DayShape(hours: stats?.hours ?? const []),
+      ),
     );
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.value, this.hint});
+/// Where the day went.
+class _TimeGroup extends ConsumerWidget {
+  const _TimeGroup();
 
-  final String label;
-  final String value;
-  final String? hint;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stats = ref.watch(todaySliceStatsProvider).value;
+    final history = ref.watch(recentRollupsProvider).value ?? const [];
+    final now = ref.watch(wallClockProvider)();
+
+    final pace = stats == null
+        ? null
+        : paceAgainstTypical(
+            today: stats.hours,
+            history: history,
+            completedHours: now.hour,
+          );
+
+    return _MetricGroup(
+      title: 'Time',
+      icon: Icons.schedule_outlined,
+      metrics: [
+        (
+          label: 'Active',
+          value: _duration(stats?.screenTime),
+          hint: _paceHint(pace),
+        ),
+        (
+          label: 'At computer',
+          value: _duration(stats?.atComputer),
+          hint: stats == null
+              ? null
+              : '${formatPercent(stats.activeRatio)} of it hands-on',
+        ),
+        (
+          label: 'Watching',
+          value: _duration(stats?.watchTime),
+          hint: 'Video, calls, slides',
+        ),
+        (label: 'Idle', value: _duration(stats?.idleTime), hint: 'Hands off'),
+        (
+          label: 'Away',
+          value: _duration(stats?.awayTime),
+          hint: 'Locked or suspended',
+        ),
+      ],
+    );
+  }
+
+  /// Reads as encouragement either way: this is a rest app, so a shorter day
+  /// than usual is not a failure to report.
+  static String? _paceHint(Pace? pace) {
+    if (pace == null) return null;
+    final minutes = pace.difference.inMinutes;
+    if (minutes.abs() < 10) return 'On par with your usual';
+    final size = formatHoursMinutes(Duration(minutes: minutes.abs()));
+    return minutes > 0 ? '$size more than usual' : '$size less than usual';
+  }
+}
+
+/// How the work itself was shaped.
+class _FocusGroup extends ConsumerWidget {
+  const _FocusGroup();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stats = ref.watch(todaySliceStatsProvider).value;
+
+    final span = switch ((stats?.firstActivity, stats?.lastActivity)) {
+      (final DateTime first, final DateTime last) =>
+        '${formatMinuteOfDay(first.hour * 60 + first.minute)}'
+            ' – ${formatMinuteOfDay(last.hour * 60 + last.minute)}',
+      _ => '—',
+    };
+    final peak = stats?.peakHour;
+
+    return _MetricGroup(
+      title: 'Focus',
+      icon: Icons.center_focus_strong_outlined,
+      metrics: [
+        (
+          label: 'Longest stretch',
+          value: _duration(stats?.longestStretch),
+          hint: 'Without a pause',
+        ),
+        (
+          label: 'Deep-work runs',
+          value: stats == null ? '—' : '${stats.focusRuns}',
+          hint: 'Over ${focusRunMinimum.inMinutes} minutes',
+        ),
+        (
+          label: 'Busiest hour',
+          value: peak == null ? '—' : formatMinuteOfDay(peak * 60),
+          hint: peak == null ? null : 'Most hands-on time',
+        ),
+        (label: 'Day ran', value: span, hint: 'First to last activity'),
+        (
+          label: 'Late & early',
+          value: _duration(stats?.afterHours),
+          hint: 'Before 07:00 or after 22:00',
+        ),
+      ],
+    );
+  }
+}
+
+/// Whether the app's whole purpose is being served.
+class _BreaksGroup extends ConsumerWidget {
+  const _BreaksGroup();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final counts = ref.watch(todayBreakCountsProvider).value;
+    final stats = ref.watch(todaySliceStatsProvider).value;
+
+    final taken = counts == null ? null : counts.completed + counts.credited;
+    final concluded = counts == null
+        ? 0
+        : counts.completed + counts.credited + counts.escaped;
+    final missed = counts == null ? null : counts.escaped + counts.skipped;
+
+    // Rest per hour actually at the machine: the number that says whether
+    // the schedule is being honoured, independent of how long the day was.
+    final atComputerHours = (stats?.atComputer.inMinutes ?? 0) / 60;
+    final perHour = taken == null || atComputerHours < 0.5
+        ? '—'
+        : (taken / atComputerHours).toStringAsFixed(1);
+
+    return _MetricGroup(
+      title: 'Breaks',
+      icon: Icons.self_improvement_outlined,
+      metrics: [
+        (
+          label: 'Taken',
+          value: taken == null ? '—' : '$taken',
+          hint: counts == null || counts.credited == 0
+              ? 'Completed or credited'
+              : '${counts.credited} by walking away',
+        ),
+        (
+          label: 'Followed through',
+          value: concluded == 0 ? '—' : formatPercent((taken ?? 0) / concluded),
+          hint: 'Of breaks that came due',
+        ),
+        (
+          label: 'Per hour',
+          value: perHour,
+          hint: 'Rests per hour at the machine',
+        ),
+        (
+          label: 'Snoozed',
+          value: counts == null ? '—' : '${counts.snoozes}',
+          hint: 'Pushed back, then taken',
+        ),
+        (
+          label: 'Skipped',
+          value: missed == null ? '—' : '$missed',
+          hint: 'From the warning or mid-break',
+        ),
+      ],
+    );
+  }
+}
+
+String _duration(Duration? d) => d == null ? '—' : formatHoursMinutes(d);
+
+typedef _Metric = ({String label, String value, String? hint});
+
+/// A titled group of related numbers in one card.
+///
+/// One card per group rather than one per number: the borders then mean
+/// something (these belong together) instead of being a uniform grid the
+/// reader has to parse from scratch.
+class _MetricGroup extends StatelessWidget {
+  const _MetricGroup({
+    required this.title,
+    required this.icon,
+    required this.metrics,
+  });
+
+  final String title;
+  final IconData icon;
+  final List<_Metric> metrics;
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final scheme = Theme.of(context).colorScheme;
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(AppTokens.spaceMd),
+        padding: const EdgeInsets.all(AppTokens.spaceLg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: textTheme.labelMedium),
-            const SizedBox(height: AppTokens.spaceSm),
-            Text(value, style: textTheme.headlineSmall),
-            if (hint != null) ...[
-              const SizedBox(height: AppTokens.spaceXs),
-              Text(
-                hint!,
-                style: textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+            Row(
+              children: [
+                Icon(icon, size: 18, color: scheme.onSurfaceVariant),
+                const SizedBox(width: AppTokens.spaceSm),
+                Text(title, style: textTheme.titleMedium),
+              ],
+            ),
+            const SizedBox(height: AppTokens.spaceLg),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                // Wraps rather than scrolls sideways, so nothing is hidden
+                // at narrow widths.
+                final columns = switch (constraints.maxWidth) {
+                  >= 820 => 5,
+                  >= 560 => 3,
+                  _ => 2,
+                };
+                final width =
+                    (constraints.maxWidth - AppTokens.spaceMd * (columns - 1)) /
+                    columns;
+                return Wrap(
+                  spacing: AppTokens.spaceMd,
+                  runSpacing: AppTokens.spaceLg,
+                  children: [
+                    for (final metric in metrics)
+                      SizedBox(width: width, child: _MetricView(metric)),
+                  ],
+                );
+              },
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MetricView extends StatelessWidget {
+  const _MetricView(this.metric);
+
+  final _Metric metric;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          metric.label,
+          style: textTheme.labelMedium?.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: AppTokens.spaceXs),
+        Text(
+          metric.value,
+          style: textTheme.headlineSmall?.copyWith(
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+          maxLines: 1,
+        ),
+        if (metric.hint != null) ...[
+          const SizedBox(height: AppTokens.spaceXs),
+          Text(
+            metric.hint!,
+            style: textTheme.bodySmall?.copyWith(color: scheme.outline),
+            maxLines: 2,
+          ),
+        ],
+      ],
     );
   }
 }
