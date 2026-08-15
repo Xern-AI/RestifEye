@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/version.dart';
 import '../../core/models/break_config.dart';
 import '../../core/models/exercise.dart';
 import '../../platform/interfaces/tray_support.dart';
@@ -206,9 +207,17 @@ class SettingsScreen extends ConsumerWidget {
                   ref.read(generalSettingsProvider.notifier).setUpdateCheck(v),
             ),
             const _SectionHeader('About'),
-            const AboutListTile(
-              icon: Icon(Icons.info_outlined),
+            ListTile(
+              leading: const Icon(Icons.tag_outlined),
+              title: const Text('Version'),
+              subtitle: Text(
+                appBuild == null ? appVersion : '$appVersion (build $appBuild)',
+              ),
+            ),
+            AboutListTile(
+              icon: const Icon(Icons.info_outlined),
               applicationName: 'RestifEye',
+              applicationVersion: appVersion,
               applicationLegalese: '© 2026 Xernai · PolyForm Shield 1.0.0',
             ),
           ],

@@ -38,6 +38,7 @@ import '../services/exercise_picker.dart';
 import '../services/mood_service.dart';
 import '../services/notification_coordinator.dart';
 import '../services/rollup_service.dart';
+import 'version.dart';
 import '../services/update_service.dart';
 import 'brand.dart';
 
@@ -82,6 +83,8 @@ typedef BootResult = ({
 /// Builds the real object graph: database, engine, Linux adapters,
 /// window takeover, notification coordinator, tray, engine service.
 Future<BootResult> bootstrap() async {
+  await loadAppVersion();
+
   final db = AppDatabase.open();
   final settings = SettingsRepository(db);
 

@@ -55,6 +55,7 @@ RestifEye reminds you to rest your eyes and move, on a schedule that adapts to w
 - Runs from the tray with autostart on by default — applied exactly once, never re-forced after you opt out.
 - Ships as an AppImage with zero extra runtime dependencies (the tray and sound paths are hand-rolled rather than pulling in appindicator or an audio plugin), plus an RPM.
 - Optional weekly update check against GitHub Releases. That is the only network call in the app.
+- Settings shows the exact version and build you are running, read from the shipped bundle — so a bug report always carries the right version, and the update check compares against what is actually installed rather than a number someone forgot to bump.
 
 ## Competitive edge
 
