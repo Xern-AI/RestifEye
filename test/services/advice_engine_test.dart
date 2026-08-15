@@ -111,4 +111,115 @@ void main() {
     ]);
     expect(advice.single.ruleId, 'all_good');
   });
+
+  group('rules that need the hourly profile', () {
+    /// A day's hands-on seconds by hour, with [lateMinutes] landing at 23:00.
+    List<int> hours({int dayMinutes = 300, int lateMinutes = 0}) => [
+      for (var h = 0; h < 24; h++)
+        if (h == 23)
+          lateMinutes * 60
+        else if (h >= 9 && h < 18)
+          dayMinutes * 60 ~/ 9
+        else
+          0,
+    ];
+
+    test('flags work landing late at night', () {
+      final advice = evaluateAdvice([
+        for (var d = 1; d <= 8; d++)
+          day(
+            d,
+            screenMinutes: 300,
+            activeByHour: hours(dayMinutes: 200, lateMinutes: 100),
+          ),
+      ]);
+      expect(advice.map((a) => a.ruleId), contains('late_night'));
+    });
+
+    // The columns default to zero on days rolled up before they existed,
+    // which is indistinguishable from a genuinely quiet day. Accusing the
+    // user of something the data cannot support is worse than silence.
+    test('says nothing about late nights on days with no profile', () {
+      final advice = evaluateAdvice([for (var d = 1; d <= 8; d++) day(d)]);
+      expect(advice.map((a) => a.ruleId), isNot(contains('late_night')));
+    });
+
+    test('flags a screen day that is mostly watching', () {
+      final advice = evaluateAdvice([
+        for (var d = 1; d <= 8; d++)
+          day(
+            d,
+            screenMinutes: 120,
+            idleMinutes: 30,
+            watchMinutes: 240,
+            activeByHour: hours(dayMinutes: 120),
+          ),
+      ]);
+      expect(advice.map((a) => a.ruleId), contains('watch_heavy'));
+    });
+
+    test('flags full days that never reach an unbroken 25 minutes', () {
+      final advice = evaluateAdvice([
+        for (var d = 1; d <= 8; d++)
+          day(d, screenMinutes: 300, focusRuns: 0, activeByHour: hours()),
+      ]);
+      expect(advice.map((a) => a.ruleId), contains('fragmented'));
+    });
+  });
+
+  test('flags a start time that swings by hours', () {
+    final advice = evaluateAdvice([
+      for (var d = 1; d <= 12; d++)
+        day(d, firstMinute: d.isEven ? 6 * 60 : 14 * 60),
+    ]);
+    expect(advice.map((a) => a.ruleId), contains('irregular_start'));
+  });
+
+  test('offers to leave weekends alone once they are a habit', () {
+    final advice = evaluateAdvice([
+      for (var d = 1; d <= 28; d++) day(d, screenMinutes: 240),
+    ]);
+    expect(advice.map((a) => a.ruleId), contains('weekend_work'));
+  });
+
+  test('celebrates compliance that is climbing', () {
+    final advice = evaluateAdvice([
+      for (var d = 1; d <= 7; d++) day(d, completed: 3, escaped: 7),
+      for (var d = 8; d <= 14; d++) day(d, completed: 10, escaped: 0),
+    ]);
+    expect(advice.map((a) => a.ruleId), contains('improving'));
+  });
+
+  test('warns when compliance is falling', () {
+    final advice = evaluateAdvice([
+      for (var d = 1; d <= 7; d++) day(d, completed: 10, escaped: 0),
+      for (var d = 8; d <= 14; d++) day(d, completed: 3, escaped: 7),
+    ]);
+    expect(advice.map((a) => a.ruleId), contains('slipping'));
+  });
+
+  // A dozen things to fix is a page nobody acts on.
+  test('caps suggestions, but never trims the praise', () {
+    final advice = evaluateAdvice([
+      for (var d = 1; d <= 28; d++)
+        day(
+          d,
+          screenMinutes: 480,
+          stretchMinutes: 150,
+          watchMinutes: 400,
+          idleMinutes: 30,
+          focusRuns: 0,
+          completed: 2,
+          credited: 0,
+          escaped: 9,
+          snoozes: 20,
+          firstMinute: d.isEven ? 6 * 60 : 15 * 60,
+          activeByHour: [
+            for (var h = 0; h < 24; h++)
+              if (h == 23) 7200 else if (h >= 9 && h < 18) 1800 else 0,
+          ],
+        ),
+    ]);
+    expect(advice.where((a) => !a.positive), hasLength(4));
+  });
 }

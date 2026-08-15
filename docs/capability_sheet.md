@@ -52,7 +52,10 @@ RestifEye reminds you to rest your eyes and move, on a schedule that adapts to w
 - Compares today with a typical recent day, over the hours that have actually finished on both sides. *Non-trivial: comparing a half-finished day with whole-day averages tells you you're behind every single morning.*
 - Rests per hour actually at the machine — the number that says whether the schedule is being honoured, whatever the day's length.
 - Weekly / monthly / yearly analytics: active time, idle, watching, away, at-computer, longest focus stretch, workday span.
-- Rule-based advice derived from your own rollups.
+- A rest score out of 100 for any week, month or year, broken into the four things that made it, with the one worth fixing next written out in plain words. *Non-trivial: it scores only resting — never how much you worked, because a long day is a fact about your job, not a failing.*
+- Every figure compared with the same length of time before it, so you can see what is moving.
+- A weekday-by-hour heatmap of when you are actually at the machine.
+- Rule-based advice derived from your own rollups: late nights, screen time that is mostly video, days that never reach an unbroken 25 minutes, a start time that swings by hours, weekend work, and whether your break habits are improving or slipping. Capped at four suggestions — a page of a dozen failings is a page nobody acts on.
 - Exercise log, break-compliance history.
 
 **The Linux details nobody else got right**
@@ -82,13 +85,14 @@ Honest read: Safe Eyes is the closest competitor and is genuinely good on Waylan
 
 ## Numbers
 
-- **206 automated tests**, `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
+- **232 automated tests**, `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
 - **1 Hz** deterministic engine tick; monotonic clock for all interval maths, wall clock only where wall clock is the right answer.
 - **52** exercises across 3 intensity tiers (10 eye, 42 movement); **7** tray moods; **5** rendered icon sizes (22–64 px).
 - **2-hour** mood horizon; **3-sample** escalation hysteresis; **15-minute** deferral cap; **30-second** pre-break warning.
 - **Zero** network calls except an optional weekly update check. **Zero** runtime dependencies in the AppImage.
 - Screen activity recorded at **1-second** resolution, aggregated into daily rollups with a **24-slot** hourly profile.
 - **25 minutes** is the deep-work threshold; **07:00–22:00** the window outside which screen time is flagged as late.
+- Rest score over **4** weighted components; **7** new advice rules; **4** suggestions shown at most.
 
 ## Hardest problem solved
 
