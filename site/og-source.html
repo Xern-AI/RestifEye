@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="utf-8">
+  <style>
+    @font-face {
+      font-family: 'Instrument Sans';
+      src: url('fonts/instrumentsans-latin-var.woff2') format('woff2');
+      font-weight: 400 700;
+    }
+
+    @font-face {
+      font-family: 'Inter';
+      src: url('fonts/inter-latin-var.woff2') format('woff2');
+      font-weight: 400 700;
+    }
+
+    @font-face {
+      font-family: 'JetBrains Mono';
+      src: url('fonts/jetbrainsmono-latin-var.woff2') format('woff2');
+      font-weight: 400 700;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 1200px;
+      height: 630px;
+      overflow: hidden;
+    }
+
+    body {
+      position: relative;
+      background: #08090b;
+      color: #f4f6f8;
+      font-family: 'Inter', system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      isolation: isolate;
+    }
+
+    .grid {
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(ellipse 85% 80% at 30% 40%, #000 10%, transparent 75%);
+    }
+
+    .glow {
+      position: absolute;
+      z-index: -1;
+      border-radius: 50%;
+      filter: blur(110px);
+      width: 620px;
+      height: 620px;
+      background: rgba(47, 221, 196, .17);
+      top: -160px;
+      right: -120px;
+    }
+
+    .glow2 {
+      position: absolute;
+      z-index: -1;
+      border-radius: 50%;
+      filter: blur(120px);
+      width: 420px;
+      height: 420px;
+      background: rgba(47, 221, 196, .08);
+      bottom: -180px;
+      left: -100px;
+    }
+
+    .in {
+      display: flex;
+      align-items: center;
+      gap: 56px;
+      padding: 0 68px;
+      width: 100%;
+    }
+
+    .copy {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 30px;
+    }
+
+    .brand img {
+      width: 46px;
+      height: 46px;
+      border-radius: 12px;
+      display: block;
+    }
+
+    .brand span {
+      font-family: 'Instrument Sans', sans-serif;
+      font-weight: 600;
+      font-size: 28px;
+      letter-spacing: -.02em;
+    }
+
+    h1 {
+      font-family: 'Instrument Sans', sans-serif;
+      font-weight: 600;
+      font-size: 68px;
+      line-height: .99;
+      letter-spacing: -.043em;
+      max-width: 13ch;
+    }
+
+    h1 em {
+      font-style: normal;
+      color: #2fddc4;
+    }
+
+    p {
+      margin-top: 24px;
+      font-size: 23px;
+      line-height: 1.45;
+      color: #a0a8b4;
+      max-width: 28ch;
+    }
+
+    .chips {
+      display: flex;
+      gap: 10px;
+      margin-top: 36px;
+      flex-wrap: wrap;
+    }
+
+    .chips span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: #2fddc4;
+      background: rgba(47, 221, 196, .1);
+      border: 1px solid rgba(47, 221, 196, .28);
+      border-radius: 999px;
+      padding: 9px 16px;
+    }
+
+    .panel {
+      flex: 0 0 386px;
+      background: #101317;
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 26px;
+      box-shadow: 0 40px 90px rgba(0, 0, 0, .65);
+      overflow: hidden;
+    }
+
+    .bar {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 13px 17px;
+      background: #161a1f;
+      border-bottom: 1px solid rgba(255, 255, 255, .075);
+    }
+
+    .bar i {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .14);
+      display: block;
+    }
+
+    .bar b {
+      margin-left: 7px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 400;
+      color: #7c8593;
+    }
+
+    .body {
+      padding: 20px;
+      display: grid;
+      gap: 13px;
+    }
+
+    .timer {
+      padding: 20px 22px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, .075);
+      background:
+        radial-gradient(120% 140% at 0% 0%, rgba(47, 221, 196, .1), transparent 65%),
+        #161a1f;
+    }
+
+    .timer small {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: #7c8593;
+    }
+
+    .timer b {
+      display: block;
+      margin-top: 7px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 47px;
+      font-weight: 700;
+      letter-spacing: -.045em;
+      line-height: 1;
+    }
+
+    .state {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 15px 17px;
+      border-radius: 14px;
+      border: 1px solid rgba(47, 221, 196, .28);
+      background: rgba(47, 221, 196, .07);
+    }
+
+    .state i {
+      width: 30px;
+      height: 30px;
+      flex: none;
+      border-radius: 9px;
+      background: rgba(47, 221, 196, .1);
+      display: grid;
+      place-items: center;
+    }
+
+    .state svg {
+      width: 15px;
+      height: 15px;
+      stroke: #2fddc4;
+      fill: none;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .state b {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .state span {
+      display: block;
+      font-size: 12px;
+      color: #7c8593;
+      margin-top: 2px;
+    }
+
+    .faces {
+      position: absolute;
+      right: 68px;
+      bottom: 46px;
+      display: flex;
+      gap: 9px;
+    }
+
+    .faces svg {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="grid"></div>
+  <div class="glow"></div>
+  <div class="glow2"></div>
+
+  <div class="in">
+    <div class="copy">
+      <div class="brand">
+        <img src="icon.svg" alt="">
+        <span>RestifEye</span>
+      </div>
+      <h1>Break reminders that <em>read the room</em>.</h1>
+      <p>Waits through meetings. Counts the breaks you already took.</p>
+      <div class="chips">
+        <span>Free on Linux</span>
+        <span>Wayland-native</span>
+        <span>0 telemetry</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="bar">
+        <i></i><i></i><i></i><b>RestifEye</b>
+      </div>
+      <div class="body">
+        <div class="timer">
+          <small>Next eye break</small>
+          <b>12:47</b>
+        </div>
+        <div class="state">
+          <i>
+            <svg viewBox="0 0 24 24">
+              <rect x="9" y="2" width="6" height="11" rx="3" />
+              <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
+            </svg>
+          </i>
+          <div>
+            <b>Deferred — mic in use</b>
+            <span>Resumes when your call ends</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="faces" id="faces"></div>
+
+  <script>
+    var MOODS = [
+      { c: '#16a34a', e: 'happy', m: 'grin' },
+      { c: '#00897b', e: 'open', m: 'smile' },
+      { c: '#3b82f6', e: 'closed', m: 'smile' },
+      { c: '#eab308', e: 'open', m: 'flat' },
+      { c: '#ea580c', e: 'droopy', m: 'flat' },
+      { c: '#dc2626', e: 'open', m: 'frown' },
+      { c: '#6b7280', e: 'closed', m: 'flat' }
+    ];
+    var EYES = {
+      open: '<rect x="30.5" y="32" width="9" height="20" rx="4.5" fill="#fff"/><rect x="60.5" y="32" width="9" height="20" rx="4.5" fill="#fff"/>',
+      happy: '<path d="M27.16 43.41A8 8 0 0 1 42.22 41.57"/><path d="M57.16 43.41A8 8 0 0 1 72.22 41.57"/>',
+      closed: '<path d="M29 42h12"/><path d="M59 42h12"/>',
+      droopy: '<rect x="30.5" y="39.5" width="9" height="11" rx="4.5" fill="#fff"/><rect x="60.5" y="39.5" width="9" height="11" rx="4.5" fill="#fff"/><path d="M26.5 40.5 43.5 35.5"/><path d="M73.5 40.5 56.5 35.5"/>'
+    };
+    var MOUTHS = {
+      grin: '<path d="M67.85 67.14A19 15 0 0 1 32.16 67.18"/>',
+      smile: '<path d="M63.02 66.97A15 10 0 0 1 36.99 66.97"/>',
+      flat: '<path d="M37 65h26"/>',
+      frown: '<path d="M36.10 68.56A16 11 0 0 1 62.61 67.23"/>'
+    };
+    document.getElementById('faces').innerHTML = MOODS.map(function (m) {
+      return '<svg viewBox="0 0 100 100"><rect x="4" y="4" width="92" height="92" rx="22" fill="' + m.c + '"/>' +
+        '<g fill="none" stroke="#fff" stroke-width="7.5" stroke-linecap="round">' + EYES[m.e] + MOUTHS[m.m] + '</g></svg>';
+    }).join('');
+  </script>
+</body>
+
+</html>

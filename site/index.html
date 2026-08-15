@@ -6,17 +6,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RestifEye — break reminders that read the room</title>
   <meta name="description"
-    content="A free break reminder for Linux that waits through your meetings, holds through films, and credits the breaks you already took. Guided exercises, an expressive tray icon, and no telemetry.">
+    content="A free break reminder for Linux. Waits through meetings, holds through films, and counts the breaks you already took. Guided exercises, an expressive tray icon, no telemetry.">
   <link rel="canonical" href="https://xern-ai.github.io/RestifEye/">
   <meta name="theme-color" content="#08090b" media="(prefers-color-scheme: dark)">
   <meta name="theme-color" content="#fbfbfc" media="(prefers-color-scheme: light)">
   <meta property="og:title" content="RestifEye — break reminders that read the room">
   <meta property="og:description"
-    content="Waits through meetings. Holds through films. Credits the breaks you already took. Free on Linux, no account, no telemetry.">
+    content="Waits through meetings. Counts the breaks you already took. Free on Linux, no account, no telemetry.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://xern-ai.github.io/RestifEye/">
   <meta property="og:image" content="https://xern-ai.github.io/RestifEye/og.png">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@Xern_AI">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/instrumentsans-latin-var.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/inter-latin-var.woff2" as="font" type="font/woff2" crossorigin>
@@ -41,7 +42,8 @@
     "url": "https://xern-ai.github.io/RestifEye/",
     "downloadUrl": "https://github.com/Xern-AI/RestifEye/releases/latest",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-    "author": { "@type": "Organization", "name": "Xernai" }
+    "author": { "@type": "Organization", "name": "Xernai" },
+    "sameAs": ["https://x.com/Xern_AI", "https://discord.gg/sXVwRSqhaj", "https://github.com/Xern-AI/RestifEye"]
   }
   </script>
 </head>
@@ -50,9 +52,16 @@
   <a class="skip" href="#main">Skip to content</a>
 
   <svg class="sr-only" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
-    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
       stroke-linecap="round" stroke-linejoin="round">
       <path d="m20 6-11 11-5-5" />
+    </symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <path d="M6 6l12 12M18 6 6 18" />
+    </symbol>
+    <symbol id="i-dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+      stroke-linecap="round">
+      <path d="M6 12h12" />
     </symbol>
     <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
       stroke-linecap="round" stroke-linejoin="round">
@@ -80,11 +89,33 @@
       <rect x="9" y="2" width="6" height="11" rx="3" />
       <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
     </symbol>
+    <symbol id="i-cam" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+      stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="6" width="13" height="12" rx="2.5" />
+      <path d="m15.5 12 6-3.5v11l-6-3.5" />
+    </symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+      stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2.5" y="4.5" width="19" height="13" rx="2.5" />
+      <path d="M8 21h8M12 17.5V21" />
+      <path d="m10.5 8.5 4.5 2.5-4.5 2.5Z" fill="currentColor" />
+    </symbol>
+    <symbol id="i-bell-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+      stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 8.5c0 6 2.2 7.5 2.2 7.5H7" />
+      <path d="M5.8 12.2C5.9 11 6 9.9 6 8.5a6 6 0 0 1 9.4-4.9" />
+      <path d="M3 3l18 18" />
+    </symbol>
     <symbol id="i-walk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
       stroke-linecap="round" stroke-linejoin="round">
       <circle cx="13.5" cy="4" r="2" />
       <path d="M9.5 21.5 12 15l-2.5-3 1-4.5L14 9l1.5 2.5 3 1" />
-      <path d="M12 15l2.8 2 1.2 4.5" />
+      <path d="m12 15 2.8 2 1.2 4.5" />
+    </symbol>
+    <symbol id="i-power" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+      stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3v9" />
+      <path d="M6.6 6.6a8.5 8.5 0 1 0 10.8 0" />
     </symbol>
     <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
       stroke-linecap="round" stroke-linejoin="round">
@@ -122,11 +153,6 @@
       <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
       <circle cx="12" cy="12" r="3" />
     </symbol>
-    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
-      stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 3 5 6v6.2C5 16.7 8 20 12 21c4-1 7-4.3 7-8.8V6l-7-3Z" />
-      <path d="m9.2 12 2 2 3.6-3.8" />
-    </symbol>
     <symbol id="i-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
       stroke-linecap="round" stroke-linejoin="round">
       <rect x="6" y="6" width="12" height="12" rx="2.5" />
@@ -149,6 +175,14 @@
     <symbol id="i-github" viewBox="0 0 24 24" fill="currentColor" stroke="none">
       <path
         d="M12 .5a11.5 11.5 0 0 0-3.64 22.42c.58.1.79-.25.79-.56v-2.1c-3.2.7-3.88-1.37-3.88-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.8 0c2.2-1.5 3.17-1.18 3.17-1.18.63 1.59.24 2.76.12 3.05.74.81 1.18 1.84 1.18 3.1 0 4.43-2.69 5.4-5.26 5.69.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z" />
+    </symbol>
+    <symbol id="i-discord" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path
+        d="M20.32 4.37A19.8 19.8 0 0 0 15.43 3c-.24.42-.5.99-.68 1.44a18.3 18.3 0 0 0-5.5 0C9.07 3.99 8.8 3.42 8.57 3a19.7 19.7 0 0 0-4.9 1.37C.57 9.05-.28 13.6.14 18.1a19.9 19.9 0 0 0 6.06 3.06c.49-.67.92-1.38 1.29-2.13-.71-.27-1.39-.6-2.03-.98l.5-.4a14.2 14.2 0 0 0 12.08 0l.5.4c-.65.38-1.33.71-2.04.98.37.75.8 1.46 1.29 2.13a19.8 19.8 0 0 0 6.07-3.06c.5-5.22-.85-9.73-3.54-13.73ZM8.02 15.33c-1.18 0-2.16-1.08-2.16-2.42 0-1.33.95-2.42 2.16-2.42 1.22 0 2.19 1.1 2.17 2.42 0 1.34-.96 2.42-2.17 2.42Zm7.96 0c-1.18 0-2.15-1.08-2.15-2.42 0-1.33.95-2.42 2.15-2.42 1.22 0 2.2 1.1 2.17 2.42 0 1.34-.95 2.42-2.17 2.42Z" />
+    </symbol>
+    <symbol id="i-twitter" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+      <path
+        d="M18.9 2H22l-6.77 7.73L23.2 22h-6.24l-4.89-6.4L6.48 22H3.36l7.24-8.27L2.8 2h6.4l4.42 5.85L18.9 2Zm-1.1 18.16h1.73L8.3 3.74H6.44l11.36 16.42Z" />
     </symbol>
   </svg>
 
@@ -191,20 +225,17 @@
         <span class="pill"><span class="pill__dot"></span> Free on Linux · <strong
             class="version-badge">latest</strong></span>
         <h1>Break reminders that <span class="accent">read the room</span>.</h1>
-        <p class="hero__lede">RestifEye waits through your meetings, holds through films, and <strong>credits the breaks
-            you already took</strong> by walking away. When a break is genuinely due, it shows you one exercise to
-          actually do.</p>
+        <p class="hero__lede">It waits through your meetings. It counts the breaks you already took.</p>
         <div class="hero__cta">
-          <a class="btn btn--primary" id="hero-dl" href="https://github.com/Xern-AI/RestifEye/releases/latest">
+          <a class="btn btn--primary" href="#download">
             <svg aria-hidden="true">
               <use href="#i-download" />
             </svg>
             Download for Linux
-            <span class="btn__meta dl-size"></span>
           </a>
-          <a class="btn btn--ghost" href="#how">See how it decides</a>
+          <a class="btn btn--ghost" href="#how">See it work</a>
         </div>
-        <p class="hero__fine">AppImage · DEB · RPM — no account, no dependencies</p>
+        <p class="hero__fine">AppImage · DEB · RPM</p>
         <ul class="hero__proof">
           <li>
             <svg aria-hidden="true">
@@ -219,7 +250,7 @@
           <li>
             <svg aria-hidden="true">
               <use href="#i-check" />
-            </svg>24 guided exercises
+            </svg>24 exercises
           </li>
           <li>
             <svg aria-hidden="true">
@@ -230,8 +261,8 @@
       </div>
 
       <div class="stage">
-        <div class="app" role="img" aria-label="The RestifEye dashboard: the next eye break is 12 minutes away, and a
-          due break is currently deferred because the microphone is in use.">
+        <div class="app" role="img"
+          aria-label="The RestifEye dashboard: the next eye break is 12 minutes away, and a due break is deferred because the microphone is in use.">
           <div class="app__bar" aria-hidden="true">
             <span class="app__dot"></span><span class="app__dot"></span><span class="app__dot"></span>
             <span class="app__title">RestifEye</span>
@@ -257,13 +288,13 @@
               </span>
               <span class="state__text">
                 <b id="state-title">Deferred — microphone in use</b>
-                <span id="state-sub">Resumes the moment your call ends · cap 15:00</span>
+                <span id="state-sub">Resumes when your call ends · cap 15:00</span>
               </span>
             </div>
             <div class="stats">
               <div class="stat"><small>Screen time</small><b>3h 20m</b></div>
-              <div class="stat"><small>Breaks taken</small><b>9</b></div>
-              <div class="stat"><small>Longest focus</small><b>1h 20m</b></div>
+              <div class="stat"><small>Breaks</small><b>9</b></div>
+              <div class="stat"><small>Focus</small><b>1h 20m</b></div>
             </div>
           </div>
         </div>
@@ -274,7 +305,7 @@
             <span>RestifEye</span>
             <time>now</time>
           </div>
-          <p>Eye break in 30 seconds. Look 20 feet away for 20 seconds.</p>
+          <p>Eye break in 30 seconds.</p>
           <div class="toast__row"><span>Start now</span><span>Snooze</span><span>Skip</span></div>
         </div>
 
@@ -288,7 +319,7 @@
             <path d="M63.02 66.97 A15 10 0 0 1 36.99 66.97" fill="none" stroke="#fff" stroke-width="7.5"
               stroke-linecap="round" />
           </svg>
-          <span>In your tray, all day</span>
+          <span>Lives in your tray</span>
         </div>
       </div>
     </div>
@@ -304,22 +335,22 @@
       <span>
         <svg aria-hidden="true">
           <use href="#i-check" />
-        </svg>0 telemetry events
+        </svg>0 telemetry
       </span>
       <span>
         <svg aria-hidden="true">
           <use href="#i-check" />
-        </svg>171 automated tests
+        </svg>171 tests
       </span>
       <span>
         <svg aria-hidden="true">
           <use href="#i-check" />
-        </svg>No runtime dependencies
+        </svg>No dependencies
       </span>
       <span>
         <svg aria-hidden="true">
           <use href="#i-check" />
-        </svg>Free forever on Linux
+        </svg>Free forever
       </span>
     </div>
   </div>
@@ -330,9 +361,7 @@
       <div class="shell">
         <div class="section-head rv">
           <p class="eyebrow">Why it survives week two</p>
-          <h2>Strict enough to matter. Polite enough to keep.</h2>
-          <p class="lede">Most break apps get uninstalled the first time they blank the screen during a demo. RestifEye
-            reads what you are doing before it asks for anything.</p>
+          <h2>Strict enough to matter.<br>Polite enough to keep.</h2>
         </div>
 
         <div class="bento rv-stagger">
@@ -344,26 +373,39 @@
               </svg>
             </span>
             <h3>It waits for your meeting to end</h3>
-            <p>Microphone live, camera live, Do&nbsp;Not&nbsp;Disturb on, a video or slide deck holding a wake lock —
-              each one defers a due break instead of stealing your screen. A hard cap keeps deferral from quietly
-              becoming denial.</p>
-            <div class="defer">
-              <div class="defer__row">
-                <span class="defer__key">Mic / camera</span>
-                <span class="defer__bar" style="--w:100%"><span>defer while in use</span></span>
+            <div class="track">
+              <span class="track__due"><span class="track__pip"></span>Break due</span>
+              <div class="track__lane">
+                <span class="seg">
+                  <svg aria-hidden="true">
+                    <use href="#i-mic" />
+                  </svg>Mic
+                </span>
+                <span class="seg">
+                  <svg aria-hidden="true">
+                    <use href="#i-cam" />
+                  </svg>Camera
+                </span>
+                <span class="seg">
+                  <svg aria-hidden="true">
+                    <use href="#i-bell-off" />
+                  </svg>DND
+                </span>
+                <span class="seg">
+                  <svg aria-hidden="true">
+                    <use href="#i-play" />
+                  </svg>Video
+                </span>
+                <svg class="track__arrow" aria-hidden="true">
+                  <use href="#i-arrow" />
+                </svg>
+                <span class="seg seg--go">
+                  <svg aria-hidden="true">
+                    <use href="#i-check" />
+                  </svg>Break
+                </span>
               </div>
-              <div class="defer__row">
-                <span class="defer__key">Do not disturb</span>
-                <span class="defer__bar" style="--w:100%"><span>defer while on</span></span>
-              </div>
-              <div class="defer__row">
-                <span class="defer__key">Video / slides</span>
-                <span class="defer__bar" style="--w:100%"><span>defer while inhibited</span></span>
-              </div>
-              <div class="defer__row">
-                <span class="defer__key">Hard cap</span>
-                <span class="defer__bar" data-tone="cap" style="--w:34%"><span>15:00 — then the break happens</span></span>
-              </div>
+              <span class="track__cap">Deferred while busy · hard cap <b>15:00</b></span>
             </div>
           </article>
 
@@ -373,9 +415,34 @@
                 <use href="#i-walk" />
               </svg>
             </span>
-            <h3>Credits breaks you already took</h3>
-            <p>Walked away, locked the screen, suspended the laptop? That was your break. RestifEye logs it as taken and
-              never nags you for rest you already had.</p>
+            <h3>Counts breaks you already took</h3>
+            <div class="credit">
+              <div class="credit__set">
+                <span>
+                  <svg aria-hidden="true">
+                    <use href="#i-walk" />
+                  </svg>Walked away
+                </span>
+                <span>
+                  <svg aria-hidden="true">
+                    <use href="#i-lock" />
+                  </svg>Locked
+                </span>
+                <span>
+                  <svg aria-hidden="true">
+                    <use href="#i-power" />
+                  </svg>Suspended
+                </span>
+              </div>
+              <svg class="credit__arrow" aria-hidden="true">
+                <use href="#i-arrow" />
+              </svg>
+              <span class="credit__out">
+                <svg aria-hidden="true">
+                  <use href="#i-check" />
+                </svg>Counted
+              </span>
+            </div>
           </article>
 
           <article class="tile tile--half rv">
@@ -385,8 +452,20 @@
               </svg>
             </span>
             <h3>24 exercises, not a blank timer</h3>
-            <p>Every break shows an illustrated move — eye tracking, neck release, shoulder rolls, posture resets. Three
-              intensity tiers, so nothing suggests a squat in an open-plan office.</p>
+            <div class="tiers">
+              <div class="tier">
+                <span class="tier__k">Soft</span>
+                <span class="tier__d"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+              </div>
+              <div class="tier">
+                <span class="tier__k">Medium</span>
+                <span class="tier__d"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+              </div>
+              <div class="tier">
+                <span class="tier__k">Heavy</span>
+                <span class="tier__d"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+              </div>
+            </div>
           </article>
 
           <article class="tile tile--half rv">
@@ -396,9 +475,11 @@
               </svg>
             </span>
             <h3>Decide from the notification</h3>
-            <p>A 30-second heads-up with <strong>Start now</strong>, <strong>Snooze</strong> and <strong>Skip</strong>
-              built into the notification itself. Each has its own budget, so a snooze habit can't become a skip habit.
-            </p>
+            <div class="notif">
+              <div class="notif__h"><img src="icon.svg" alt="" width="14" height="14"><span>RestifEye</span></div>
+              <p>Eye break in 30 seconds.</p>
+              <div class="notif__b"><span>Start now</span><span>Snooze</span><span>Skip</span></div>
+            </div>
           </article>
 
           <article class="tile tile--half rv">
@@ -408,8 +489,15 @@
               </svg>
             </span>
             <h3>Advice from your own week</h3>
-            <p>Screen time, idle, away, longest focus stretch and workday span — weekly, monthly, yearly. A rule engine
-              turns four weeks of your history into concrete, judgment-free suggestions.</p>
+            <div class="spark">
+              <div class="spark__bars" role="img" aria-label="A week of screen time, with Thursday the longest">
+                <i style="--h:52%"></i><i style="--h:68%"></i><i style="--h:44%"></i><i style="--h:78%"></i>
+                <i class="hot" style="--h:96%"></i><i style="--h:60%"></i><i style="--h:22%"></i>
+              </div>
+              <div class="spark__x" aria-hidden="true">
+                <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+              </div>
+            </div>
           </article>
 
           <article class="tile tile--full rv">
@@ -419,9 +507,6 @@
               </svg>
             </span>
             <h3>Private by architecture, not by promise</h3>
-            <p>There is no account to make and no server to send anything to. Every second of activity data lives in a
-              SQLite file on your machine. One optional weekly version check is the entire network story — and it has an
-              off switch.</p>
             <div class="privacy-net">
               <span>accounts</span>
               <span>cloud sync</span>
@@ -441,70 +526,68 @@
         <div class="section-head rv">
           <p class="eyebrow">How it works</p>
           <h2>Out of your way, until it shouldn't be</h2>
-          <p class="lede">Four moments, from login to the advice you get on Friday.</p>
         </div>
 
-        <div class="flow">
-          <div class="steps" id="steps">
-            <span class="steps__progress" id="steps-progress" aria-hidden="true"></span>
-            <ol class="steps__list">
-            <li class="step">
-              <span class="step__num">01</span>
-              <div>
-                <h3>It starts with your computer</h3>
-                <p>RestifEye launches at login and sits in your tray. Eye breaks every 20 minutes, movement breaks every
-                  50 — and every interval, work-hour and work-day is yours to change.</p>
-              </div>
-            </li>
-            <li class="step">
-              <span class="step__num">02</span>
-              <div>
-                <h3>It checks the room before it asks</h3>
-                <p>When a break falls due, RestifEye reads your microphone, camera, Do&nbsp;Not&nbsp;Disturb state and
-                  any app holding an idle inhibitor. If now is wrong, it waits — up to fifteen minutes, measured from
-                  when the break was actually due.</p>
-              </div>
-            </li>
-            <li class="step">
-              <span class="step__num">03</span>
-              <div>
-                <h3>A heads-up, then a real break</h3>
-                <p>Thirty seconds of warning, always. Then one illustrated exercise, matched to the intensity you
-                  allowed. Emergencies happen: a three-second hold always lets you out, and it goes on your own record.
-                </p>
-              </div>
-            </li>
-            <li class="step">
-              <span class="step__num">04</span>
-              <div>
-                <h3>Your patterns become your advice</h3>
-                <p>Dashboards show screen time and focus stretches. The tray face tells you how the last two hours went
-                  without opening anything at all.</p>
-              </div>
-            </li>
-            </ol>
-          </div>
-
-          <aside class="flow__aside rv">
-            <h3>Drawn, not described</h3>
-            <p>All 24 exercises are drawn in code rather than shipped as images — so they stay crisp at any size, theme
-              themselves light and dark, and add nothing to the download.</p>
-            <div class="exercise">
-              <svg viewBox="0 0 240 130" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
-                stroke-linejoin="round" aria-hidden="true">
-                <path d="M14 65C36 36 84 36 106 65 84 94 36 94 14 65Z" />
-                <circle cx="60" cy="65" r="15" />
-                <circle cx="60" cy="65" r="6" fill="currentColor" stroke="none" />
-                <path d="M120 60h6M136 57h6M152 54h6M168 51h6" opacity=".5" />
-                <path d="M186 96h44" opacity=".65" />
-                <path d="m190 96 14-24 9 15 7-11 10 20" />
-                <path d="M186 112v6M230 112v6M186 115h44" stroke-width="2" opacity=".5" />
-                <text x="208" y="128" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="11"
-                  fill="currentColor" stroke="none" opacity=".6">20 ft</text>
+        <ol class="journey rv-stagger">
+          <li class="rv">
+            <span class="jicon">
+              <svg aria-hidden="true">
+                <use href="#i-cpu" />
               </svg>
-            </div>
+            </span>
+            <b>Sits in your tray</b>
+            <small>From login. 20 and 50 minute cycles.</small>
+          </li>
+          <li class="rv">
+            <span class="jicon">
+              <svg aria-hidden="true">
+                <use href="#i-mic" />
+              </svg>
+            </span>
+            <b>Reads the room</b>
+            <small>Mic, camera, DND, video. Waits if busy.</small>
+          </li>
+          <li class="rv">
+            <span class="jicon">
+              <svg aria-hidden="true">
+                <use href="#i-eye" />
+              </svg>
+            </span>
+            <b>One real break</b>
+            <small>30 seconds' warning, then an exercise.</small>
+          </li>
+          <li class="rv">
+            <span class="jicon">
+              <svg aria-hidden="true">
+                <use href="#i-chart" />
+              </svg>
+            </span>
+            <b>Learns your week</b>
+            <small>Local stats become plain advice.</small>
+          </li>
+        </ol>
+
+        <div class="showcase rv">
+          <div class="exercise">
+            <svg viewBox="0 0 240 130" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"
+              stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 65C36 36 84 36 106 65 84 94 36 94 14 65Z" />
+              <circle cx="60" cy="65" r="15" />
+              <circle cx="60" cy="65" r="6" fill="currentColor" stroke="none" />
+              <path d="M120 60h6M136 57h6M152 54h6M168 51h6" opacity=".5" />
+              <path d="M186 96h44" opacity=".65" />
+              <path d="m190 96 14-24 9 15 7-11 10 20" />
+              <path d="M186 112v6M230 112v6M186 115h44" stroke-width="2" opacity=".5" />
+              <text x="208" y="128" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="11"
+                fill="currentColor" stroke="none" opacity=".6">20 ft</text>
+            </svg>
+          </div>
+          <div class="showcase__side">
+            <p class="eyebrow">Drawn, not described</p>
+            <h3>Every exercise is code, not a picture file</h3>
+            <p>Crisp at any size. Themed light and dark. Zero weight in the download.</p>
             <p class="exercise__cap"><span>Eye break · 20 seconds</span><b>01 / 24</b></p>
-          </aside>
+          </div>
         </div>
       </div>
     </section>
@@ -512,11 +595,11 @@
     <section class="section section--tight">
       <div class="shell">
         <div class="metrics rv">
-          <div class="metric"><b>24</b><small>illustrated exercises across three intensity tiers</small></div>
-          <div class="metric"><b>7</b><small>tray moods, each with its own eyes and mouth</small></div>
-          <div class="metric"><b>171</b><small>automated tests on the scheduling engine</small></div>
-          <div class="metric"><b>15<em>m</em></b><small>hard cap on how long a break can be deferred</small></div>
-          <div class="metric"><b>0</b><small>accounts, trackers and telemetry events</small></div>
+          <div class="metric"><b>24</b><small>illustrated exercises</small></div>
+          <div class="metric"><b>7</b><small>tray moods</small></div>
+          <div class="metric"><b>171</b><small>automated tests</small></div>
+          <div class="metric"><b>15<em>m</em></b><small>max deferral</small></div>
+          <div class="metric"><b>0</b><small>telemetry events</small></div>
         </div>
       </div>
     </section>
@@ -526,15 +609,13 @@
         <div class="section-head rv">
           <p class="eyebrow">The signature detail</p>
           <h2>A face in your tray that knows how the day is going</h2>
-          <p class="lede">Most break apps give you a static icon. RestifEye gives you a glanceable read on the last two
-            hours — no window, no dashboard, no interruption.</p>
         </div>
 
         <div class="moods">
           <div class="mood-stage rv">
             <svg class="mood-stage__face" id="mood-face" viewBox="0 0 100 100" role="img" aria-labelledby="mood-tip">
             </svg>
-            <p class="mood-stage__name" id="mood-name">On schedule</p>
+            <p class="mood-stage__name" id="mood-name">Good</p>
             <p class="mood-stage__tip" id="mood-tip">On schedule</p>
             <div class="mood-picker" id="mood-picker" role="group" aria-label="Preview each tray mood"></div>
           </div>
@@ -545,9 +626,8 @@
                 <use href="#i-contrast" />
               </svg>
               <div>
-                <b>Colour is never the only signal</b>
-                <p>Every mood changes the eyes or the mouth too, so the icon still reads for the roughly 8% of men with
-                  a colour-vision deficiency — and in the monochrome tray themes some desktops apply.</p>
+                <b>Never colour alone</b>
+                <p>Every mood changes the eyes or mouth too.</p>
               </div>
             </li>
             <li>
@@ -555,9 +635,8 @@
                 <use href="#i-clock" />
               </svg>
               <div>
-                <b>Judged on a rolling two hours</b>
-                <p>Not on day totals. A rough morning doesn't colour the icon until midnight, and a good afternoon can
-                  earn it back.</p>
+                <b>Rolling two hours</b>
+                <p>A rough morning doesn't haunt you until midnight.</p>
               </div>
             </li>
             <li>
@@ -565,9 +644,8 @@
                 <use href="#i-refresh" />
               </svg>
               <div>
-                <b>Praise instantly, warn slowly</b>
-                <p>Escalation needs three consecutive samples; improvement lands immediately. One skipped break never
-                  turns the icon red.</p>
+                <b>Praise fast, warn slow</b>
+                <p>One skipped break never turns it red.</p>
               </div>
             </li>
             <li>
@@ -575,9 +653,8 @@
                 <use href="#i-cpu" />
               </svg>
               <div>
-                <b>Drawn at five panel sizes</b>
-                <p>22 to 64 pixels, rendered at runtime rather than shipped as fourteen PNGs, so it never arrives as the
-                  soft rescaled smudge next to your other status icons.</p>
+                <b>Five panel sizes</b>
+                <p>Drawn at runtime, 22 to 64 px. Never a rescaled smudge.</p>
               </div>
             </li>
           </ul>
@@ -590,15 +667,13 @@
         <div class="section-head rv">
           <p class="eyebrow">Honest comparison</p>
           <h2>Where RestifEye is actually different</h2>
-          <p class="lede">Safe Eyes is genuinely good, and Workrave has earned its two decades. The gap is situational
-            awareness — knowing when <em>not</em> to ask.</p>
         </div>
         <div class="table-wrap rv">
           <table>
             <caption class="sr-only">Feature comparison between RestifEye, Stretchly, Workrave and Safe Eyes</caption>
             <thead>
               <tr>
-                <th scope="col">Capability</th>
+                <th scope="col"></th>
                 <th scope="col" class="us">RestifEye</th>
                 <th scope="col">Stretchly</th>
                 <th scope="col">Workrave</th>
@@ -608,52 +683,108 @@
             <tbody>
               <tr>
                 <th scope="row">Wayland idle detection</th>
-                <td class="us">Mutter IdleMonitor, logind fallback</td>
-                <td>Electron idle, weak on Wayland</td>
-                <td>X11-era, effectively unsupported</td>
-                <td>Yes, via ext-idle-notify</td>
+                <td class="us"><span class="v"><i class="v-i v-yes"><svg>
+                        <use href="#i-check" />
+                      </svg></i>Native</span></td>
+                <td><span class="v"><i class="v-i v-part"><svg>
+                        <use href="#i-dash" />
+                      </svg></i>Weak</span></td>
+                <td><span class="v"><i class="v-i v-no"><svg>
+                        <use href="#i-x" />
+                      </svg></i></span></td>
+                <td><span class="v"><i class="v-i v-yes"><svg>
+                        <use href="#i-check" />
+                      </svg></i></span></td>
               </tr>
               <tr>
                 <th scope="row">Waits for meetings</th>
-                <td class="us">Mic, camera and DND — capped at 15 min</td>
-                <td>Manual postpone; pauses on DND</td>
-                <td>No</td>
-                <td>Fullscreen-window rule only</td>
+                <td class="us"><span class="v"><i class="v-i v-yes"><svg>
+                        <use href="#i-check" />
+                      </svg></i>Mic · cam · DND</span></td>
+                <td><span class="v"><i class="v-i v-part"><svg>
+                        <use href="#i-dash" />
+                      </svg></i>DND only</span></td>
+                <td><span class="v"><i class="v-i v-no"><svg>
+                        <use href="#i-x" />
+                      </svg></i></span></td>
+                <td><span class="v"><i class="v-i v-part"><svg>
+                        <use href="#i-dash" />
+                      </svg></i>Fullscreen</span></td>
               </tr>
               <tr>
                 <th scope="row">Waits for video and slides</th>
-                <td class="us">Any app holding an idle inhibitor</td>
-                <td>No</td>
-                <td>No</td>
-                <td>Fullscreen active window</td>
+                <td class="us"><span class="v"><i class="v-i v-yes"><svg>
+                        <use href="#i-check" />
+                      </svg></i>Idle inhibitors</span></td>
+                <td><span class="v"><i class="v-i v-no"><svg>
+                        <use href="#i-x" />
+                      </svg></i></span></td>
+                <td><span class="v"><i class="v-i v-no"><svg>
+                        <use href="#i-x" />
+                      </svg></i></span></td>
+                <td><span class="v"><i class="v-i v-part"><svg>
+                        <use href="#i-dash" />
+                      </svg></i>Fullscreen</span></td>
               </tr>
               <tr>
-                <th scope="row">Credits a break you already took</th>
-                <td class="us">Yes — idle, lock and suspend log as taken</td>
-                <td>No</td>
-                <td>Idle resets the timer</td>
-                <td>Smart Pause stops the timer</td>
+                <th scope="row">Counts a break you took</th>
+                <td class="us"><span class="v"><i class="v-i v-yes"><svg>
+                        <use href="#i-check" />
+                      </svg></i>Logged as taken</span></td>
+                <td><span class="v"><i class="v-i v-no"><svg>
+                        <use href="#i-x" />
+                      </svg></i></span></td>
+                <td><span class="v"><i class="v-i v-part"><svg>
+                        <use href="#i-dash" />
+                      </svg></i>Resets timer</span></td>
+                <td><span class="v"><i class="v-i v-part"><svg>
+                        <use href="#i-dash" />
+                      </svg></i>Stops timer</span></td>
               </tr>
               <tr>
-                <th scope="row">Ambient status without a window</th>
-                <td class="us">7-mood expressive tray face</td>
-                <td>Static icon</td>
-                <td>Static icon</td>
-                <td>Static icon</td>
+                <th scope="row">Ambient status, no window</th>
+                <td class="us"><span class="v"><i class="v-i v-yes"><svg>
+                        <use href="#i-check" />
+                      </svg></i>7 moods</span></td>
+                <td><span class="v"><i class="v-i v-no"><svg>
+                        <use href="#i-x" />
+                      </svg></i></span></td>
+                <td><span class="v"><i class="v-i v-no"><svg>
+                        <use href="#i-x" />
+                      </svg></i></span></td>
+                <td><span class="v"><i class="v-i v-no"><svg>
+                        <use href="#i-x" />
+                      </svg></i></span></td>
               </tr>
               <tr>
                 <th scope="row">Illustrated exercises</th>
-                <td class="us">24, across 3 intensity tiers</td>
-                <td>Text ideas</td>
-                <td>Basic figures</td>
-                <td>Text instructions</td>
+                <td class="us"><span class="v"><i class="v-i v-yes"><svg>
+                        <use href="#i-check" />
+                      </svg></i>24</span></td>
+                <td><span class="v"><i class="v-i v-part"><svg>
+                        <use href="#i-dash" />
+                      </svg></i>Text</span></td>
+                <td><span class="v"><i class="v-i v-part"><svg>
+                        <use href="#i-dash" />
+                      </svg></i>Basic</span></td>
+                <td><span class="v"><i class="v-i v-part"><svg>
+                        <use href="#i-dash" />
+                      </svg></i>Text</span></td>
               </tr>
               <tr>
                 <th scope="row">Runtime dependencies</th>
-                <td class="us">None — AppImage runs as-is</td>
-                <td>Electron</td>
-                <td>GTK</td>
-                <td>Python and GTK</td>
+                <td class="us"><span class="v"><i class="v-i v-yes"><svg>
+                        <use href="#i-check" />
+                      </svg></i>None</span></td>
+                <td><span class="v"><i class="v-i v-no"><svg>
+                        <use href="#i-x" />
+                      </svg></i>Electron</span></td>
+                <td><span class="v"><i class="v-i v-no"><svg>
+                        <use href="#i-x" />
+                      </svg></i>GTK</span></td>
+                <td><span class="v"><i class="v-i v-no"><svg>
+                        <use href="#i-x" />
+                      </svg></i>Python · GTK</span></td>
               </tr>
             </tbody>
           </table>
@@ -662,8 +793,7 @@
           <svg aria-hidden="true">
             <use href="#i-info" />
           </svg>
-          <span>Compiled from each project's public documentation, last checked July 2026. These projects move — if
-            something here is out of date, tell us and we'll correct it.</span>
+          <span>From each project's public docs, last checked July 2026.</span>
         </p>
       </div>
     </section>
@@ -673,8 +803,6 @@
         <div class="section-head rv">
           <p class="eyebrow">Download</p>
           <h2>Running in under a minute</h2>
-          <p class="lede">Not sure which? Take the AppImage — it runs on every distribution without installing
-            anything.</p>
         </div>
 
         <div class="dl rv-stagger">
@@ -682,37 +810,34 @@
             <span class="pkg__ribbon">Recommended</span>
             <span class="pkg__for">Any distribution</span>
             <h3>AppImage</h3>
-            <p>Download, make it executable, run it. No root, no dependencies, nothing installed system-wide.</p>
-            <pre><code><span class="p">$</span> chmod +x RestifEye-*-x86_64.AppImage
-<span class="p">$</span> ./RestifEye-*-x86_64.AppImage</code></pre>
+            <pre><code><span class="p">$</span> chmod +x RestifEye-*.AppImage
+<span class="p">$</span> ./RestifEye-*.AppImage</code></pre>
             <a class="btn btn--primary btn--wide" data-dl="appimage"
               href="https://github.com/Xern-AI/RestifEye/releases/latest">
               <svg aria-hidden="true">
                 <use href="#i-download" />
               </svg>
-              Download AppImage <span class="btn__meta dl-size"></span>
+              AppImage <span class="btn__meta dl-size"></span>
             </a>
           </article>
 
           <article class="pkg rv">
-            <span class="pkg__for">Ubuntu · Debian · Mint · Pop!_OS</span>
+            <span class="pkg__for">Ubuntu · Debian · Mint</span>
             <h3>DEB</h3>
-            <p>Integrates with your app menu, icon theme and system updates.</p>
-            <pre><code><span class="p">$</span> sudo apt install ./restifeye_*_amd64.deb</code></pre>
+            <pre><code><span class="p">$</span> sudo apt install ./restifeye_*.deb</code></pre>
             <a class="btn btn--ghost btn--wide" data-dl="deb"
               href="https://github.com/Xern-AI/RestifEye/releases/latest">
-              Download .deb <span class="btn__meta dl-size"></span>
+              .deb <span class="btn__meta dl-size"></span>
             </a>
           </article>
 
           <article class="pkg rv">
             <span class="pkg__for">Fedora · RHEL · openSUSE</span>
             <h3>RPM</h3>
-            <p>Integrates with your app grid, icon theme and updates.</p>
             <pre><code><span class="p">$</span> sudo dnf install ./RestifEye-*.rpm</code></pre>
             <a class="btn btn--ghost btn--wide" data-dl="rpm"
               href="https://github.com/Xern-AI/RestifEye/releases/latest">
-              Download .rpm <span class="btn__meta dl-size"></span>
+              .rpm <span class="btn__meta dl-size"></span>
             </a>
           </article>
         </div>
@@ -721,9 +846,9 @@
           <svg aria-hidden="true">
             <use href="#i-info" />
           </svg>
-          <span>On GNOME, install the <a href="https://extensions.gnome.org/extension/615/appindicator-support/"
-              rel="noopener">AppIndicator extension</a> to see the tray icon — RestifEye detects the missing status area
-            and offers to set it up in one click. KDE, XFCE, Cinnamon and MATE show it out of the box.</span>
+          <span>On GNOME, the app offers to install the <a
+              href="https://extensions.gnome.org/extension/615/appindicator-support/" rel="noopener">AppIndicator
+              extension</a> in one click. KDE, XFCE, Cinnamon and MATE need nothing.</span>
         </p>
       </div>
     </section>
@@ -737,41 +862,33 @@
         <div class="faq rv-stagger">
           <details class="rv">
             <summary>Does it phone home?</summary>
-            <p>No. There are no accounts and no telemetry. The only network request RestifEye can make is an optional
-              weekly version check against GitHub Releases, and you can switch it off in Settings.</p>
+            <p>No. No accounts, no telemetry. One optional weekly version check — switchable off.</p>
           </details>
           <details class="rv">
-            <summary>Will it interrupt my presentation or call?</summary>
-            <p>No. While your microphone or camera is in use, Do&nbsp;Not&nbsp;Disturb is on, or an app is holding an
-              idle inhibitor, due breaks are deferred. A hard cap of 15 minutes — measured from when the break was
-              actually due, not from when the deferral started — makes sure deferral can't become denial.</p>
+            <summary>Will it interrupt my call?</summary>
+            <p>No. Mic, camera, DND or any idle inhibitor defers it. Hard cap: 15 minutes from when the break was due.
+            </p>
           </details>
           <details class="rv">
-            <summary>Can I escape a strict break in an emergency?</summary>
-            <p>Always. Hold the escape button for three seconds and the break ends. It's recorded in your own stats —
-              accountability to yourself, not to us.</p>
+            <summary>Can I escape a strict break?</summary>
+            <p>Hold escape for three seconds. It goes on your own stats, nowhere else.</p>
           </details>
           <details class="rv">
-            <summary>Won't a long film just suppress breaks all day?</summary>
-            <p>No, for two reasons. Deferral is built on idle inhibitors, which video players and slide tools take but
-              background music does not — so a playlist can't hold breaks off. And timers are never reset on resume: two
-              hours of video is still two hours of screen time, and the break happens as soon as the film does.</p>
+            <summary>Won't a long film suppress breaks all day?</summary>
+            <p>No. Video players hold an idle inhibitor, background music doesn't. And timers never reset — the break
+              fires the moment the film ends.</p>
           </details>
           <details class="rv">
             <summary>How do I know it's running?</summary>
-            <p>A tray icon with a small menu — open, pause, quit — whose face changes with how your last two hours went.
-              Closing the window keeps RestifEye running in the background, and launching it again reopens the same
-              instance rather than starting a second one.</p>
+            <p>A tray face that changes with your last two hours. Closing the window keeps it running.</p>
           </details>
           <details class="rv">
             <summary>Wayland or X11?</summary>
-            <p>Both. RestifEye is developed Wayland-first on Fedora GNOME and uses desktop-portal-friendly D-Bus APIs —
-              no X11-only hacks that quietly stop working on modern sessions.</p>
+            <p>Both. Developed Wayland-first on Fedora GNOME, using portal-friendly D-Bus APIs.</p>
           </details>
           <details class="rv">
             <summary>Is it really free?</summary>
-            <p>Yes — free on Linux, forever. A paid macOS and Windows version may come later; the Linux app stays free
-              either way.</p>
+            <p>Free on Linux, forever. A paid Mac and Windows build may come later.</p>
           </details>
         </div>
       </div>
@@ -781,7 +898,6 @@
       <div class="shell">
         <div class="cta rv">
           <h2>Your eyes have done enough today.</h2>
-          <p>Install it once. It sits in the tray, learns your day, and only speaks up when it's genuinely time.</p>
           <div class="cta__row">
             <a class="btn btn--primary" href="#download">
               <svg aria-hidden="true">
@@ -789,11 +905,11 @@
               </svg>
               Download for Linux
             </a>
-            <a class="btn btn--ghost" href="https://github.com/Xern-AI/RestifEye" rel="noopener">
+            <a class="btn btn--ghost" href="https://discord.gg/sXVwRSqhaj" rel="noopener">
               <svg aria-hidden="true">
-                <use href="#i-github" />
+                <use href="#i-discord" />
               </svg>
-              View on GitHub
+              Join the Discord
             </a>
           </div>
         </div>
@@ -801,13 +917,13 @@
         <div class="mac rv">
           <div>
             <b>Using a Mac or Windows?</b>
-            <p>A polished, paid version is on the roadmap. Enough interest is exactly what gets it built.</p>
+            <p>A paid version is on the roadmap. Interest is what gets it built.</p>
           </div>
           <a class="btn btn--ghost btn--sm" href="mailto:xernaitech@gmail.com?subject=RestifEye%20for%20Mac">
             <svg aria-hidden="true">
               <use href="#i-mail" />
             </svg>
-            Tell us you want it
+            Tell us
           </a>
         </div>
       </div>
@@ -820,8 +936,24 @@
       <div class="foot">
         <div>
           <a class="brand" href="#top"><img src="icon.svg" alt="" width="26" height="26"><span>RestifEye</span></a>
-          <p>A break reminder for Linux that waits through your meetings, credits the breaks you already took, and keeps
-            every second of it on your own machine.</p>
+          <p>Break reminders for Linux that read the room.</p>
+          <div class="social">
+            <a href="https://discord.gg/sXVwRSqhaj" rel="noopener" aria-label="RestifEye on Discord">
+              <svg aria-hidden="true">
+                <use href="#i-discord" />
+              </svg>
+            </a>
+            <a href="https://x.com/Xern_AI" rel="noopener" aria-label="Xernai on X">
+              <svg aria-hidden="true">
+                <use href="#i-twitter" />
+              </svg>
+            </a>
+            <a href="https://github.com/Xern-AI/RestifEye" rel="noopener" aria-label="RestifEye on GitHub">
+              <svg aria-hidden="true">
+                <use href="#i-github" />
+              </svg>
+            </a>
+          </div>
         </div>
         <div>
           <h4>Product</h4>
@@ -829,18 +961,25 @@
             <li><a href="#features">Features</a></li>
             <li><a href="#how">How it works</a></li>
             <li><a href="#tray">Tray moods</a></li>
-            <li><a href="#compare">Comparison</a></li>
+            <li><a href="#compare">Compare</a></li>
             <li><a href="#download">Download</a></li>
           </ul>
         </div>
         <div>
           <h4>Project</h4>
           <ul>
-            <li><a href="https://github.com/Xern-AI/RestifEye" rel="noopener">GitHub</a></li>
             <li><a href="https://github.com/Xern-AI/RestifEye/releases" rel="noopener">Releases</a></li>
             <li><a href="https://github.com/Xern-AI/RestifEye/issues" rel="noopener">Report an issue</a></li>
             <li><a href="https://github.com/Xern-AI/RestifEye/blob/main/PRIVACY.md" rel="noopener">Privacy</a></li>
             <li><a href="mailto:xernaitech@gmail.com">Contact</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Community</h4>
+          <ul>
+            <li><a href="https://discord.gg/sXVwRSqhaj" rel="noopener">Discord</a></li>
+            <li><a href="https://x.com/Xern_AI" rel="noopener">X / Twitter</a></li>
+            <li><a href="https://github.com/Xern-AI/RestifEye" rel="noopener">GitHub</a></li>
           </ul>
         </div>
       </div>
@@ -924,13 +1063,6 @@
           if (tag) {
             document.querySelectorAll('.version-badge').forEach(function (el) { el.textContent = 'v' + tag; });
           }
-
-          var hero = document.getElementById('hero-dl');
-          if (hero) {
-            hero.href = matched.appimage ? matched.appimage.url : FALLBACK;
-            var hs = hero.querySelector('.dl-size');
-            if (hs && matched.appimage) hs.textContent = '· ' + fmtSize(matched.appimage.size);
-          }
         })
         .catch(function () {
           document.querySelectorAll('[data-dl]').forEach(function (el) { el.href = FALLBACK; });
@@ -966,9 +1098,9 @@
       if (calm || !state) return;
 
       var scenes = [
-        ['#i-mic', 'Deferred — microphone in use', 'Resumes the moment your call ends · cap 15:00', 'true'],
-        ['#i-eye', 'Deferred — video is playing', 'Your timer keeps running · cap 15:00', 'true'],
-        ['#i-walk', 'Credited — you walked away', 'Logged as a break taken · no reminder queued', 'true'],
+        ['#i-mic', 'Deferred — microphone in use', 'Resumes when your call ends · cap 15:00', 'true'],
+        ['#i-play', 'Deferred — video is playing', 'Your timer keeps running · cap 15:00', 'true'],
+        ['#i-walk', 'Counted — you walked away', 'Logged as a break taken', 'true'],
         ['#i-check', 'On schedule', 'Nothing due · next check in 20:00', 'false']
       ];
       var i = 0;
@@ -991,13 +1123,13 @@
 
     (function () {
       var MOODS = [
-        { id: 'great', color: '#16a34a', eyes: 'happy', mouth: 'grin', name: 'Great', tip: "You're taking your breaks — keep it up" },
+        { id: 'great', color: '#16a34a', eyes: 'happy', mouth: 'grin', name: 'Great', tip: 'Taking your breaks' },
         { id: 'good', color: '#00897b', eyes: 'open', mouth: 'smile', name: 'Good', tip: 'On schedule' },
-        { id: 'resting', color: '#3b82f6', eyes: 'closed', mouth: 'smile', name: 'Resting', tip: 'Break time — rest your eyes' },
-        { id: 'slipping', color: '#eab308', eyes: 'open', mouth: 'flat', name: 'Slipping', tip: 'Breaks are slipping — try taking the next one' },
-        { id: 'tired', color: '#ea580c', eyes: 'droopy', mouth: 'flat', name: 'Tired', tip: "That's a long stretch at the screen — take a proper break" },
-        { id: 'ignoring', color: '#dc2626', eyes: 'open', mouth: 'frown', name: 'Ignoring', tip: 'Several breaks skipped — your eyes need one' },
-        { id: 'paused', color: '#6b7280', eyes: 'closed', mouth: 'flat', name: 'Paused', tip: 'Paused — breaks are off' }
+        { id: 'resting', color: '#3b82f6', eyes: 'closed', mouth: 'smile', name: 'Resting', tip: 'Break time' },
+        { id: 'slipping', color: '#eab308', eyes: 'open', mouth: 'flat', name: 'Slipping', tip: 'Breaks are slipping' },
+        { id: 'tired', color: '#ea580c', eyes: 'droopy', mouth: 'flat', name: 'Tired', tip: 'A long stretch at the screen' },
+        { id: 'ignoring', color: '#dc2626', eyes: 'open', mouth: 'frown', name: 'Ignoring', tip: 'Several breaks skipped' },
+        { id: 'paused', color: '#6b7280', eyes: 'closed', mouth: 'flat', name: 'Paused', tip: 'Breaks are off' }
       ];
 
       var EYES = {
@@ -1074,28 +1206,6 @@
         });
       }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
       els.forEach(function (e) { obs.observe(e); });
-    })();
-
-    (function () {
-      var list = document.getElementById('steps');
-      var bar = document.getElementById('steps-progress');
-      if (!list || !bar) return;
-      var steps = Array.prototype.slice.call(list.querySelectorAll('.step'));
-
-      function update() {
-        var rect = list.getBoundingClientRect();
-        var line = window.innerHeight * 0.55;
-        var height = Math.max(0, Math.min(rect.height, line - rect.top));
-        bar.style.height = height + 'px';
-        steps.forEach(function (s) {
-          var r = s.querySelector('.step__num').getBoundingClientRect();
-          s.classList.toggle('on', r.top < line);
-        });
-      }
-
-      update();
-      addEventListener('scroll', update, { passive: true });
-      addEventListener('resize', update, { passive: true });
     })();
 
     (function () {
