@@ -130,9 +130,9 @@ class _StatTiles extends StatelessWidget {
         .where((r) => r.firstActivityMinute != null)
         .toList();
     final span = withSpan.isEmpty
-        ? '—'
+        ? '-'
         : '${formatMinuteOfDay(withSpan.fold(0, (n, r) => n + r.firstActivityMinute!) ~/ withSpan.length)}'
-              ' – ${formatMinuteOfDay(withSpan.fold(0, (n, r) => n + r.lastActivityMinute!) ~/ withSpan.length)}';
+              ' - ${formatMinuteOfDay(withSpan.fold(0, (n, r) => n + r.lastActivityMinute!) ~/ withSpan.length)}';
 
     final tiles = <({String label, String value})>[
       (label: 'Avg active / day', value: formatHoursMinutes(avgScreen)),

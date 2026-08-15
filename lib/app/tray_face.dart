@@ -36,19 +36,19 @@ class MoodFace {
       background: Color(0xFF6B7280),
       eyes: TrayEyes.closed,
       mouth: TrayMouth.flat,
-      tooltip: 'Paused — breaks are off',
+      tooltip: 'Paused - breaks are off',
     ),
     Mood.resting => const MoodFace(
       background: Color(0xFF3B82F6),
       eyes: TrayEyes.closed,
       mouth: TrayMouth.smile,
-      tooltip: 'Break time — rest your eyes',
+      tooltip: 'Break time - rest your eyes',
     ),
     Mood.great => const MoodFace(
       background: Color(0xFF16A34A),
       eyes: TrayEyes.happy,
       mouth: TrayMouth.grin,
-      tooltip: "You're taking your breaks — keep it up",
+      tooltip: "You're taking your breaks - keep it up",
     ),
     Mood.good => const MoodFace(
       background: _brand,
@@ -60,19 +60,19 @@ class MoodFace {
       background: Color(0xFFEA580C),
       eyes: TrayEyes.droopy,
       mouth: TrayMouth.flat,
-      tooltip: "That's a long stretch at the screen — take a proper break",
+      tooltip: "That's a long stretch at the screen - take a proper break",
     ),
     Mood.slipping => const MoodFace(
       background: Color(0xFFEAB308),
       eyes: TrayEyes.open,
       mouth: TrayMouth.flat,
-      tooltip: 'Breaks are slipping — try taking the next one',
+      tooltip: 'Breaks are slipping - try taking the next one',
     ),
     Mood.ignoring => const MoodFace(
       background: Color(0xFFDC2626),
       eyes: TrayEyes.open,
       mouth: TrayMouth.frown,
-      tooltip: 'Several breaks skipped — your eyes need one',
+      tooltip: 'Several breaks skipped - your eyes need one',
     ),
   };
 }

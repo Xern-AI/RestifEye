@@ -220,7 +220,7 @@ const exerciseDeck = <Exercise>[
     name: 'Neck side stretch',
     steps: [
       'Sit tall and drop one ear toward that shoulder',
-      'Rest a hand on your head for gentle weight — do not pull',
+      'Rest a hand on your head for gentle weight, do not pull',
       'Hold 15 seconds, then switch sides',
     ],
     tier: BreakKind.long,

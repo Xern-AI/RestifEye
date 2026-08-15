@@ -231,13 +231,13 @@ class _TodayStatsRow extends ConsumerWidget {
     final stats = ref.watch(todaySliceStatsProvider).value;
     final counts = ref.watch(todayBreakCountsProvider).value;
 
-    String dur(Duration? d) => d == null ? '—' : formatHoursMinutes(d);
+    String dur(Duration? d) => d == null ? '-' : formatHoursMinutes(d);
 
     final span = switch ((stats?.firstActivity, stats?.lastActivity)) {
       (final DateTime first, final DateTime last) =>
         '${formatMinuteOfDay(first.hour * 60 + first.minute)}'
-            ' – ${formatMinuteOfDay(last.hour * 60 + last.minute)}',
-      _ => '—',
+            ' - ${formatMinuteOfDay(last.hour * 60 + last.minute)}',
+      _ => '-',
     };
 
     return LayoutBuilder(
@@ -283,9 +283,9 @@ class _TodayStatsRow extends ConsumerWidget {
               (
                 label: 'Breaks taken',
                 value: counts == null
-                    ? '—'
+                    ? '-'
                     : '${counts.completed + counts.credited}',
-                hint: span == '—' ? null : 'Day ran $span',
+                hint: span == '-' ? null : 'Day ran $span',
               ),
             ])
               SizedBox(

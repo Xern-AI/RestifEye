@@ -56,7 +56,7 @@ class _HoldToSkipState extends State<HoldToSkip>
     return Semantics(
       button: true,
       label:
-          '${widget.label} — press and hold for '
+          '${widget.label} - press and hold for '
           '${widget.holdFor.inSeconds} seconds',
       child: GestureDetector(
         // Opaque: the ring/icon children don't claim hit tests themselves.
