@@ -76,7 +76,7 @@ Honest read: Safe Eyes is the closest competitor and is genuinely good on Waylan
 
 ## Numbers
 
-- **161 automated tests**, `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
+- **171 automated tests**, `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
 - **1 Hz** deterministic engine tick; monotonic clock for all interval maths, wall clock only where wall clock is the right answer.
 - **24** exercises across 3 intensity tiers; **7** tray moods; **5** rendered icon sizes (22–64 px).
 - **2-hour** mood horizon; **3-sample** escalation hysteresis; **15-minute** deferral cap; **30-second** pre-break warning.
@@ -91,7 +91,13 @@ Two coredumps told the same story: `wl_proxy_get_version`, called from `gdk_wayl
 
 The change that introduced it was innocuous: a break that started from the tray should end back in the tray, so the window now hides itself when a break finishes. The reason it only crashed *there* is that break end is the one moment where a frame is guaranteed to be in flight — the exercise illustration animates continuously, and dropping full-screen a step earlier adds a resize burst on top. The same hide had existed for months on the "close to tray" path and never crashed once, because an idle app has nothing queued to draw.
 
-The fix was to stop treating the hide as an action and start treating it as a desire: it is held until the renderer reports no scheduled frame, and if the renderer never goes quiet, it is simply retried on the next one-second reconciliation tick. Worst case the window lingers a second longer. Previous worst case was losing the process.
+The fix was to stop treating the hide as an action and start treating it as a desire: it is held until the renderer reports no scheduled frame, and retried on the next one-second tick if it is not. Crashes dropped from routine to about one a fortnight.
+
+They did not stop. Four weeks later, two more coredumps with identical stacks — and the interesting part is *why the fix was right and still insufficient*. The signal it waited on, `hasScheduledFrame`, reports whether the framework intends to build another frame. But the crash happens two stages further down, in the toolkit's frame clock, drawing a frame the rasteriser had already handed over. The flag goes quiet while that frame is still travelling. No amount of polling helps, because nothing on the framework side can see the toolkit's paint queue at all — the honest conclusion was that the question was unanswerable, not that it had been asked badly.
+
+So the second fix stopped asking. The hide now waits out three consecutive quiet one-second ticks — roughly three seconds, against a pipeline that empties in about two frames — and is never performed on the same tick that decided it. Reading the window plugin's source during that work turned up a second hazard for free: it resizes the window *after* unmapping it, which re-queues toolkit work on something that no longer exists. The same wait defuses that too.
+
+The part worth defending in an interview is the fix that was rejected. There is a provably correct version: unmap from a low-priority idle callback in the C runner, below the toolkit's redraw priority, so queued paints must finish first. It was turned down because it is untestable C whose failure mode — a window that never comes back from the tray — is worse than the once-a-fortnight crash it prevents. Correctness is not the only axis.
 
 The confirming detail: the last break in the database completed at 23:21:56, and the coredump is stamped 23:21:56.
 

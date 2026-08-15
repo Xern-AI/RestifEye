@@ -44,6 +44,11 @@ class WindowTakeover with WindowListener implements OverlayController {
   /// under a second, so a retry costs one reconciliation tick.
   static const _quiesceBudget = Duration(milliseconds: 600);
 
+  /// Consecutive quiet reconciliation ticks a break-end hide must observe
+  /// before the window is unmapped — roughly three seconds, since the hide is
+  /// never serviced on the tick that decided it.
+  static const _postBreakSettleTicks = 3;
+
   /// The last state we successfully pushed to the real window. Only ever
   /// advanced after the window agrees, so a failed transition is retried by
   /// the next tick rather than being silently assumed to have worked.
@@ -62,30 +67,52 @@ class WindowTakeover with WindowListener implements OverlayController {
   /// normal case (app closed to tray) means it disappears on its own.
   bool _wasVisibleBeforeBreak = true;
 
-  /// A hide that has been decided but not yet performed.
+  /// A hide that has been decided but not yet performed, and the number of
+  /// consecutive quiet reconciliation ticks it must observe first. Null when
+  /// no hide is pending.
   ///
   /// Unmapping a window on Wayland destroys its EGL surface immediately, but
   /// the toolkit will still draw the Flutter texture into it if a frame is
   /// already in flight: `gdk_cairo_draw_from_gl` then dereferences a freed
-  /// `wl_surface` and the process dies with SIGSEGV. Two coredumps, both
+  /// `wl_surface` and the process dies with SIGSEGV. Four coredumps now, all
   /// stamped the exact second a break ended.
   ///
-  /// Break end is the one place this reliably bit. The exercise illustration
-  /// animates continuously, so a frame is always in the air, and dropping
-  /// fullscreen one step earlier adds a resize burst on top; closing an idle
-  /// window to the tray — the path that had existed for months — never had a
-  /// frame to collide with. So the hide is a *desire*, held until the
-  /// renderer is quiet and retried on the next tick if it is not.
-  bool _pendingHide = false;
+  /// [_rendererQuiesced] alone did not settle this, because it asks the wrong
+  /// object. `hasScheduledFrame` is a *framework* fact — whether Dart intends
+  /// to build another frame. The crash happens two stages downstream, in GDK's
+  /// frame clock, drawing a frame the raster thread already handed to GTK. The
+  /// flag goes false while that frame is still in the pipeline, so a hide one
+  /// sample later still lands on a live paint.
+  ///
+  /// Nothing in Dart can observe GTK's paint queue, so the gate is time
+  /// instead: [_postBreakSettleTicks] quiet ticks put seconds between the
+  /// break and the unmap, where the pipeline drains in about two frames. The
+  /// same wait clears the second hazard for free — `window_manager`'s `hide()`
+  /// calls `gtk_window_resize()` *after* unmapping, which re-queues a paint
+  /// whenever the size it reads is stale, and the compositor's unfullscreen
+  /// configure has long since landed by then.
+  ///
+  /// Zero ticks for a user-initiated close: an idle window has nothing in the
+  /// pipeline, that path has never crashed, and it has to feel instant.
+  int? _hideAfterQuietTicks;
+
+  /// Quiet ticks observed so far against [_hideAfterQuietTicks]. Consecutive,
+  /// not cumulative — a busy sample resets it.
+  int _quietTicks = 0;
 
   @override
   Future<void> init() => _ops.prepare(title: Brand.appName, on: this);
 
   @override
   Future<void> apply(BreakWindowState desired) => _enqueue(() async {
-    if (desired != _current) await _transition(desired);
-    // Serviced on every tick, not only on transitions: a hide that could not
-    // be performed safely a second ago has to get another chance without
+    if (desired != _current) {
+      // A hide decided on this tick is never performed on it: the frame that
+      // ended the break is still working its way through GTK.
+      await _transition(desired);
+      return;
+    }
+    // Serviced on every other tick, not only on transitions: a hide that could
+    // not be performed safely a second ago has to get another chance without
     // waiting for the next phase change.
     await _servicePendingHide();
   });
@@ -101,7 +128,7 @@ class WindowTakeover with WindowListener implements OverlayController {
 
   @override
   Future<void> presentWindow() => _enqueue(() async {
-    _pendingHide = false; // asked for explicitly; do not yank it away again
+    _cancelPendingHide(); // asked for explicitly; do not yank it away again
     await _ops.show();
     await _ops.focus();
   });
@@ -125,7 +152,7 @@ class WindowTakeover with WindowListener implements OverlayController {
       // Sampled before `show()`, and only on the way in, so a mid-break
       // re-assertion (windowed → fullscreen) cannot overwrite it with `true`.
       if (entering) _wasVisibleBeforeBreak = await _isVisible();
-      _pendingHide = false; // a break supersedes an unfinished hide
+      _cancelPendingHide(); // a break supersedes an unfinished hide
       await _ops.show();
       // Set these unconditionally in both directions — a previous break may
       // have left them on, and a windowed break must clear them.
@@ -137,22 +164,38 @@ class WindowTakeover with WindowListener implements OverlayController {
       await _ops.setFullScreen(false);
       // Put the window back the way we found it.
       if (leaving && restoreVisibility && !_wasVisibleBeforeBreak) {
-        _pendingHide = true;
+        _scheduleHide(after: _postBreakSettleTicks);
       }
     }
     _current = desired;
   }
 
+  void _scheduleHide({required int after}) {
+    _hideAfterQuietTicks = after;
+    _quietTicks = 0;
+  }
+
+  void _cancelPendingHide() {
+    _hideAfterQuietTicks = null;
+    _quietTicks = 0;
+  }
+
   /// Performs a decided hide, once it is safe to unmap the window.
   ///
-  /// Leaves the flag set when the renderer is still busy: the reconciler
-  /// re-applies the phase every second, so the window hides a tick late
-  /// instead of taking the process with it.
+  /// Leaves the request standing when the renderer is still busy, or when it
+  /// has not been quiet for long enough yet: the reconciler re-applies the
+  /// phase every second, so the window hides a tick late instead of taking the
+  /// process with it.
   Future<void> _servicePendingHide() async {
-    if (!_pendingHide) return;
-    if (!await _rendererQuiesced()) return;
+    final required = _hideAfterQuietTicks;
+    if (required == null) return;
+    if (!await _rendererQuiesced()) {
+      _quietTicks = 0;
+      return;
+    }
+    if (++_quietTicks < required) return;
     await _ops.hide();
-    _pendingHide = false; // only once the window agrees, as everywhere else
+    _cancelPendingHide(); // only once the window agrees, as everywhere else
   }
 
   /// Waits for the renderer to stop scheduling frames, up to
@@ -185,7 +228,7 @@ class WindowTakeover with WindowListener implements OverlayController {
   @override
   void onWindowClose() async {
     if (_current.inBreak) return; // no closing your way out of a break
-    _pendingHide = true;
+    _scheduleHide(after: 0);
     unawaited(_enqueue(_servicePendingHide));
     // Announced on the decision rather than on the unmap: "still running in
     // the background" is true the moment the close is accepted.
