@@ -22,6 +22,9 @@ String formatHoursMinutes(Duration d) {
   return '${h}h ${m}m';
 }
 
+/// Whole minutes, for spans short enough that hours would read as noise.
+String formatMinutes(Duration d) => '${d.inMinutes}m';
+
 /// A percentage with no decimals: "81%".
 String formatPercent(double fraction) => '${(fraction * 100).round()}%';
 

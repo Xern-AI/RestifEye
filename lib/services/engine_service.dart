@@ -82,7 +82,9 @@ class EngineService {
       };
       final now = _clock.now();
       await _sampler.refreshIfNeeded(relevant: relevant, now: now);
-      if (pauseDuringMedia) await _presentation.refresh(now);
+      // Sampled whether or not the pause is wanted: the setting decides
+      // whether a film delays a break, not whether watch time is counted.
+      await _presentation.refresh(now);
       final presenting = pauseDuringMedia
           ? _presentation.value
           : PresentationState.idle;
@@ -97,7 +99,15 @@ class EngineService {
         ),
       );
 
-      _recorder.observe(now, _sliceKind(idle));
+      _recorder.observe(
+        now,
+        classifySlice(
+          away: _away,
+          idle: idle,
+          idleThreshold: engine.config.idleFireThreshold,
+          presenting: _presentation.value.active,
+        ),
+      );
       if (now.difference(_lastFlush) >= _flushEvery) {
         _lastFlush = now;
         await _recorder.flush(now);
@@ -109,12 +119,6 @@ class EngineService {
     } finally {
       _ticking = false;
     }
-  }
-
-  SliceKind _sliceKind(Duration idle) {
-    if (_away) return SliceKind.locked;
-    if (idle >= engine.config.idleFireThreshold) return SliceKind.idle;
-    return SliceKind.active;
   }
 
   Future<void> dispose() async {

@@ -86,6 +86,72 @@ void main() {
     expect(stored[1].screen, Duration.zero);
   });
 
+  test('stores watch time, deep-work runs and the hourly profile', () async {
+    final day = DateTime(2026, 1, 6);
+    // 09:00-09:40 hands-on, 10:00-10:30 watching, 11:00-11:30 hands-on.
+    await activity.insertSlice(
+      ActivitySlice(
+        start: day.add(const Duration(hours: 9)),
+        end: day.add(const Duration(hours: 9, minutes: 40)),
+        kind: SliceKind.active,
+      ),
+    );
+    await activity.insertSlice(
+      ActivitySlice(
+        start: day.add(const Duration(hours: 10)),
+        end: day.add(const Duration(hours: 10, minutes: 30)),
+        kind: SliceKind.watching,
+      ),
+    );
+    await activity.insertSlice(
+      ActivitySlice(
+        start: day.add(const Duration(hours: 11)),
+        end: day.add(const Duration(hours: 11, minutes: 30)),
+        kind: SliceKind.active,
+      ),
+    );
+
+    await service.run();
+
+    final stored = await rollups
+        .watchRange(DateTime(2026, 1, 6), DateTime(2026, 1, 7))
+        .first;
+    final rolled = stored.single;
+    expect(rolled.watch, const Duration(minutes: 30));
+    expect(rolled.screen, const Duration(minutes: 70));
+    expect(rolled.focusRuns, 2); // both runs clear 25 minutes
+    // The hourly profile survives the round trip through its text column.
+    expect(rolled.activeByHour, hasLength(24));
+    expect(rolled.activeByHour[9], 40 * 60);
+    expect(rolled.activeByHour[10], 0); // watching is not hands-on
+    expect(rolled.activeByHour[11], 30 * 60);
+    expect(atComputerOf(rolled), const Duration(minutes: 100));
+  });
+
+  // Days rolled up before the hourly column existed report no profile at
+  // all, rather than a plausible-looking day of zeroes.
+  test('a day with no stored profile reads as unknown, not as empty', () async {
+    await db
+        .into(db.dailyRollups)
+        .insert(
+          DailyRollupsCompanion.insert(
+            day: DateTime(2026, 1, 4),
+            screenSeconds: 3600,
+            longestStretchSeconds: 1800,
+            breaksCompleted: 2,
+            breaksCredited: 0,
+            breaksEscaped: 0,
+            snoozes: 0,
+          ),
+        );
+
+    final stored = await rollups
+        .watchRange(DateTime(2026, 1, 4), DateTime(2026, 1, 5))
+        .first;
+    expect(stored.single.activeByHour, isEmpty);
+    expect(stored.single.watch, Duration.zero);
+  });
+
   test('prunes raw slices older than the retention window', () async {
     await seedDay(DateTime(2025, 12, 20), activeMinutes: 60);
     await seedDay(DateTime(2026, 1, 6), activeMinutes: 60);

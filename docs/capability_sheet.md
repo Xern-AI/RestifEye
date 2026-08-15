@@ -45,7 +45,13 @@ RestifEye reminds you to rest your eyes and move, on a schedule that adapts to w
 
 **Insight**
 - Fully local screen-time and work-pattern tracking, recorded every second.
-- Weekly / monthly / yearly analytics: active time, idle, away, at-computer, longest focus stretch, workday span.
+- Tells work from watching: time with a video, call or slide deck on screen is counted separately from real hands-on work. *Non-trivial: detected from idle inhibitors, and typing during a video still counts as work — otherwise a background film would swallow a morning.*
+- "Shape of your day": a 24-hour timeline of what each hour was actually made of — working, watching, idle, away. *Non-trivial: totals answer how much; only this answers when, so the late start, the lunch gap and the evening that ran on are visible without reading a number.*
+- Deep-work runs: how many unbroken stretches passed 25 minutes, not just the single longest.
+- Busiest hour, and how much work landed before 07:00 or after 22:00.
+- Compares today with a typical recent day, over the hours that have actually finished on both sides. *Non-trivial: comparing a half-finished day with whole-day averages tells you you're behind every single morning.*
+- Rests per hour actually at the machine — the number that says whether the schedule is being honoured, whatever the day's length.
+- Weekly / monthly / yearly analytics: active time, idle, watching, away, at-computer, longest focus stretch, workday span.
 - Rule-based advice derived from your own rollups.
 - Exercise log, break-compliance history.
 
@@ -76,12 +82,13 @@ Honest read: Safe Eyes is the closest competitor and is genuinely good on Waylan
 
 ## Numbers
 
-- **186 automated tests**, `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
+- **206 automated tests**, `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
 - **1 Hz** deterministic engine tick; monotonic clock for all interval maths, wall clock only where wall clock is the right answer.
 - **52** exercises across 3 intensity tiers (10 eye, 42 movement); **7** tray moods; **5** rendered icon sizes (22–64 px).
 - **2-hour** mood horizon; **3-sample** escalation hysteresis; **15-minute** deferral cap; **30-second** pre-break warning.
 - **Zero** network calls except an optional weekly update check. **Zero** runtime dependencies in the AppImage.
-- Screen activity recorded at **1-second** resolution, aggregated into daily rollups.
+- Screen activity recorded at **1-second** resolution, aggregated into daily rollups with a **24-slot** hourly profile.
+- **25 minutes** is the deep-work threshold; **07:00–22:00** the window outside which screen time is flagged as late.
 
 ## Hardest problem solved
 

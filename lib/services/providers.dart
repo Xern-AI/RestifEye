@@ -170,6 +170,16 @@ final rangeRollupsProvider = StreamProvider<List<DayRollup>>((ref) {
   return ref.watch(rollupRepositoryProvider).watchRange(from, today);
 });
 
+/// The last fortnight of finished days, for judging today against a typical
+/// one. Kept separate from [rangeRollupsProvider] so switching the analytics
+/// range cannot change what "typical" means on the dashboard.
+final recentRollupsProvider = StreamProvider<List<DayRollup>>((ref) {
+  final today = ref.watch(todayProvider);
+  return ref
+      .watch(rollupRepositoryProvider)
+      .watchRange(today.subtract(const Duration(days: 14)), today);
+});
+
 /// Current advice from the last four weeks of rollups.
 final adviceProvider = StreamProvider<List<Advice>>((ref) {
   final today = ref.watch(todayProvider);

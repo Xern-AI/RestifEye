@@ -1,7 +1,3 @@
-// Copyright 2026 Xernai. All rights reserved.
-// Use of this source code is governed by the PolyForm Shield 1.0.0
-// license that can be found in the LICENSE file.
-
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'database.dart';
@@ -788,6 +784,41 @@ class $DailyRollupsTable extends DailyRollups
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _watchSecondsMeta = const VerificationMeta(
+    'watchSeconds',
+  );
+  @override
+  late final GeneratedColumn<int> watchSeconds = GeneratedColumn<int>(
+    'watch_seconds',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _focusRunsMeta = const VerificationMeta(
+    'focusRuns',
+  );
+  @override
+  late final GeneratedColumn<int> focusRuns = GeneratedColumn<int>(
+    'focus_runs',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _activeByHourMeta = const VerificationMeta(
+    'activeByHour',
+  );
+  @override
+  late final GeneratedColumn<String> activeByHour = GeneratedColumn<String>(
+    'active_by_hour',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     day,
@@ -801,6 +832,9 @@ class $DailyRollupsTable extends DailyRollups
     awaySeconds,
     firstActivityMinute,
     lastActivityMinute,
+    watchSeconds,
+    focusRuns,
+    activeByHour,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -921,6 +955,30 @@ class $DailyRollupsTable extends DailyRollups
         ),
       );
     }
+    if (data.containsKey('watch_seconds')) {
+      context.handle(
+        _watchSecondsMeta,
+        watchSeconds.isAcceptableOrUnknown(
+          data['watch_seconds']!,
+          _watchSecondsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('focus_runs')) {
+      context.handle(
+        _focusRunsMeta,
+        focusRuns.isAcceptableOrUnknown(data['focus_runs']!, _focusRunsMeta),
+      );
+    }
+    if (data.containsKey('active_by_hour')) {
+      context.handle(
+        _activeByHourMeta,
+        activeByHour.isAcceptableOrUnknown(
+          data['active_by_hour']!,
+          _activeByHourMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -974,6 +1032,18 @@ class $DailyRollupsTable extends DailyRollups
         DriftSqlType.int,
         data['${effectivePrefix}last_activity_minute'],
       ),
+      watchSeconds: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}watch_seconds'],
+      )!,
+      focusRuns: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}focus_runs'],
+      )!,
+      activeByHour: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}active_by_hour'],
+      ),
     );
   }
 
@@ -1001,6 +1071,18 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
   /// v2: first and last activity, as minutes since local midnight.
   final int? firstActivityMinute;
   final int? lastActivityMinute;
+
+  /// v3: hands off, but watching something that held the screen awake.
+  final int watchSeconds;
+
+  /// v3: unbroken runs of work that reached the deep-work threshold.
+  final int focusRuns;
+
+  /// v3: hands-on seconds per hour of the local day, 24 comma-separated
+  /// integers. Stored as text rather than 24 columns because it is only ever
+  /// read and written whole, and null on days rolled up before v3 — those
+  /// days genuinely have no hourly detail and must not pretend to.
+  final String? activeByHour;
   const DailyRollup({
     required this.day,
     required this.screenSeconds,
@@ -1013,6 +1095,9 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
     required this.awaySeconds,
     this.firstActivityMinute,
     this.lastActivityMinute,
+    required this.watchSeconds,
+    required this.focusRuns,
+    this.activeByHour,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1031,6 +1116,11 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
     }
     if (!nullToAbsent || lastActivityMinute != null) {
       map['last_activity_minute'] = Variable<int>(lastActivityMinute);
+    }
+    map['watch_seconds'] = Variable<int>(watchSeconds);
+    map['focus_runs'] = Variable<int>(focusRuns);
+    if (!nullToAbsent || activeByHour != null) {
+      map['active_by_hour'] = Variable<String>(activeByHour);
     }
     return map;
   }
@@ -1052,6 +1142,11 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
       lastActivityMinute: lastActivityMinute == null && nullToAbsent
           ? const Value.absent()
           : Value(lastActivityMinute),
+      watchSeconds: Value(watchSeconds),
+      focusRuns: Value(focusRuns),
+      activeByHour: activeByHour == null && nullToAbsent
+          ? const Value.absent()
+          : Value(activeByHour),
     );
   }
 
@@ -1076,6 +1171,9 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
         json['firstActivityMinute'],
       ),
       lastActivityMinute: serializer.fromJson<int?>(json['lastActivityMinute']),
+      watchSeconds: serializer.fromJson<int>(json['watchSeconds']),
+      focusRuns: serializer.fromJson<int>(json['focusRuns']),
+      activeByHour: serializer.fromJson<String?>(json['activeByHour']),
     );
   }
   @override
@@ -1093,6 +1191,9 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
       'awaySeconds': serializer.toJson<int>(awaySeconds),
       'firstActivityMinute': serializer.toJson<int?>(firstActivityMinute),
       'lastActivityMinute': serializer.toJson<int?>(lastActivityMinute),
+      'watchSeconds': serializer.toJson<int>(watchSeconds),
+      'focusRuns': serializer.toJson<int>(focusRuns),
+      'activeByHour': serializer.toJson<String?>(activeByHour),
     };
   }
 
@@ -1108,6 +1209,9 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
     int? awaySeconds,
     Value<int?> firstActivityMinute = const Value.absent(),
     Value<int?> lastActivityMinute = const Value.absent(),
+    int? watchSeconds,
+    int? focusRuns,
+    Value<String?> activeByHour = const Value.absent(),
   }) => DailyRollup(
     day: day ?? this.day,
     screenSeconds: screenSeconds ?? this.screenSeconds,
@@ -1124,6 +1228,9 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
     lastActivityMinute: lastActivityMinute.present
         ? lastActivityMinute.value
         : this.lastActivityMinute,
+    watchSeconds: watchSeconds ?? this.watchSeconds,
+    focusRuns: focusRuns ?? this.focusRuns,
+    activeByHour: activeByHour.present ? activeByHour.value : this.activeByHour,
   );
   DailyRollup copyWithCompanion(DailyRollupsCompanion data) {
     return DailyRollup(
@@ -1156,6 +1263,13 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
       lastActivityMinute: data.lastActivityMinute.present
           ? data.lastActivityMinute.value
           : this.lastActivityMinute,
+      watchSeconds: data.watchSeconds.present
+          ? data.watchSeconds.value
+          : this.watchSeconds,
+      focusRuns: data.focusRuns.present ? data.focusRuns.value : this.focusRuns,
+      activeByHour: data.activeByHour.present
+          ? data.activeByHour.value
+          : this.activeByHour,
     );
   }
 
@@ -1172,7 +1286,10 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
           ..write('idleSeconds: $idleSeconds, ')
           ..write('awaySeconds: $awaySeconds, ')
           ..write('firstActivityMinute: $firstActivityMinute, ')
-          ..write('lastActivityMinute: $lastActivityMinute')
+          ..write('lastActivityMinute: $lastActivityMinute, ')
+          ..write('watchSeconds: $watchSeconds, ')
+          ..write('focusRuns: $focusRuns, ')
+          ..write('activeByHour: $activeByHour')
           ..write(')'))
         .toString();
   }
@@ -1190,6 +1307,9 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
     awaySeconds,
     firstActivityMinute,
     lastActivityMinute,
+    watchSeconds,
+    focusRuns,
+    activeByHour,
   );
   @override
   bool operator ==(Object other) =>
@@ -1205,7 +1325,10 @@ class DailyRollup extends DataClass implements Insertable<DailyRollup> {
           other.idleSeconds == this.idleSeconds &&
           other.awaySeconds == this.awaySeconds &&
           other.firstActivityMinute == this.firstActivityMinute &&
-          other.lastActivityMinute == this.lastActivityMinute);
+          other.lastActivityMinute == this.lastActivityMinute &&
+          other.watchSeconds == this.watchSeconds &&
+          other.focusRuns == this.focusRuns &&
+          other.activeByHour == this.activeByHour);
 }
 
 class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
@@ -1220,6 +1343,9 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
   final Value<int> awaySeconds;
   final Value<int?> firstActivityMinute;
   final Value<int?> lastActivityMinute;
+  final Value<int> watchSeconds;
+  final Value<int> focusRuns;
+  final Value<String?> activeByHour;
   final Value<int> rowid;
   const DailyRollupsCompanion({
     this.day = const Value.absent(),
@@ -1233,6 +1359,9 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
     this.awaySeconds = const Value.absent(),
     this.firstActivityMinute = const Value.absent(),
     this.lastActivityMinute = const Value.absent(),
+    this.watchSeconds = const Value.absent(),
+    this.focusRuns = const Value.absent(),
+    this.activeByHour = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DailyRollupsCompanion.insert({
@@ -1247,6 +1376,9 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
     this.awaySeconds = const Value.absent(),
     this.firstActivityMinute = const Value.absent(),
     this.lastActivityMinute = const Value.absent(),
+    this.watchSeconds = const Value.absent(),
+    this.focusRuns = const Value.absent(),
+    this.activeByHour = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : day = Value(day),
        screenSeconds = Value(screenSeconds),
@@ -1267,6 +1399,9 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
     Expression<int>? awaySeconds,
     Expression<int>? firstActivityMinute,
     Expression<int>? lastActivityMinute,
+    Expression<int>? watchSeconds,
+    Expression<int>? focusRuns,
+    Expression<String>? activeByHour,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1284,6 +1419,9 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
         'first_activity_minute': firstActivityMinute,
       if (lastActivityMinute != null)
         'last_activity_minute': lastActivityMinute,
+      if (watchSeconds != null) 'watch_seconds': watchSeconds,
+      if (focusRuns != null) 'focus_runs': focusRuns,
+      if (activeByHour != null) 'active_by_hour': activeByHour,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1300,6 +1438,9 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
     Value<int>? awaySeconds,
     Value<int?>? firstActivityMinute,
     Value<int?>? lastActivityMinute,
+    Value<int>? watchSeconds,
+    Value<int>? focusRuns,
+    Value<String?>? activeByHour,
     Value<int>? rowid,
   }) {
     return DailyRollupsCompanion(
@@ -1315,6 +1456,9 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
       awaySeconds: awaySeconds ?? this.awaySeconds,
       firstActivityMinute: firstActivityMinute ?? this.firstActivityMinute,
       lastActivityMinute: lastActivityMinute ?? this.lastActivityMinute,
+      watchSeconds: watchSeconds ?? this.watchSeconds,
+      focusRuns: focusRuns ?? this.focusRuns,
+      activeByHour: activeByHour ?? this.activeByHour,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1357,6 +1501,15 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
     if (lastActivityMinute.present) {
       map['last_activity_minute'] = Variable<int>(lastActivityMinute.value);
     }
+    if (watchSeconds.present) {
+      map['watch_seconds'] = Variable<int>(watchSeconds.value);
+    }
+    if (focusRuns.present) {
+      map['focus_runs'] = Variable<int>(focusRuns.value);
+    }
+    if (activeByHour.present) {
+      map['active_by_hour'] = Variable<String>(activeByHour.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1377,6 +1530,9 @@ class DailyRollupsCompanion extends UpdateCompanion<DailyRollup> {
           ..write('awaySeconds: $awaySeconds, ')
           ..write('firstActivityMinute: $firstActivityMinute, ')
           ..write('lastActivityMinute: $lastActivityMinute, ')
+          ..write('watchSeconds: $watchSeconds, ')
+          ..write('focusRuns: $focusRuns, ')
+          ..write('activeByHour: $activeByHour, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -2558,6 +2714,9 @@ typedef $$DailyRollupsTableCreateCompanionBuilder =
       Value<int> awaySeconds,
       Value<int?> firstActivityMinute,
       Value<int?> lastActivityMinute,
+      Value<int> watchSeconds,
+      Value<int> focusRuns,
+      Value<String?> activeByHour,
       Value<int> rowid,
     });
 typedef $$DailyRollupsTableUpdateCompanionBuilder =
@@ -2573,6 +2732,9 @@ typedef $$DailyRollupsTableUpdateCompanionBuilder =
       Value<int> awaySeconds,
       Value<int?> firstActivityMinute,
       Value<int?> lastActivityMinute,
+      Value<int> watchSeconds,
+      Value<int> focusRuns,
+      Value<String?> activeByHour,
       Value<int> rowid,
     });
 
@@ -2637,6 +2799,21 @@ class $$DailyRollupsTableFilterComposer
 
   ColumnFilters<int> get lastActivityMinute => $composableBuilder(
     column: $table.lastActivityMinute,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get watchSeconds => $composableBuilder(
+    column: $table.watchSeconds,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get focusRuns => $composableBuilder(
+    column: $table.focusRuns,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get activeByHour => $composableBuilder(
+    column: $table.activeByHour,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -2704,6 +2881,21 @@ class $$DailyRollupsTableOrderingComposer
     column: $table.lastActivityMinute,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get watchSeconds => $composableBuilder(
+    column: $table.watchSeconds,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get focusRuns => $composableBuilder(
+    column: $table.focusRuns,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get activeByHour => $composableBuilder(
+    column: $table.activeByHour,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DailyRollupsTableAnnotationComposer
@@ -2765,6 +2957,19 @@ class $$DailyRollupsTableAnnotationComposer
     column: $table.lastActivityMinute,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get watchSeconds => $composableBuilder(
+    column: $table.watchSeconds,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get focusRuns =>
+      $composableBuilder(column: $table.focusRuns, builder: (column) => column);
+
+  GeneratedColumn<String> get activeByHour => $composableBuilder(
+    column: $table.activeByHour,
+    builder: (column) => column,
+  );
 }
 
 class $$DailyRollupsTableTableManager
@@ -2809,6 +3014,9 @@ class $$DailyRollupsTableTableManager
                 Value<int> awaySeconds = const Value.absent(),
                 Value<int?> firstActivityMinute = const Value.absent(),
                 Value<int?> lastActivityMinute = const Value.absent(),
+                Value<int> watchSeconds = const Value.absent(),
+                Value<int> focusRuns = const Value.absent(),
+                Value<String?> activeByHour = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DailyRollupsCompanion(
                 day: day,
@@ -2822,6 +3030,9 @@ class $$DailyRollupsTableTableManager
                 awaySeconds: awaySeconds,
                 firstActivityMinute: firstActivityMinute,
                 lastActivityMinute: lastActivityMinute,
+                watchSeconds: watchSeconds,
+                focusRuns: focusRuns,
+                activeByHour: activeByHour,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -2837,6 +3048,9 @@ class $$DailyRollupsTableTableManager
                 Value<int> awaySeconds = const Value.absent(),
                 Value<int?> firstActivityMinute = const Value.absent(),
                 Value<int?> lastActivityMinute = const Value.absent(),
+                Value<int> watchSeconds = const Value.absent(),
+                Value<int> focusRuns = const Value.absent(),
+                Value<String?> activeByHour = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DailyRollupsCompanion.insert(
                 day: day,
@@ -2850,6 +3064,9 @@ class $$DailyRollupsTableTableManager
                 awaySeconds: awaySeconds,
                 firstActivityMinute: firstActivityMinute,
                 lastActivityMinute: lastActivityMinute,
+                watchSeconds: watchSeconds,
+                focusRuns: focusRuns,
+                activeByHour: activeByHour,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
