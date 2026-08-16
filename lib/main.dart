@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
 import 'app/bootstrap.dart';
+import 'app/startup_failure.dart';
 import 'app/tray_face.dart';
 import 'core/mood/mood.dart';
 import 'platform/interfaces/tray_indicator.dart';
@@ -18,7 +19,16 @@ import 'services/tray_mood_presenter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final boot = await bootstrap();
+
+  final BootResult boot;
+  try {
+    boot = await bootstrap();
+  } catch (error, stack) {
+    // The runner shows the GTK window before Dart starts, so an unhandled
+    // failure here leaves a blank window with no way to tell what broke.
+    runApp(StartupFailureApp(error: error, stack: stack));
+    return;
+  }
 
   final lifecycle = AppLifecycle(
     overlay: boot.overlay,

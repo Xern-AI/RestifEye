@@ -65,6 +65,8 @@ RestifEye reminds you to rest your eyes and move, on a schedule that adapts to w
 - Ships as an AppImage with zero extra runtime dependencies (the tray and sound paths are hand-rolled rather than pulling in appindicator or an audio plugin), plus an RPM.
 - Optional weekly update check against GitHub Releases. That is the only network call in the app.
 - Settings shows the exact version and build you are running, read from the shipped bundle — so a bug report always carries the right version, and the update check compares against what is actually installed rather than a number someone forgot to bump.
+- Upgrades that change the database are all-or-nothing and can be re-run safely. Killing the app mid-upgrade rolls back cleanly, and a database left half-upgraded by an older build repairs itself on the next launch instead of refusing to start — your history is never wiped to recover.
+- If the app cannot start at all, it says so on screen with the error, the version and the database path, plus a Copy details button — rather than showing an empty window that tells you nothing.
 
 ## Competitive edge
 
@@ -85,7 +87,7 @@ Honest read: Safe Eyes is the closest competitor and is genuinely good on Waylan
 
 ## Numbers
 
-- **232 automated tests**, `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
+- **241 automated tests**, `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
 - **1 Hz** deterministic engine tick; monotonic clock for all interval maths, wall clock only where wall clock is the right answer.
 - **52** exercises across 3 intensity tiers (10 eye, 42 movement); **7** tray moods; **5** rendered icon sizes (22–64 px).
 - **2-hour** mood horizon; **3-sample** escalation hysteresis; **15-minute** deferral cap; **30-second** pre-break warning.
