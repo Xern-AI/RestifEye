@@ -125,8 +125,13 @@ Future<BootResult> bootstrap() async {
   // Closing to the background gets a "still running" notice so nobody thinks
   // the app quit.
   final overlay = WindowTakeover(
-    onHiddenToBackground: () =>
-        unawaited(_maybeShowHideNotice(settings, breakNotifier, traySupport)),
+    onHiddenToBackground: () => unawaited(
+      _maybeShowHideNotice(
+        settings,
+        breakNotifier,
+        traySupport,
+      ).catchError((Object _) {}),
+    ),
   );
   await overlay.init();
 
@@ -162,7 +167,7 @@ Future<BootResult> bootstrap() async {
       notifier: breakNotifier,
       settings: settings,
       clock: clock,
-    ).maybeCheck(),
+    ).maybeCheck().catchError((Object _) => null),
   );
 
   final service =
