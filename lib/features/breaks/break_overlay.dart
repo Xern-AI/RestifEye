@@ -75,7 +75,33 @@ class BreakOverlay extends ConsumerWidget {
               formatCountdown(phase.remaining),
               style: textTheme.headlineMedium?.copyWith(
                 fontFeatures: const [FontFeature.tabularFigures()],
+                color: phase.held ? scheme.onSurfaceVariant : null,
               ),
+            ),
+            const SizedBox(height: AppTokens.spaceXs),
+            // Reserves its own height whether or not it is showing, so the
+            // countdown does not jump when the clock stops and starts.
+            SizedBox(
+              height: 24,
+              child: phase.held
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.pause_circle_outline,
+                          size: 18,
+                          color: scheme.error,
+                        ),
+                        const SizedBox(width: AppTokens.spaceXs),
+                        Text(
+                          'Paused — this break only counts while you are here',
+                          style: textTheme.labelLarge?.copyWith(
+                            color: scheme.error,
+                          ),
+                        ),
+                      ],
+                    )
+                  : null,
             ),
             const SizedBox(height: AppTokens.spaceLg),
             if (exercise != null)

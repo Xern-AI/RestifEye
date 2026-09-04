@@ -51,6 +51,11 @@ class FakeWindowOps implements WindowOps {
   @override
   Future<bool> isVisible() async => visible;
 
+  bool focused = true;
+
+  @override
+  Future<bool> isFocused() async => focused;
+
   @override
   Future<void> destroy() async => calls.add('destroy');
 }

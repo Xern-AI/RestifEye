@@ -11,6 +11,7 @@ import '../core/models/activity.dart';
 import '../data/break_log_repository.dart';
 import '../data/settings_repository.dart';
 import '../platform/interfaces/idle_monitor.dart';
+import '../platform/interfaces/overlay_controller.dart';
 import '../platform/interfaces/presentation_signals.dart';
 import '../platform/interfaces/session_signals.dart';
 import 'activity_recorder.dart';
@@ -27,6 +28,7 @@ class EngineService {
     required this._sessionSignals,
     required this._sampler,
     required this._presentation,
+    required this._overlay,
     required this._breakLog,
     required this._settings,
     required this._recorder,
@@ -47,6 +49,11 @@ class EngineService {
   final SessionSignals _sessionSignals;
   final ContextSampler _sampler;
   final PresentationSampler _presentation;
+
+  /// Asked, during a break only, whether the break window still has focus.
+  /// A break the user has alt-tabbed away from is not rest, and its clock
+  /// must not run.
+  final OverlayController _overlay;
   final BreakLogRepository _breakLog;
   final SettingsRepository _settings;
   final ActivityRecorder _recorder;
@@ -85,6 +92,9 @@ class EngineService {
       // Sampled whether or not the pause is wanted: the setting decides
       // whether a film delays a break, not whether watch time is counted.
       await _presentation.refresh(now);
+      // Only meaningful during a break, and one method channel round trip
+      // per second is not worth paying outside one.
+      final breakFocused = phase is InBreak ? await _overlay.hasFocus() : true;
       final presenting = pauseDuringMedia
           ? _presentation.value
           : PresentationState.idle;
@@ -96,6 +106,7 @@ class EngineService {
           busy: _sampler.value,
           presenting: presenting.active,
           presentingApp: presenting.byApp,
+          breakFocused: breakFocused,
         ),
       );
 

@@ -58,6 +58,14 @@ abstract interface class OverlayController {
   /// state in place so the next tick retries.
   Future<void> apply(BreakWindowState desired);
 
+  /// Whether the window currently has keyboard focus.
+  ///
+  /// Polled rather than latched from focus events, for the same reason the
+  /// window state is: a missed event would leave the break clock stuck.
+  /// Implementations answer `true` when they cannot tell, so an unreadable
+  /// desktop can never freeze a break forever.
+  Future<bool> hasFocus();
+
   /// Brings the (possibly hidden) window to the front — tray, or relaunch.
   Future<void> presentWindow();
 

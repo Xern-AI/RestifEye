@@ -114,17 +114,21 @@ Future<BootResult> bootstrap() async {
       fallback: true,
     ),
   );
+  // Declared late so the notification's "Return to break" action can reach
+  // the window takeover, which is built below.
+  late final WindowTakeover overlay;
   NotificationCoordinator(
     engine: engine,
     notifier: breakNotifier,
     sounds: sounds,
+    onReturnToBreak: () => unawaited(overlay.presentWindow()),
   ).start();
 
   final traySupport = GnomeTraySupport(sessionBus);
 
   // Closing to the background gets a "still running" notice so nobody thinks
   // the app quit.
-  final overlay = WindowTakeover(
+  overlay = WindowTakeover(
     onHiddenToBackground: () => unawaited(
       _maybeShowHideNotice(
         settings,
@@ -183,6 +187,7 @@ Future<BootResult> bootstrap() async {
           presentation: PresentationSampler(
             LinuxPresentationSignals(session: sessionBus, system: systemBus),
           ),
+          overlay: overlay,
           breakLog: breakLogRepo,
           settings: settings,
           recorder: ActivityRecorder(activityRepo.insertSlice),

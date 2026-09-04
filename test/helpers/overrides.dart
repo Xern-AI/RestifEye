@@ -51,6 +51,7 @@ class TestHarness {
       sessionSignals: session,
       sampler: ContextSampler(context),
       presentation: PresentationSampler(presentation),
+      overlay: overlay,
       breakLog: BreakLogRepository(db),
       settings: SettingsRepository(db),
       recorder: ActivityRecorder(ActivityRepository(db).insertSlice),

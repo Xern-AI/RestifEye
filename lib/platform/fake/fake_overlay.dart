@@ -14,6 +14,9 @@ class FakeOverlayController implements OverlayController {
 
   bool destroyed = false;
 
+  /// What [hasFocus] reports; tests flip it to simulate an alt-tab.
+  bool focused = true;
+
   @override
   Future<void> init() async => calls.add('init');
 
@@ -23,6 +26,9 @@ class FakeOverlayController implements OverlayController {
     state = desired;
     calls.add('apply($desired)');
   }
+
+  @override
+  Future<bool> hasFocus() async => focused;
 
   @override
   Future<void> presentWindow() async => calls.add('present');

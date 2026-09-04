@@ -4,8 +4,8 @@
 
 import '../../core/models/break_kind.dart';
 
-/// What the user tapped on a pre-break warning notification.
-enum WarningAction { snooze, startNow, skip }
+/// What the user tapped on one of our notifications.
+enum WarningAction { snooze, startNow, skip, returnToBreak }
 
 /// Desktop notifications for the pre-break warning.
 abstract interface class BreakNotifier {
@@ -19,6 +19,15 @@ abstract interface class BreakNotifier {
 
   /// Removes the warning, e.g. when the break starts or is snoozed.
   Future<void> dismissWarning();
+
+  /// Shows (or replaces) the notice that a break is on hold because the user
+  /// switched away from the break screen. Lives in its own slot: it can never
+  /// be on screen at the same time as a warning, but it must not be able to
+  /// close one either.
+  Future<void> showBreakHeld({required BreakKind kind});
+
+  /// Removes the on-hold notice.
+  Future<void> dismissBreakHeld();
 
   /// Actions invoked from the notification.
   Stream<WarningAction> get actions;
