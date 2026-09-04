@@ -8,7 +8,7 @@ Break reminders for Linux that read the room instead of nagging you.
 
 ## 60-second version
 
-RestifEye reminds you to rest your eyes and move, on a schedule that adapts to what you're actually doing. If you're on a call, it waits. If you're watching a film, it holds. If you already got up and walked away, it counts that and doesn't ask again. When a break is genuinely due it warns you thirty seconds ahead, then shows one illustrated exercise to do. It works properly on Wayland, where most break apps quietly stop detecting whether you're at the computer at all. Everything is stored on your machine — no account, no telemetry, no server.
+RestifEye reminds you to rest your eyes and move, on a schedule that adapts to what you're actually doing. If you're on a call, it waits. If you're watching a film, it holds. If you already got up and walked away, it counts that and doesn't ask again. And the break clock only runs while you're actually taking the break — switch to another window and it stops, so it can never tell you that you rested when you didn't. When a break is genuinely due it warns you thirty seconds ahead, then shows one illustrated exercise to do. It works properly on Wayland, where most break apps quietly stop detecting whether you're at the computer at all. Everything is stored on your machine — no account, no telemetry, no server.
 
 ## Feature inventory
 
@@ -32,6 +32,8 @@ RestifEye reminds you to rest your eyes and move, on a schedule that adapts to w
 - "Can't do this one" opts an exercise out permanently and swaps in another.
 - Windowed or full-screen breaks, your choice; strict breaks are always full-screen.
 - Strict mode with a logged 3-second hold-to-escape, once the snooze budget is gone.
+- The break clock only runs while you are actually on the break screen. Switch to another window and it stops where it is, then picks up where it left off when you come back — so a break you worked through is never recorded as one you took. *Non-trivial: no Linux compositor lets an app grab your keyboard, so no break app can truly stop you leaving. Rather than pretend otherwise, RestifEye makes leaving pointless: the time is still owed. Walking away from the machine entirely, or locking it, still counts as rest, so the honest cases are never punished.*
+- Tells you why a break is not ending: the screen says it is paused, and after ten seconds away a notification with a "Return to break" button explains it — because you cannot see the window you walked away from.
 - A break started from the tray ends back in the tray — the window goes back to whatever it was doing.
 - Optional sound, one mechanism, one setting.
 
@@ -78,18 +80,20 @@ RestifEye reminds you to rest your eyes and move, on a schedule that adapts to w
 | Waits for meetings | Mic/camera **and** DND, capped at 15 min | Manual postpone; pauses on DND | No | Fullscreen-window rule only |
 | Waits for video / presentations | Any app holding an idle inhibitor | No | No | Fullscreen active window |
 | Credits a break you already took | Yes — logged as taken (idle, lock, suspend) | No | Idle resets the timer | Smart Pause stops the timer |
+| Can it count a break you worked through? | No — the clock stops when you switch away | Yes | Yes | Yes |
 | Ambient status without a window | 7-mood expressive tray face | Static icon | Static icon | Static icon |
 | Illustrated exercises | 52, 3 intensity tiers | Text ideas | Basic figures | Text instructions |
 | Local-only, no telemetry | Yes | Yes | Yes | Yes |
 | Runtime dependencies | None (AppImage) | Electron | GTK | Python + GTK |
 
-Honest read: Safe Eyes is the closest competitor and is genuinely good on Wayland idle. The gap is *situational awareness* — it pauses on a fullscreen window; RestifEye reads mic, camera, DND and idle inhibitors, credits breaks you took by walking away, and never resets a timer just because you watched something.
+Honest read: Safe Eyes is the closest competitor and is genuinely good on Wayland idle. The gap is *situational awareness* — it pauses on a fullscreen window; RestifEye reads mic, camera, DND and idle inhibitors, credits breaks you took by walking away, and never resets a timer just because you watched something. The second gap is honesty about the break itself: every one of these apps runs the break countdown on the wall clock, so alt-tabbing back to work still earns you a completed break. RestifEye's clock stops when you do.
 
 ## Numbers
 
-- **241 automated tests**, `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
+- **253 automated tests**, `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
 - **1 Hz** deterministic engine tick; monotonic clock for all interval maths, wall clock only where wall clock is the right answer.
 - **52** exercises across 3 intensity tiers (10 eye, 42 movement); **7** tray moods; **5** rendered icon sizes (22–64 px).
+- Break clock held to **5 s per tick** at most while you are away, so a suspend cannot add hours to a break; a **10-second** hold before the "break paused" notice.
 - **2-hour** mood horizon; **3-sample** escalation hysteresis; **15-minute** deferral cap; **30-second** pre-break warning.
 - **Zero** network calls except an optional weekly update check. **Zero** runtime dependencies in the AppImage.
 - Screen activity recorded at **1-second** resolution, aggregated into daily rollups with a **24-slot** hourly profile.

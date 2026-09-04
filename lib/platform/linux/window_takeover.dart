@@ -126,6 +126,18 @@ class WindowTakeover with WindowListener implements OverlayController {
     await _transition(BreakWindowState.normal, restoreVisibility: false);
   });
 
+  /// Read straight from the window on every ask. Treats an unreadable answer
+  /// as focused: guessing wrong that way costs one second of break clock,
+  /// while guessing the other way would hold a break open indefinitely.
+  @override
+  Future<bool> hasFocus() async {
+    try {
+      return await _ops.isFocused();
+    } on Object {
+      return true;
+    }
+  }
+
   @override
   Future<void> presentWindow() => _enqueue(() async {
     _cancelPendingHide(); // asked for explicitly; do not yank it away again

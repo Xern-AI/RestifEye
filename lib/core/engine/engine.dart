@@ -19,6 +19,7 @@ class TickInput {
     this.busy = false,
     this.presenting = false,
     this.presentingApp,
+    this.breakFocused = true,
   });
 
   /// Time since the last user input.
@@ -38,6 +39,10 @@ class TickInput {
 
   /// Which app is presenting, when the desktop tells us.
   final String? presentingApp;
+
+  /// Whether the break window currently holds keyboard focus. Only consulted
+  /// during a break; defaults to true so every other caller is unaffected.
+  final bool breakFocused;
 }
 
 /// Deterministic break scheduler. Pure Dart: no timers, no I/O — the caller
@@ -77,6 +82,11 @@ class BreakEngine {
   /// Lead time for the (re-)warning after a deferral or an away return.
   static const Duration _shortLead = Duration(seconds: 15);
 
+  /// Most the break clock may be held back by a single tick. Ticks stop
+  /// while the machine is suspended, so an unclamped hold would hand back
+  /// the whole suspend as break time owed.
+  static const Duration _maxHoldStep = Duration(seconds: 5);
+
   final Clock _clock;
   BreakConfig _config;
 
@@ -89,6 +99,14 @@ class BreakEngine {
 
   BreakKind _activeKind = BreakKind.micro;
   Duration _breakEndsAt = Duration.zero;
+
+  /// The tick that last advanced the break clock, and the moment the clock
+  /// was put on hold (null while it is running). A break the user has walked
+  /// away from — alt-tabbed to another window, or clicked one — is not rest,
+  /// so its countdown stops until they come back. Without this the clock ran
+  /// on wall time and credited a break the user spent working.
+  Duration _lastBreakTick = Duration.zero;
+  Duration? _heldSince;
 
   /// Snoozes left, tracked **per break kind**.
   ///
@@ -177,6 +195,10 @@ class BreakEngine {
         remaining: _clampZero(_breakEndsAt - now),
         snoozesLeft: _snoozesLeftFor(_activeKind),
         strict: _strictNow,
+        held: _heldSince != null,
+        heldFor: _heldSince == null
+            ? Duration.zero
+            : _clampZero(now - _heldSince!),
       ),
       _Mode.deferred => Deferred(
         kind: _activeKind,
@@ -238,6 +260,16 @@ class BreakEngine {
         }
 
       case _Mode.inBreak:
+        final sinceLastTick = now - _lastBreakTick;
+        _lastBreakTick = now;
+        if (!_isAttending(input)) {
+          _breakEndsAt += sinceLastTick < _maxHoldStep
+              ? sinceLastTick
+              : _maxHoldStep;
+          _heldSince ??= now;
+          break;
+        }
+        _heldSince = null;
         if (now >= _breakEndsAt) {
           _emit(BreakCompleted(_clock.now(), _activeKind));
           _consecutiveSkips = 0;
@@ -519,9 +551,23 @@ class BreakEngine {
     return _pausedByHours;
   }
 
+  /// Whether the break on screen is actually being taken.
+  ///
+  /// Focus is the direct evidence, but two other states are rest just as
+  /// honestly: a locked session, and a user who has not touched the machine
+  /// for [BreakConfig.idleFireThreshold] — the same span the engine already
+  /// credits as a break elsewhere. The idle case also keeps a break from
+  /// hanging forever when someone alt-tabs away and then leaves the desk.
+  bool _isAttending(TickInput input) =>
+      input.breakFocused ||
+      input.locked ||
+      input.idle >= _config.idleFireThreshold;
+
   void _startBreak(Duration now) {
     _mode = _Mode.inBreak;
     _breakEndsAt = now + _config.breakDuration(_activeKind);
+    _lastBreakTick = now;
+    _heldSince = null;
     _strictNow = _snoozesLeftFor(_activeKind) <= 0 && _config.strictMode;
     _emit(BreakStarted(_clock.now(), _activeKind, strict: _strictNow));
   }

@@ -43,6 +43,8 @@ class InBreak extends EnginePhase {
     required this.remaining,
     required this.snoozesLeft,
     required this.strict,
+    this.held = false,
+    this.heldFor = Duration.zero,
   });
 
   final BreakKind kind;
@@ -51,6 +53,13 @@ class InBreak extends EnginePhase {
 
   /// True once the snooze budget is exhausted (or strict-only config).
   final bool strict;
+
+  /// The break clock is on hold because the user switched away from the
+  /// break screen. [remaining] does not move while this is true.
+  final bool held;
+
+  /// How long the hold has lasted. Zero when [held] is false.
+  final Duration heldFor;
 }
 
 /// A due break is being held back because the user is busy (call / DND).

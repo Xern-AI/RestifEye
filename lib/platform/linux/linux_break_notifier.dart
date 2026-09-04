@@ -15,8 +15,10 @@ import '../interfaces/break_notifier.dart';
 ///
 /// Two invariants this class exists to keep:
 ///
-///  * **Exactly one live notification.** Re-warns replace the current one in
-///    place via `replaces_id`, so a deferral never stacks up banners.
+///  * **At most one live notification per slot.** Re-warns replace the
+///    current one in place via `replaces_id`, so a deferral never stacks up
+///    banners, and the on-hold notice keeps its own slot so the two can never
+///    close each other.
 ///  * **A new cycle always raises a new banner.** `replaces_id` is only ever
 ///    a *live* id. Passing an id the daemon has already destroyed makes it
 ///    write into a dead slot instead of notifying — which silently swallowed
@@ -35,7 +37,8 @@ class LinuxBreakNotifier implements BreakNotifier {
           name: 'ActionInvoked',
           signature: DBusSignature('us'),
         ).listen((signal) {
-          if (signal.values[0].asUint32() != _activeId) return;
+          final id = signal.values[0].asUint32();
+          if (id != _warning.id && id != _held.id) return;
           switch (signal.values[1].asString()) {
             case _actionSnooze:
               _actions.add(WarningAction.snooze);
@@ -43,6 +46,8 @@ class LinuxBreakNotifier implements BreakNotifier {
               _actions.add(WarningAction.startNow);
             case _actionSkip:
               _actions.add(WarningAction.skip);
+            case _actionReturn:
+              _actions.add(WarningAction.returnToBreak);
           }
         }, onError: (Object _) {});
 
@@ -57,7 +62,9 @@ class LinuxBreakNotifier implements BreakNotifier {
           name: 'NotificationClosed',
           signature: DBusSignature('uu'),
         ).listen((signal) {
-          if (signal.values[0].asUint32() == _activeId) _activeId = 0;
+          final id = signal.values[0].asUint32();
+          if (id == _warning.id) _warning.id = 0;
+          if (id == _held.id) _held.id = 0;
         }, onError: (Object _) {});
   }
 
@@ -67,6 +74,7 @@ class LinuxBreakNotifier implements BreakNotifier {
   static const _actionSnooze = 'snooze';
   static const _actionStart = 'start';
   static const _actionSkip = 'skip';
+  static const _actionReturn = 'return';
 
   final DBusClient _bus;
 
@@ -74,8 +82,11 @@ class LinuxBreakNotifier implements BreakNotifier {
   late final StreamSubscription<DBusSignal> _actionSub;
   late final StreamSubscription<DBusSignal> _closedSub;
 
-  /// The id of the notification currently on screen, or 0 when none is.
-  int _activeId = 0;
+  /// One live id per kind of notification we raise. Separate slots on
+  /// purpose: the two can never be on screen together, but sharing a slot
+  /// would let either one close the other's banner by mistake.
+  final _warning = _Slot();
+  final _held = _Slot();
 
   /// Serializes Notify/CloseNotification so a dismiss can never overtake the
   /// show whose reply carries the id it needs to dismiss.
@@ -110,7 +121,7 @@ class LinuxBreakNotifier implements BreakNotifier {
         const DBusString(Brand.appName),
         // Only ever a live id: 0 starts a fresh banner, a live id replaces the
         // current one in place (the re-warn case) without stacking.
-        DBusUint32(_activeId),
+        DBusUint32(_warning.id),
         const DBusString(Brand.appId),
         DBusString(title),
         DBusString(body),
@@ -129,9 +140,35 @@ class LinuxBreakNotifier implements BreakNotifier {
         }),
         DBusInt32(startsIn.inMilliseconds),
       ], replySignature: DBusSignature('u'));
-      _activeId = reply.returnValues[0].asUint32();
+      _warning.id = reply.returnValues[0].asUint32();
     } on DBusMethodResponseException {
       // No notification daemon — the overlay still enforces the break.
+    }
+  });
+
+  @override
+  Future<void> showBreakHeld({required BreakKind kind}) => _enqueue(() async {
+    final what = kind == BreakKind.micro ? 'eye break' : 'movement break';
+    try {
+      final reply = await _object.callMethod(_iface, 'Notify', [
+        const DBusString(Brand.appName),
+        DBusUint32(_held.id),
+        const DBusString(Brand.appId),
+        const DBusString('Break paused'),
+        DBusString('Come back to ${Brand.appName} to finish your $what.'),
+        DBusArray.string(const [_actionReturn, 'Return to break']),
+        DBusDict.stringVariant(const {
+          // Critical so the shell keeps it on screen: the user cannot see the
+          // break window right now, and a banner that times out would leave
+          // them with no explanation for a break that never ends.
+          'urgency': DBusVariant(DBusByte(2)),
+          'desktop-entry': DBusVariant(DBusString(Brand.appId)),
+        }),
+        const DBusInt32(0), // never expires; taken down from the phase
+      ], replySignature: DBusSignature('u'));
+      _held.id = reply.returnValues[0].asUint32();
+    } on DBusMethodResponseException {
+      // No notification daemon.
     }
   });
 
@@ -157,10 +194,15 @@ class LinuxBreakNotifier implements BreakNotifier {
       });
 
   @override
-  Future<void> dismissWarning() => _enqueue(() async {
-    if (_activeId == 0) return;
-    final id = _activeId;
-    _activeId = 0; // forget it first: a failed close must not resurrect the id
+  Future<void> dismissWarning() => _enqueue(() => _close(_warning));
+
+  @override
+  Future<void> dismissBreakHeld() => _enqueue(() => _close(_held));
+
+  Future<void> _close(_Slot slot) async {
+    if (slot.id == 0) return;
+    final id = slot.id;
+    slot.id = 0; // forget it first: a failed close must not resurrect the id
     try {
       await _object.callMethod(_iface, 'CloseNotification', [
         DBusUint32(id),
@@ -168,7 +210,7 @@ class LinuxBreakNotifier implements BreakNotifier {
     } on DBusMethodResponseException {
       // Already gone.
     }
-  });
+  }
 
   @override
   Future<void> dispose() async {
@@ -176,4 +218,9 @@ class LinuxBreakNotifier implements BreakNotifier {
     await _closedSub.cancel();
     await _actions.close();
   }
+}
+
+/// The id of one live notification, or 0 when its slot is empty.
+class _Slot {
+  int id = 0;
 }

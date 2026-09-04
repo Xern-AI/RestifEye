@@ -27,6 +27,7 @@ abstract interface class WindowOps {
   Future<void> setFullScreen(bool value);
   Future<void> setAlwaysOnTop(bool value);
   Future<bool> isVisible();
+  Future<bool> isFocused();
   Future<void> destroy();
 
   /// Whether the renderer has a frame scheduled — i.e. whether the toolkit
@@ -67,6 +68,9 @@ class WindowManagerOps implements WindowOps {
 
   @override
   Future<bool> isVisible() => windowManager.isVisible();
+
+  @override
+  Future<bool> isFocused() => windowManager.isFocused();
 
   @override
   Future<void> destroy() => windowManager.destroy();

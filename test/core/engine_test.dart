@@ -776,6 +776,106 @@ void main() {
     });
   });
 
+  group('switching away from the break screen', () {
+    /// Drives the engine to the micro-break warning and starts the break, so
+    /// each test below begins with a 20-second break on screen.
+    Rig atMicroBreak() {
+      final rig = Rig();
+      rig.run(const Duration(minutes: 19, seconds: 40));
+      expect(rig.engine.phase, isA<Warning>());
+      rig.events.clear();
+      rig.engine.startNow();
+      expect(rig.engine.phase, isA<InBreak>());
+      return rig;
+    }
+
+    // THE bug this group exists for: the break clock ran on wall time, so a
+    // user who alt-tabbed back to work was handed a completed break they
+    // never took.
+    test('the clock stops while the user is working in another window', () {
+      final rig = atMicroBreak();
+
+      rig.run(const Duration(minutes: 1), const TickInput(breakFocused: false));
+
+      expect(rig.eventsOf<BreakCompleted>(), isEmpty);
+      final phase = rig.engine.phase as InBreak;
+      expect(phase.remaining, const Duration(seconds: 20));
+      expect(phase.held, isTrue);
+    });
+
+    test('the clock resumes, and the full break is still owed', () {
+      final rig = atMicroBreak();
+      rig.run(const Duration(seconds: 5)); // 5 s actually taken
+      rig.run(const Duration(minutes: 2), const TickInput(breakFocused: false));
+
+      // Coming back owes the remaining 15 s, not 0.
+      rig.run(const Duration(seconds: 14));
+      expect(rig.eventsOf<BreakCompleted>(), isEmpty);
+      rig.run(const Duration(seconds: 2));
+      expect(rig.eventsOf<BreakCompleted>(), hasLength(1));
+      expect(rig.engine.phase, isA<Monitoring>());
+    });
+
+    // The escape hatch that keeps an unattended break from hanging forever:
+    // no focus and no input for idleFireThreshold is rest by every other
+    // measure the engine uses, so it counts here too.
+    test('walking away from the machine still runs the clock', () {
+      final rig = atMicroBreak();
+
+      var idle = Duration.zero;
+      for (var i = 0; i < 200; i++) {
+        idle += const Duration(seconds: 1);
+        rig.clock.advance(const Duration(seconds: 1));
+        rig.engine.tick(TickInput(idle: idle, breakFocused: false));
+      }
+
+      expect(rig.eventsOf<BreakCompleted>(), hasLength(1));
+    });
+
+    test('a locked session counts as taking the break', () {
+      final rig = atMicroBreak();
+
+      rig.run(
+        const Duration(seconds: 25),
+        const TickInput(breakFocused: false, locked: true),
+      );
+
+      expect(rig.eventsOf<BreakCompleted>(), hasLength(1));
+    });
+
+    test('the hold is reported to the UI with its age', () {
+      final rig = atMicroBreak();
+      expect((rig.engine.phase as InBreak).held, isFalse);
+
+      rig.run(
+        const Duration(seconds: 12),
+        const TickInput(breakFocused: false),
+      );
+      final held = rig.engine.phase as InBreak;
+      expect(held.held, isTrue);
+      expect(held.heldFor, const Duration(seconds: 11));
+
+      rig.run(const Duration(seconds: 1));
+      final resumed = rig.engine.phase as InBreak;
+      expect(resumed.held, isFalse);
+      expect(resumed.heldFor, Duration.zero);
+    });
+
+    // Ticks stop while the machine is suspended. Without the per-tick clamp,
+    // resuming from an hour of sleep would hand back an hour of break owed.
+    test('a suspend does not extend the break by the whole gap', () {
+      final rig = atMicroBreak();
+
+      rig.clock.advance(const Duration(hours: 1));
+      rig.engine.tick(const TickInput(breakFocused: false));
+      expect(rig.eventsOf<BreakCompleted>(), isEmpty);
+
+      // At most 5 s was added to a break that had 20 s left when it started.
+      rig.run(const Duration(seconds: 6));
+      expect(rig.eventsOf<BreakCompleted>(), hasLength(1));
+    });
+  });
+
   group('regression guards', () {
     test('default config starts inside work hours on a weekday', () {
       expect(const BreakConfig().isWithinWorkHours(monday9am), isTrue);

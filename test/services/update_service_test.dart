@@ -38,6 +38,12 @@ class _StubNotifier implements BreakNotifier {
   Future<void> dismissWarning() async {}
 
   @override
+  Future<void> showBreakHeld({required BreakKind kind}) async {}
+
+  @override
+  Future<void> dismissBreakHeld() async {}
+
+  @override
   Future<void> showWarning({
     required BreakKind kind,
     required Duration startsIn,
