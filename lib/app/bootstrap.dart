@@ -23,6 +23,7 @@ import '../platform/interfaces/tray_indicator.dart';
 import '../platform/interfaces/tray_support.dart';
 import '../platform/linux/linux_adapters.dart';
 import '../platform/windows/windows_adapters.dart';
+import '../platform/windows/windows_version.dart';
 import '../services/activity_recorder.dart';
 import '../services/context_sampler.dart';
 import '../services/engine_service.dart';
@@ -82,6 +83,10 @@ typedef BootResult = ({
 /// everything built on them is shared.
 Future<BootResult> bootstrap({AppLog log = const NoAppLog()}) async {
   await loadAppVersion();
+  if (Platform.isWindows) {
+    final version = exeProductVersion(Platform.resolvedExecutable);
+    if (version != null) applyVersionString(version);
+  }
   log.info(
     'startup ${Brand.appName} $appVersion (build ${appBuild ?? '?'}) '
     'on ${Platform.operatingSystemVersion}',

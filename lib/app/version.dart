@@ -62,6 +62,21 @@ Future<void> loadAppVersion({String? executablePath}) async {
   }
 }
 
+/// Applies a pubspec-style `version+build` string such as `0.2.0+13`.
+///
+/// Windows bundles carry no `version.json`; Flutter writes the same string
+/// into the executable's version resource instead, which the Windows build
+/// reads and hands here. Anything that does not look like a version is
+/// ignored, so the last good value stays.
+void applyVersionString(String full) {
+  final match = RegExp(
+    r'^(\d+\.\d+\.\d+)(?:\+(\w+))?$',
+  ).firstMatch(full.trim());
+  if (match == null) return;
+  _appVersion = match.group(1)!;
+  _appBuild = match.group(2);
+}
+
 /// True when [candidate] is a strictly newer semver than [current].
 /// Tolerates a leading 'v' and missing segments; returns false on garbage.
 bool isNewerVersion({required String current, required String candidate}) {

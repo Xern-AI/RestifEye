@@ -78,6 +78,7 @@ jobs:
           $text = Get-Content $log.FullName -Raw
           if ($text -notmatch "startup complete") { throw "The log never reached 'startup complete'" }
           if ($text -match " (FAIL|ERROR) ") { throw "The log shows an adapter failure or an uncaught error" }
+          if ($text -match "startup RestifEye 0\.0\.0") { throw "The app could not read its own version" }
 
       - name: Package
         id: package

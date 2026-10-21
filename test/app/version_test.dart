@@ -58,6 +58,19 @@ void main() {
     expect(appVersion, '1.2.3');
   });
 
+  test('a Windows version resource string sets version and build', () {
+    applyVersionString('0.2.0+13');
+    expect(appVersion, '0.2.0');
+    expect(appBuild, '13');
+  });
+
+  test('a version string that is not a version keeps the last good value', () {
+    applyVersionString('1.0');
+    applyVersionString('');
+    expect(appVersion, '0.2.0');
+    expect(appBuild, '13');
+  });
+
   group('isNewerVersion', () {
     test('compares semver, tolerating a leading v and build suffixes', () {
       expect(isNewerVersion(current: '0.1.4', candidate: 'v0.1.5'), isTrue);
