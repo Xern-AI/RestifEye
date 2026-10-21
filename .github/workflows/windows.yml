@@ -1,0 +1,126 @@
+name: Windows test build
+
+# Builds, tests and smoke-tests the Windows app. The exe and zip are never
+# published from this public repo: no Actions artifacts (anyone signed in can
+# download those), no release files here, and no cache of build output. A
+# zip goes only to a release on the private Xern-AI/restifeye-builds repo.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUILDS_REPO: Xern-AI/restifeye-builds
+  KEEP_RELEASES: 10
+
+jobs:
+  windows:
+    name: Analyze, test, build, smoke test
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      # Same pin as ci.yml and release.yml. The cache holds the SDK and the
+      # pub cache only, never anything built.
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.8
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --fatal-infos
+
+      - name: Test
+        run: flutter test
+
+      - name: Build
+        run: flutter build windows --release
+
+      # Starts the real app, leaves it running for 20 seconds, then requires
+      # that it is still alive, that SQLite shipped inside the build, and that
+      # its own log reached the end of startup with no FAIL or ERROR line.
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          $release = "build\windows\x64\runner\Release"
+          if (-not (Get-ChildItem "$release\*sqlite3*.dll" -ErrorAction SilentlyContinue)) {
+            throw "SQLite is not bundled in $release"
+          }
+          $data = Join-Path $env:APPDATA "RestifEye"
+          Remove-Item -Recurse -Force $data -ErrorAction SilentlyContinue
+
+          $app = Start-Process -FilePath "$release\RestifEye.exe" -PassThru
+          Start-Sleep -Seconds 20
+          $alive = -not $app.HasExited
+
+          $log = Get-ChildItem (Join-Path $data "logs") -Filter "restifeye-*.log" -ErrorAction SilentlyContinue |
+            Sort-Object Name | Select-Object -Last 1
+          Write-Host "----- RestifEye log -----"
+          if ($log) { Get-Content $log.FullName } else { Write-Host "(no log file)" }
+          Write-Host "-------------------------"
+
+          if ($alive) { Stop-Process -Id $app.Id -Force }
+          if (-not $alive) { throw "RestifEye exited within 20 seconds (exit code $($app.ExitCode))" }
+          if (-not $log) { throw "RestifEye wrote no log" }
+          $text = Get-Content $log.FullName -Raw
+          if ($text -notmatch "startup complete") { throw "The log never reached 'startup complete'" }
+          if ($text -match " (FAIL|ERROR) ") { throw "The log shows an adapter failure or an uncaught error" }
+
+      - name: Package
+        id: package
+        if: github.repository == 'Xern-AI/RestifEye' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        shell: pwsh
+        run: |
+          $full = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(\S+)').Matches[0].Groups[1].Value
+          $version, $build = $full.Split('+')
+          $sha = "${{ github.sha }}".Substring(0, 7)
+          $zip = "RestifEye-$version-$sha-windows-x64.zip"
+          Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath $zip
+          "zip=$zip" >> $env:GITHUB_OUTPUT
+          "tag=windows-v$version-b$build-r${{ github.run_number }}-$sha" >> $env:GITHUB_OUTPUT
+          "title=RestifEye $full ($sha) for Windows" >> $env:GITHUB_OUTPUT
+
+      # The token reaches only these two steps. gh's own output (which
+      # includes the release URL) is discarded; only the tag is printed.
+      - name: Deliver to the private builds repo
+        if: steps.package.outcome == 'success'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.WINDOWS_BUILDS_TOKEN }}
+          ZIP: ${{ steps.package.outputs.zip }}
+          TAG: ${{ steps.package.outputs.tag }}
+          TITLE: ${{ steps.package.outputs.title }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          if (-not $env:GH_TOKEN) { throw "The WINDOWS_BUILDS_TOKEN secret is not set in this repo" }
+          $notes = "Test build from branch $env:BRANCH, commit ${{ github.sha }}.`n`nUnzip, then run RestifEye.exe. Windows SmartScreen: More info, then Run anyway. Logs: %APPDATA%\RestifEye\logs"
+          gh release create $env:TAG $env:ZIP --repo $env:BUILDS_REPO --title $env:TITLE --notes $notes --prerelease | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "Could not create the release" }
+          Write-Host "Delivered $env:ZIP as release $env:TAG in the private builds repo."
+
+      - name: Keep only the newest test releases
+        if: steps.package.outcome == 'success'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.WINDOWS_BUILDS_TOKEN }}
+        run: |
+          $releases = gh release list --repo $env:BUILDS_REPO --limit 200 --json tagName,createdAt | ConvertFrom-Json
+          $old = $releases | Where-Object { $_.tagName -like 'windows-*' } |
+            Sort-Object createdAt -Descending | Select-Object -Skip ([int]$env:KEEP_RELEASES)
+          foreach ($release in $old) {
+            gh release delete $release.tagName --repo $env:BUILDS_REPO --yes --cleanup-tag | Out-Null
+            Write-Host "Removed old test release $($release.tagName)"
+          }
