@@ -99,15 +99,21 @@ enum TrayMouth { grin, smile, flat, frown }
 const _traySizes = [22, 24, 32, 48, 64];
 
 /// Renders [mood] into the ARGB32 pixmaps the StatusNotifierItem protocol
-/// expects, at every size a host might want.
+/// expects, at every size a host might want. [sizes] replaces that set where
+/// the platform knows exactly which sizes it draws (Windows' tray, which goes
+/// down to 16 px at 100% scaling and would otherwise have to shrink a 22).
 ///
 /// Drawn at runtime rather than shipped as PNGs: seven moods times two sizes
 /// is fourteen assets to keep in sync, and the pulse animation needs
 /// in-between frames that could not be pre-rendered sensibly anyway.
-Future<List<TrayPixmap>> renderTrayFace(Mood mood, {double scale = 1}) async {
+Future<List<TrayPixmap>> renderTrayFace(
+  Mood mood, {
+  double scale = 1,
+  List<int>? sizes,
+}) async {
   final face = MoodFace.of(mood);
   final pixmaps = <TrayPixmap>[];
-  for (final size in _traySizes) {
+  for (final size in sizes ?? _traySizes) {
     pixmaps.add(await _render(face, size, scale));
   }
   return pixmaps;

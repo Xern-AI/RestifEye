@@ -40,6 +40,10 @@ dependencies:
   window_manager: ^0.5.2
   fl_chart: ^1.2.0
   path: ^1.9.1
+  win32: ^6.4.0
+  win32_registry: ^3.0.3
+  flutter_local_notifications_windows: ^3.1.1
+  ffi: ^2.2.0
 
 dev_dependencies:
   flutter_test:
