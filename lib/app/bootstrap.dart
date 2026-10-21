@@ -5,8 +5,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:dbus/dbus.dart';
-
 import '../core/clock.dart';
 import '../core/engine/engine.dart';
 import '../core/models/break_config.dart';
@@ -16,27 +14,22 @@ import '../data/break_log_repository.dart';
 import '../data/database.dart';
 import '../data/settings_repository.dart';
 import '../data/rollup_repository.dart';
+import '../platform/desktop/window_takeover.dart';
+import '../platform/interfaces/app_log.dart';
 import '../platform/interfaces/autostart.dart';
+import '../platform/interfaces/break_notifier.dart';
 import '../platform/interfaces/sound_player.dart';
 import '../platform/interfaces/tray_indicator.dart';
 import '../platform/interfaces/tray_support.dart';
-import '../platform/linux/github_update_checker.dart';
-import '../platform/linux/gnome_tray_support.dart';
-import '../platform/linux/linux_break_notifier.dart';
-import '../platform/linux/linux_context_signals.dart';
-import '../platform/linux/linux_idle_monitor.dart';
-import '../platform/linux/linux_presentation_signals.dart';
-import '../platform/linux/linux_session_signals.dart';
-import '../platform/linux/linux_sound_player.dart';
-import '../platform/linux/sni_tray.dart';
-import '../platform/desktop/window_takeover.dart';
-import '../platform/linux/xdg_autostart.dart';
+import '../platform/linux/linux_adapters.dart';
+import '../platform/windows/windows_adapters.dart';
 import '../services/activity_recorder.dart';
 import '../services/context_sampler.dart';
 import '../services/engine_service.dart';
 import '../services/exercise_picker.dart';
 import '../services/mood_service.dart';
 import '../services/notification_coordinator.dart';
+import '../services/phase_log.dart';
 import '../services/rollup_service.dart';
 import 'version.dart';
 import '../services/update_service.dart';
@@ -78,14 +71,24 @@ typedef BootResult = ({
   TrayHostSupport traySupport,
   MoodService mood,
   bool moodIndicator,
+  List<int>? traySizes,
+  bool updateChecks,
 });
 
-/// Builds the real object graph: database, engine, Linux adapters,
+/// Builds the real object graph: database, engine, platform adapters,
 /// window takeover, notification coordinator, tray, engine service.
-Future<BootResult> bootstrap() async {
+///
+/// The adapters are the only part that differs between Linux and Windows;
+/// everything built on them is shared.
+Future<BootResult> bootstrap({AppLog log = const NoAppLog()}) async {
   await loadAppVersion();
+  log.info(
+    'startup ${Brand.appName} $appVersion (build ${appBuild ?? '?'}) '
+    'on ${Platform.operatingSystemVersion}',
+  );
 
   final db = AppDatabase.open();
+  log.info('database ${AppDatabase.productionPath}');
   final settings = SettingsRepository(db);
 
   final config = isDevMode ? _devConfig : await settings.loadConfig();
@@ -102,18 +105,18 @@ Future<BootResult> bootstrap() async {
     restoreFrom: snapshot,
   );
 
-  final sessionBus = DBusClient.session();
-  final systemBus = DBusClient.system();
+  final soundsEnabled = await settings.getFlag(
+    SettingsRepository.flagSounds,
+    fallback: true,
+  );
+  final platform = Platform.isWindows
+      ? await windowsAdapters(soundsEnabled: soundsEnabled, log: log)
+      : linuxAdapters(soundsEnabled: soundsEnabled);
   final activityRepo = ActivityRepository(db);
   final breakLogRepo = BreakLogRepository(db);
 
-  final breakNotifier = LinuxBreakNotifier(sessionBus);
-  final sounds = LinuxSoundPlayer(
-    enabled: await settings.getFlag(
-      SettingsRepository.flagSounds,
-      fallback: true,
-    ),
-  );
+  final breakNotifier = platform.notifier;
+  final sounds = platform.sounds;
   // Declared late so the notification's "Return to break" action can reach
   // the window takeover, which is built below.
   late final WindowTakeover overlay;
@@ -124,11 +127,12 @@ Future<BootResult> bootstrap() async {
     onReturnToBreak: () => unawaited(overlay.presentWindow()),
   ).start();
 
-  final traySupport = GnomeTraySupport(sessionBus);
+  final traySupport = platform.traySupport;
 
   // Closing to the background gets a "still running" notice so nobody thinks
   // the app quit.
   overlay = WindowTakeover(
+    ops: platform.windowOps,
     onHiddenToBackground: () => unawaited(
       _maybeShowHideNotice(
         settings,
@@ -138,11 +142,12 @@ Future<BootResult> bootstrap() async {
     ),
   );
   await overlay.init();
+  platform.relaunches.listen((_) => unawaited(overlay.presentWindow()));
 
   // Launch at login is the default: a break reminder that only runs when
   // you remember to start it churns users. One-time so an explicit opt-out
   // in Settings is never overridden on the next start.
-  final autostart = XdgAutostart();
+  final autostart = platform.autostart;
   if (!isDevMode) {
     final applied = await settings.getFlag(
       SettingsRepository.flagAutostartApplied,
@@ -165,28 +170,26 @@ Future<BootResult> bootstrap() async {
     clock: clock,
   ).start();
 
-  unawaited(
-    UpdateService(
-      checker: GithubUpdateChecker(),
-      notifier: breakNotifier,
-      settings: settings,
-      clock: clock,
-    ).maybeCheck().catchError((Object _) => null),
-  );
+  final updateChecker = platform.updateChecker;
+  if (updateChecker != null) {
+    unawaited(
+      UpdateService(
+        checker: updateChecker,
+        notifier: breakNotifier,
+        settings: settings,
+        clock: clock,
+      ).maybeCheck().catchError((Object _) => null),
+    );
+  }
 
   final service =
       EngineService(
           engine: engine,
           clock: clock,
-          idleMonitor: LinuxIdleMonitor(sessionBus),
-          sessionSignals: LinuxSessionSignals(
-            session: sessionBus,
-            system: systemBus,
-          ),
-          sampler: ContextSampler(LinuxContextSignals()),
-          presentation: PresentationSampler(
-            LinuxPresentationSignals(session: sessionBus, system: systemBus),
-          ),
+          idleMonitor: platform.idle,
+          sessionSignals: platform.session,
+          sampler: ContextSampler(platform.context),
+          presentation: PresentationSampler(platform.presentation),
           overlay: overlay,
           breakLog: breakLogRepo,
           settings: settings,
@@ -206,6 +209,7 @@ Future<BootResult> bootstrap() async {
     breaks: breakLogRepo,
   );
   await mood.start();
+  if (log.enabled) PhaseLog(engine: engine, log: log).start();
 
   return (
     db: db,
@@ -220,7 +224,7 @@ Future<BootResult> bootstrap() async {
       ),
     ),
     autostart: autostart,
-    tray: SniTrayIndicator(sessionBus),
+    tray: platform.tray,
     sounds: sounds,
     traySupport: traySupport,
     mood: mood,
@@ -228,6 +232,8 @@ Future<BootResult> bootstrap() async {
       SettingsRepository.flagMoodIndicator,
       fallback: true,
     ),
+    traySizes: platform.traySizes,
+    updateChecks: updateChecker != null,
   );
 }
 
@@ -239,7 +245,7 @@ Future<BootResult> bootstrap() async {
 /// Being mildly repetitive beats leaving someone unable to reach the app.
 Future<void> _maybeShowHideNotice(
   SettingsRepository settings,
-  LinuxBreakNotifier notifier,
+  BreakNotifier notifier,
   TrayHostSupport traySupport,
 ) async {
   final tray = await traySupport.check();

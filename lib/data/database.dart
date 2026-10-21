@@ -27,9 +27,17 @@ part 'database.g.dart';
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
-  static String get _dataHome =>
-      Platform.environment['XDG_DATA_HOME'] ??
-      p.join(Platform.environment['HOME'] ?? '.', '.local', 'share');
+  /// `%APPDATA%` on Windows (roaming, where per-user app data belongs);
+  /// the XDG data home everywhere else.
+  static String get _dataHome => Platform.isWindows
+      ? Platform.environment['APPDATA'] ??
+            p.join(
+              Platform.environment['USERPROFILE'] ?? '.',
+              'AppData',
+              'Roaming',
+            )
+      : Platform.environment['XDG_DATA_HOME'] ??
+            p.join(Platform.environment['HOME'] ?? '.', '.local', 'share');
 
   /// Where the production database lives, resolved without touching the
   /// disk. Startup failures name this path, so it must stay readable even
@@ -38,7 +46,8 @@ class AppDatabase extends _$AppDatabase {
       p.join(_dataHome, 'RestifEye', 'RestifEye.db');
 
   /// Production database at the XDG data location
-  /// (`~/.local/share/RestifEye/RestifEye.db`).
+  /// (`~/.local/share/RestifEye/RestifEye.db`), or
+  /// `%APPDATA%\RestifEye\RestifEye.db` on Windows.
   factory AppDatabase.open() {
     final dataHome = _dataHome;
     final dir = Directory(p.join(dataHome, 'RestifEye'));
