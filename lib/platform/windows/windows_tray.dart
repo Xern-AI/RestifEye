@@ -39,7 +39,9 @@ class WindowsTrayIndicator implements TrayIndicator {
   Future<void> init({required List<TrayPixmap> icons}) async {
     try {
       await _menu(paused: false);
-      if (!await _show(icons)) throw StateError('Shell_NotifyIcon refused');
+      // An Exception, not an Error: main.dart treats a tray that cannot
+      // start as normal and carries on without it.
+      if (!await _show(icons)) throw Exception('Shell_NotifyIcon refused');
       log.info('adapter tray ok');
     } on Object catch (e) {
       log.failure('tray', e);

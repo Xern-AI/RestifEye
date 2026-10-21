@@ -156,8 +156,10 @@ Future<BootResult> bootstrap({AppLog log = const NoAppLog()}) async {
     if (!applied) {
       try {
         await autostart.setEnabled(true);
-      } on FileSystemException {
-        // Read-only config dir — the Settings toggle stays available.
+      } on Exception catch (e) {
+        // Read-only config dir, or a registry write Windows refused — the
+        // Settings toggle stays available.
+        log.failure('autostart', e);
       }
       await settings.setFlag(SettingsRepository.flagAutostartApplied, true);
     }
