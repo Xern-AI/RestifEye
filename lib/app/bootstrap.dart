@@ -29,7 +29,7 @@ import '../platform/linux/linux_presentation_signals.dart';
 import '../platform/linux/linux_session_signals.dart';
 import '../platform/linux/linux_sound_player.dart';
 import '../platform/linux/sni_tray.dart';
-import '../platform/linux/window_takeover.dart';
+import '../platform/desktop/window_takeover.dart';
 import '../platform/linux/xdg_autostart.dart';
 import '../services/activity_recorder.dart';
 import '../services/context_sampler.dart';
