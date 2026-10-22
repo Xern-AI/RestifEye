@@ -19,6 +19,7 @@ import 'windows_runner.dart';
 class WindowsTrayIndicator implements TrayIndicator {
   WindowsTrayIndicator({required this.runner, required this.log}) {
     _sub = runner.trayEvents.listen((event) {
+      log.info('tray $event');
       final action = trayActionFor(event);
       if (action != null && !_actions.isClosed) _actions.add(action);
     });

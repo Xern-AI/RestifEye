@@ -89,4 +89,16 @@ class WindowsRunner {
   /// foreground, which a plain `SetForegroundWindow` is not allowed to do.
   Future<bool> forceForeground() async =>
       await _channel.invokeMethod<bool>('forceForeground') ?? false;
+
+  /// Shows the window and returns only once Windows has shown it.
+  Future<bool> showWindow() async =>
+      await _channel.invokeMethod<bool>('showWindow') ?? false;
+
+  /// Borderless over the whole monitor, or back to the previous frame.
+  Future<bool> setFullScreen(bool on) async =>
+      await _channel.invokeMethod<bool>('setFullScreen', {'on': on}) ?? false;
+
+  /// Whether the full-screen break window is what fills the screen right now.
+  Future<bool> coversScreen() async =>
+      await _channel.invokeMethod<bool>('coversScreen') ?? false;
 }

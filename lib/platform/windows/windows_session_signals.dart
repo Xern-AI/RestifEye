@@ -4,14 +4,16 @@
 
 import 'dart:async';
 
+import '../interfaces/app_log.dart';
 import '../interfaces/session_signals.dart';
 import 'windows_runner.dart';
 
 /// Lock, unlock, sleep and wake, from the runner's window procedure
 /// (`WM_WTSSESSION_CHANGE` and `WM_POWERBROADCAST`).
 class WindowsSessionSignals implements SessionSignals {
-  WindowsSessionSignals(WindowsRunner runner) {
+  WindowsSessionSignals(WindowsRunner runner, {AppLog log = const NoAppLog()}) {
     _sub = runner.sessionEvents.listen((event) {
+      log.info('session $event');
       if (!_controller.isClosed) _controller.add(_state.apply(event));
     });
   }

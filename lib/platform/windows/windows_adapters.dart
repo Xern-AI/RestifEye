@@ -46,7 +46,7 @@ Future<PlatformAdapters> windowsAdapters({
   final idle = WindowsIdleMonitor(log: log);
   await check('idle', idle.probe);
 
-  final session = WindowsSessionSignals(runner);
+  final session = WindowsSessionSignals(runner, log: log);
   await check('session', () async {
     if (!await runner.startSessionEvents()) {
       throw StateError('WTSRegisterSessionNotification refused');
@@ -83,7 +83,7 @@ Future<PlatformAdapters> windowsAdapters({
     notifier: notifier,
     sounds: sounds,
     traySupport: const WindowsTraySupport(),
-    windowOps: WindowsWindowOps(runner),
+    windowOps: WindowsWindowOps(runner, log),
     autostart: autostart,
     updateChecker: null,
     idle: idle,

@@ -46,6 +46,9 @@ class DesktopBridge {
   void ShowTrayMenu(int x, int y);
   bool ForceForeground();
   void ShowMainWindow();
+  bool ShowSynchronously();
+  bool SetFullScreen(bool on);
+  bool CoversScreen();
   void Send(const char* method, const std::string& argument);
 
   HWND main_window_;
@@ -60,6 +63,12 @@ class DesktopBridge {
   std::wstring menu_quit_ = L"Quit";
   bool session_registered_ = false;
   UINT taskbar_created_ = 0;
+
+  // The window as it was before a break took the whole screen.
+  bool fullscreen_ = false;
+  LONG_PTR saved_style_ = 0;
+  RECT saved_rect_ = {};
+  bool saved_zoomed_ = false;
 };
 
 #endif  // RUNNER_DESKTOP_BRIDGE_H_

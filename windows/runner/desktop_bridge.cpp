@@ -216,6 +216,14 @@ void DesktopBridge::HandleMethodCall(
     result->Success();
   } else if (method == "forceForeground") {
     result->Success(flutter::EncodableValue(ForceForeground()));
+  } else if (method == "showWindow") {
+    result->Success(flutter::EncodableValue(ShowSynchronously()));
+  } else if (method == "setFullScreen" && args) {
+    const auto* on = Field(*args, "on");
+    const auto* flag = on ? std::get_if<bool>(on) : nullptr;
+    result->Success(flutter::EncodableValue(flag && SetFullScreen(*flag)));
+  } else if (method == "coversScreen") {
+    result->Success(flutter::EncodableValue(CoversScreen()));
   } else {
     result->NotImplemented();
   }
@@ -302,6 +310,75 @@ bool DesktopBridge::ForceForeground() {
   ::SetForegroundWindow(main_window_);
   if (attached) ::AttachThreadInput(theirs, ours, FALSE);
   return ::GetForegroundWindow() == main_window_;
+}
+
+// window_manager shows with ShowWindowAsync, which returns before the window
+// is visible; sizing or focusing it in that gap left a break window at the
+// wrong size and without focus. This returns only once Windows has shown it.
+bool DesktopBridge::ShowSynchronously() {
+  ::ShowWindow(main_window_, ::IsIconic(main_window_) ? SW_RESTORE : SW_SHOW);
+  ::UpdateWindow(main_window_);
+  return ::IsWindowVisible(main_window_) != FALSE;
+}
+
+// Borderless and exactly the size of the window's monitor, covering the
+// taskbar. The previous style and frame are kept so leaving restores them.
+bool DesktopBridge::SetFullScreen(bool on) {
+  if (on == fullscreen_) return true;
+  constexpr UINT kFrame = SWP_NOOWNERZORDER | SWP_FRAMECHANGED;
+  if (on) {
+    MONITORINFO monitor = {};
+    monitor.cbSize = sizeof(monitor);
+    if (!::GetMonitorInfoW(
+            ::MonitorFromWindow(main_window_, MONITOR_DEFAULTTONEAREST),
+            &monitor)) {
+      return false;
+    }
+    saved_style_ = ::GetWindowLongPtrW(main_window_, GWL_STYLE);
+    saved_zoomed_ = ::IsZoomed(main_window_) != FALSE;
+    ::GetWindowRect(main_window_, &saved_rect_);
+    const LONG_PTR frameless =
+        (saved_style_ & ~static_cast<LONG_PTR>(WS_OVERLAPPEDWINDOW)) |
+        static_cast<LONG_PTR>(WS_POPUP);
+    ::SetWindowLongPtrW(main_window_, GWL_STYLE, frameless);
+    const RECT& area = monitor.rcMonitor;
+    ::SetWindowPos(main_window_, HWND_TOP, area.left, area.top,
+                   area.right - area.left, area.bottom - area.top,
+                   kFrame | SWP_SHOWWINDOW);
+    fullscreen_ = true;
+    return true;
+  }
+  ::SetWindowLongPtrW(main_window_, GWL_STYLE, saved_style_);
+  ::SetWindowPos(main_window_, nullptr, saved_rect_.left, saved_rect_.top,
+                 saved_rect_.right - saved_rect_.left,
+                 saved_rect_.bottom - saved_rect_.top,
+                 kFrame | SWP_NOZORDER | SWP_NOACTIVATE);
+  if (saved_zoomed_) ::ShowWindow(main_window_, SW_MAXIMIZE);
+  fullscreen_ = false;
+  return true;
+}
+
+// Whether the full-screen break is what the user is looking at, whichever app
+// holds the keyboard: our window is the one at the centre of its monitor.
+// Alt+Tab leaves a topmost break on top (true); Win+D, minimising or Task View
+// uncover the screen (false).
+bool DesktopBridge::CoversScreen() {
+  if (!fullscreen_ || !::IsWindowVisible(main_window_) ||
+      ::IsIconic(main_window_)) {
+    return false;
+  }
+  MONITORINFO monitor = {};
+  monitor.cbSize = sizeof(monitor);
+  if (!::GetMonitorInfoW(
+          ::MonitorFromWindow(main_window_, MONITOR_DEFAULTTONEAREST),
+          &monitor)) {
+    return false;
+  }
+  const RECT& area = monitor.rcMonitor;
+  const POINT centre = {(area.left + area.right) / 2,
+                        (area.top + area.bottom) / 2};
+  HWND hit = ::WindowFromPoint(centre);
+  return hit && ::GetAncestor(hit, GA_ROOT) == main_window_;
 }
 
 void DesktopBridge::ShowMainWindow() {

@@ -82,6 +82,7 @@ class WindowsBreakNotifier implements BreakNotifier {
   }
 
   void _onActivated(String argument) {
+    log.info('notification ${argument.isEmpty ? 'clicked' : argument}');
     final action = warningActionFor(argument);
     if (action != null && !_actions.isClosed) _actions.add(action);
   }
