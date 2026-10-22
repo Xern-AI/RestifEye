@@ -46,13 +46,16 @@ void main() {
     expect(await autostart.isEnabled(), isTrue);
   });
 
-  test('enabling here clears a Task Manager "disabled" mark', () async {
+  test('enabling here writes Task Manager\'s own "enabled" mark', () async {
     await autostart.setEnabled(true);
     registry.set(_approved, _name, _approval(0x03));
 
     await autostart.setEnabled(true);
-    expect(registry.readBinary(_approved, _name), isNull);
+    expect(registry.readBinary(_approved, _name), _approval(0x02));
     expect(await autostart.isEnabled(), isTrue);
+
+    await autostart.setEnabled(false);
+    expect(registry.readBinary(_approved, _name), isNull);
   });
 
   test('StartupApproved: odd first byte is disabled, absent is not', () {

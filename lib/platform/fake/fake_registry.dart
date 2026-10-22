@@ -58,6 +58,10 @@ class FakeUserRegistry implements UserRegistry {
       set(path, name, value);
 
   @override
+  void writeBinary(String path, String name, Uint8List value) =>
+      set(path, name, value);
+
+  @override
   void deleteValue(String path, String name) =>
       _keys[_norm(path)]?.remove(name);
 }

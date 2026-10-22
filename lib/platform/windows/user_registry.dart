@@ -19,6 +19,7 @@ abstract interface class UserRegistry {
   Uint8List? readBinary(String path, String name);
   List<String> subkeys(String path);
   void writeString(String path, String name, String value);
+  void writeBinary(String path, String name, Uint8List value);
   void deleteValue(String path, String name);
 }
 
@@ -61,10 +62,17 @@ class Win32UserRegistry implements UserRegistry {
   List<String> subkeys(String path) => _withKey(path, (k) => k.keys) ?? [];
 
   @override
-  void writeString(String path, String name, String value) {
+  void writeString(String path, String name, String value) =>
+      _write(path, name, StringValue(value));
+
+  @override
+  void writeBinary(String path, String name, Uint8List value) =>
+      _write(path, name, BinaryValue(value));
+
+  void _write(String path, String name, RegistryValue value) {
     final key = CURRENT_USER.create(path);
     try {
-      key.setValue(name, StringValue(value));
+      key.setValue(name, value);
     } finally {
       key.close();
     }

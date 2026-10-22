@@ -77,7 +77,8 @@ RestifEye reminds you to rest your eyes and move, on a schedule that adapts to w
 - Holds breaks during full-screen video, full-screen games and presentation mode, using the same signal Windows uses to hold back its own notifications. *Non-trivial: its own full-screen break would read as "a film is playing"; it recognises itself and never pauses its own break.*
 - The tray face, drawn at the exact pixel size Windows uses at every display scale from 100% to 300%, with Open / Pause / Quit; comes back by itself if Explorer restarts.
 - The 30-second warning as a Windows notification with Start now / Snooze / Skip, and a "Break paused" notice that stays on screen until acted on.
-- A break can take the foreground even when another app is in front, so the break clock (which only runs while the break has focus) starts straight away. *Non-trivial: Windows normally refuses this to background apps and just flashes the taskbar.*
+- A break can take the foreground even when another app is in front, so the break clock starts straight away. *Non-trivial: Windows normally refuses this to background apps and just flashes the taskbar.*
+- On Windows a full-screen break stays in front through Alt+Tab, and the break keeps counting as long as it still fills the screen; uncovering the screen (Win+D, minimising) holds the clock, as on Linux. *Non-trivial: the check is "is our window the one at the centre of the screen", not "do we have the keyboard".*
 - Starts with Windows, respects being switched off in Task Manager, and re-points itself when a newer copy is unpacked somewhere else.
 - One copy per user: launching again shows the running window.
 - Sounds from your own Windows sound scheme; silent if you silenced them.
@@ -104,7 +105,7 @@ Honest read: Safe Eyes is the closest competitor and is genuinely good on Waylan
 
 ## Numbers
 
-- **298 automated tests** (45 added for the Windows work, all running on Linux against fakes), `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
+- **306 automated tests** (53 added for the Windows work, all running on Linux against fakes), `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
 - **1 Hz** deterministic engine tick; monotonic clock for all interval maths, wall clock only where wall clock is the right answer.
 - **52** exercises across 3 intensity tiers (10 eye, 42 movement); **7** tray moods; **5** rendered icon sizes (22–64 px).
 - Break clock held to **5 s per tick** at most while you are away, so a suspend cannot add hours to a break; a **10-second** hold before the "break paused" notice.

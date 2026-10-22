@@ -31,16 +31,22 @@ class WindowsAutostart implements Autostart {
       registry.readString(runPath, valueName) != null &&
       !startupApprovedDisabled(registry.readBinary(approvedPath, valueName));
 
-  /// Enabling from Settings also clears a Task Manager "disabled" mark: the
-  /// user has just asked for it here, which is the newer decision.
+  /// Enabling from Settings also overrides a Task Manager "disabled" mark:
+  /// the user has just asked for it here, which is the newer decision. It
+  /// writes the same "enabled" mark Task Manager writes, because the first
+  /// Windows test showed Task Manager still listing the app as disabled when
+  /// the mark was merely deleted.
   @override
   Future<void> setEnabled(bool enabled) async {
     if (enabled) {
-      registry.writeString(runPath, valueName, runCommandFor(executable));
+      registry
+        ..writeString(runPath, valueName, runCommandFor(executable))
+        ..writeBinary(approvedPath, valueName, startupApprovedEnabled);
     } else {
-      registry.deleteValue(runPath, valueName);
+      registry
+        ..deleteValue(runPath, valueName)
+        ..deleteValue(approvedPath, valueName);
     }
-    registry.deleteValue(approvedPath, valueName);
   }
 
   /// Points an enabled entry at this copy of the app.
@@ -59,6 +65,9 @@ class WindowsAutostart implements Autostart {
     return true;
   }
 }
+
+/// Task Manager's "enabled" mark: `02` followed by eleven zero bytes.
+final startupApprovedEnabled = Uint8List.fromList([2, ...List.filled(11, 0)]);
 
 /// Quoted, because the folder a zip is unpacked to often contains spaces.
 String runCommandFor(String executable) => '"$executable"';
