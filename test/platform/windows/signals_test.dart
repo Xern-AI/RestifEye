@@ -97,6 +97,7 @@ void main() {
           presentationFrom(
             state: state,
             foregroundIsOurs: false,
+            foregroundCoversMonitor: true,
             foregroundApp: 'chrome',
           ),
           const PresentationState(active: true, byApp: 'chrome'),
@@ -107,7 +108,11 @@ void main() {
     test('everything else does not', () {
       for (final state in [1, 5, 6, 7]) {
         expect(
-          presentationFrom(state: state, foregroundIsOurs: false),
+          presentationFrom(
+            state: state,
+            foregroundIsOurs: false,
+            foregroundCoversMonitor: true,
+          ),
           PresentationState.idle,
         );
       }
@@ -115,16 +120,82 @@ void main() {
 
     test('our own full-screen break never pauses itself', () {
       expect(
-        presentationFrom(state: 2, foregroundIsOurs: true, foregroundApp: 'x'),
+        presentationFrom(
+          state: 2,
+          foregroundIsOurs: true,
+          foregroundCoversMonitor: true,
+          foregroundApp: 'x',
+        ),
         PresentationState.idle,
+      );
+    });
+
+    test('a lagging full-screen answer with a normal window in front is no '
+        'film (the "paused media by Notepad" after every break)', () {
+      for (final state in [2, 3]) {
+        expect(
+          presentationFrom(
+            state: state,
+            foregroundIsOurs: false,
+            foregroundCoversMonitor: false,
+            foregroundApp: 'Notepad',
+          ),
+          PresentationState.idle,
+        );
+      }
+    });
+
+    test('presentation mode is a setting and counts without a window', () {
+      expect(
+        presentationFrom(
+          state: 4,
+          foregroundIsOurs: false,
+          foregroundCoversMonitor: false,
+        ).active,
+        isTrue,
       );
     });
 
     test('an unnamed app still pauses, without a name', () {
       expect(
-        presentationFrom(state: 3, foregroundIsOurs: false, foregroundApp: ' '),
+        presentationFrom(
+          state: 3,
+          foregroundIsOurs: false,
+          foregroundCoversMonitor: true,
+          foregroundApp: ' ',
+        ),
         const PresentationState(active: true),
       );
+    });
+
+    group('coversMonitor', () {
+      const monitor = (left: 0, top: 0, right: 1920, bottom: 1080);
+
+      test('a full-screen window covers its monitor', () {
+        expect(coversMonitor(window: monitor, monitor: monitor), isTrue);
+      });
+
+      test('a maximised window stops at the taskbar', () {
+        expect(
+          coversMonitor(
+            window: (left: -8, top: -8, right: 1928, bottom: 1040),
+            monitor: monitor,
+          ),
+          isFalse,
+        );
+      });
+
+      test('works on a second monitor to the left', () {
+        const left = (left: -2560, top: 0, right: 0, bottom: 1440);
+        expect(coversMonitor(window: left, monitor: left), isTrue);
+        expect(
+          coversMonitor(
+            window: (left: -2000, top: 100, right: -500, bottom: 900),
+            monitor: left,
+          ),
+          isFalse,
+        );
+      });
     });
   });
 

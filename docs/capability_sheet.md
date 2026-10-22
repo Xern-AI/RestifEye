@@ -105,7 +105,7 @@ Honest read: Safe Eyes is the closest competitor and is genuinely good on Waylan
 
 ## Numbers
 
-- **306 automated tests** (53 added for the Windows work, all running on Linux against fakes), `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
+- **311 automated tests** (58 added for the Windows work, all running on Linux against fakes), `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
 - **1 Hz** deterministic engine tick; monotonic clock for all interval maths, wall clock only where wall clock is the right answer.
 - **52** exercises across 3 intensity tiers (10 eye, 42 movement); **7** tray moods; **5** rendered icon sizes (22–64 px).
 - Break clock held to **5 s per tick** at most while you are away, so a suspend cannot add hours to a break; a **10-second** hold before the "break paused" notice.

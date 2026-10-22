@@ -44,6 +44,7 @@ class WindowsPresentationSignals implements PresentationSignals {
       return presentationFrom(
         state: state,
         foregroundIsOurs: owner.pid == pid,
+        foregroundCoversMonitor: _foregroundCoversMonitor(),
         foregroundApp: owner.app,
       );
     } on Object catch (e) {
@@ -58,6 +59,21 @@ class WindowsPresentationSignals implements PresentationSignals {
     final hr = _query(out);
     if (hr != 0) throw StateError('SHQueryUserNotificationState hr=$hr');
     return out.value;
+  });
+
+  bool _foregroundCoversMonitor() => using((arena) {
+    final window = GetForegroundWindow();
+    final rect = arena<RECT>();
+    if (!GetWindowRect(window, rect).value) return false;
+    final monitor = arena<MONITORINFO>()..ref.cbSize = sizeOf<MONITORINFO>();
+    final handle = MonitorFromWindow(window, MONITOR_DEFAULTTONEAREST);
+    if (!GetMonitorInfo(handle, monitor)) return false;
+    final w = rect.ref;
+    final m = monitor.ref.rcMonitor;
+    return coversMonitor(
+      window: (left: w.left, top: w.top, right: w.right, bottom: w.bottom),
+      monitor: (left: m.left, top: m.top, right: m.right, bottom: m.bottom),
+    );
   });
 
   ({int pid, String? app}) _foregroundProcess() => using((arena) {
@@ -94,15 +110,29 @@ class WindowsPresentationSignals implements PresentationSignals {
 /// "accepts notifications" are not something on screen to protect.
 const quietStates = {2, 3, 4};
 
-/// Maps the query result to a pause, ignoring our own break window: a
-/// full-screen break would otherwise report itself as a film and pause the
-/// very break it is showing.
+/// `QUNS_PRESENTATION_MODE` is a Windows setting rather than a window, so it
+/// needs no full-screen window in front to count.
+const _presentationMode = 4;
+
+/// Maps the query result to a pause.
+///
+/// Ignores our own break window, which would otherwise report itself as a
+/// film and pause the very break it is showing. And for the full-screen
+/// states it also requires the app in front to actually cover its monitor:
+/// Windows' answer lags a second or two behind a window leaving full screen,
+/// and the first Windows test logged "paused media by Notepad" just after
+/// every full-screen break, when the lagging answer met whatever app got the
+/// focus back.
 PresentationState presentationFrom({
   required int state,
   required bool foregroundIsOurs,
+  required bool foregroundCoversMonitor,
   String? foregroundApp,
 }) {
   if (!quietStates.contains(state) || foregroundIsOurs) {
+    return PresentationState.idle;
+  }
+  if (state != _presentationMode && !foregroundCoversMonitor) {
     return PresentationState.idle;
   }
   final app = foregroundApp?.trim();
@@ -111,3 +141,14 @@ PresentationState presentationFrom({
     byApp: app == null || app.isEmpty ? null : app,
   );
 }
+
+typedef ScreenRect = ({int left, int top, int right, int bottom});
+
+/// Whether [window] spans the whole of [monitor], as a full-screen video,
+/// slide show or game does. A maximised window stops at the taskbar, so it
+/// does not.
+bool coversMonitor({required ScreenRect window, required ScreenRect monitor}) =>
+    window.left <= monitor.left &&
+    window.top <= monitor.top &&
+    window.right >= monitor.right &&
+    window.bottom >= monitor.bottom;
