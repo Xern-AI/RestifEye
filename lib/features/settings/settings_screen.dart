@@ -195,17 +195,20 @@ class SettingsScreen extends ConsumerWidget {
               onChanged: (v) =>
                   ref.read(generalSettingsProvider.notifier).setAutostart(v),
             ),
-            SwitchListTile(
-              secondary: const Icon(Icons.system_update_alt_outlined),
-              title: const Text('Check for updates weekly'),
-              subtitle: const Text(
-                'The only network request RestifEye ever makes',
+            if (ref.watch(updateCheckAvailableProvider))
+              SwitchListTile(
+                secondary: const Icon(Icons.system_update_alt_outlined),
+                title: const Text('Check for updates weekly'),
+                subtitle: const Text(
+                  'The only network request RestifEye ever makes',
+                ),
+                value:
+                    ref.watch(generalSettingsProvider).value?.updateCheck ??
+                    true,
+                onChanged: (v) => ref
+                    .read(generalSettingsProvider.notifier)
+                    .setUpdateCheck(v),
               ),
-              value:
-                  ref.watch(generalSettingsProvider).value?.updateCheck ?? true,
-              onChanged: (v) =>
-                  ref.read(generalSettingsProvider.notifier).setUpdateCheck(v),
-            ),
             const _SectionHeader('About'),
             ListTile(
               leading: const Icon(Icons.tag_outlined),
@@ -248,7 +251,10 @@ class _TrayTile extends ConsumerWidget {
     final name = support?.extensionName ?? 'the AppIndicator extension';
 
     final (subtitle, action) = switch (support?.state) {
-      TrayState.working => ('Showing in the top bar', null),
+      TrayState.working => (
+        'Showing in ${support?.location ?? 'the top bar'}',
+        null,
+      ),
       TrayState.extensionDisabled => (
         'Needs the “$name” GNOME extension, which you already have '
             'installed — it is just switched off',

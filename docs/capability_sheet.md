@@ -4,7 +4,7 @@
 
 ## One-liner
 
-Break reminders for Linux that read the room instead of nagging you.
+Break reminders for Linux (Windows in testing) that read the room instead of nagging you.
 
 ## 60-second version
 
@@ -70,6 +70,21 @@ RestifEye reminds you to rest your eyes and move, on a schedule that adapts to w
 - Upgrades that change the database are all-or-nothing and can be re-run safely. Killing the app mid-upgrade rolls back cleanly, and a database left half-upgraded by an older build repairs itself on the next launch instead of refusing to start — your history is never wiped to recover.
 - If the app cannot start at all, it says so on screen with the error, the version and the database path, plus a Copy details button — rather than showing an empty window that tells you nothing.
 
+**Windows (test build, v0.2.0 — not yet released)**
+- The same app on Windows 10/11: one shared engine, screens and data; only the platform layer is new, and the Linux build still ships the same libraries and links the same system libraries as before. *Non-trivial: every OS-specific call sat behind an interface from day one, so the port is twelve small adapters rather than a rewrite.*
+- Knows you are away from the last keyboard or mouse input, from a screen lock (Win+L), and from sleep and wake.
+- Waits for meetings by reading which apps have the microphone or camera open — the same record behind the Windows privacy indicator — for Store apps and ordinary programs alike.
+- Holds breaks during full-screen video, full-screen games and presentation mode, using the same signal Windows uses to hold back its own notifications. *Non-trivial: its own full-screen break would read as "a film is playing"; it recognises itself and never pauses its own break.*
+- The tray face, drawn at the exact pixel size Windows uses at every display scale from 100% to 300%, with Open / Pause / Quit; comes back by itself if Explorer restarts.
+- The 30-second warning as a Windows notification with Start now / Snooze / Skip, and a "Break paused" notice that stays on screen until acted on.
+- A break can take the foreground even when another app is in front, so the break clock starts straight away. *Non-trivial: Windows normally refuses this to background apps and just flashes the taskbar.*
+- On Windows a full-screen break stays in front through Alt+Tab, and the break keeps counting as long as it still fills the screen; uncovering the screen (Win+D, minimising) holds the clock, as on Linux. *Non-trivial: the check is "is our window the one at the centre of the screen", not "do we have the keyboard".*
+- Starts with Windows, respects being switched off in Task Manager, and re-points itself when a newer copy is unpacked somewhere else.
+- One copy per user: launching again shows the running window.
+- Sounds from your own Windows sound scheme; silent if you silenced them.
+- A plain daily log in `%APPDATA%\RestifEye\logs` (every component that started or failed, every break phase), so a bug report is one paste.
+- Built, tested and smoke-run on Windows by CI on every push, and delivered only to a private repo — no Windows tools needed on the tester's machine.
+
 ## Competitive edge
 
 *Checked against public docs, July 2026. Say "last I checked" when quoting these — they move.*
@@ -90,7 +105,7 @@ Honest read: Safe Eyes is the closest competitor and is genuinely good on Waylan
 
 ## Numbers
 
-- **253 automated tests**, `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
+- **311 automated tests** (58 added for the Windows work, all running on Linux against fakes), `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
 - **1 Hz** deterministic engine tick; monotonic clock for all interval maths, wall clock only where wall clock is the right answer.
 - **52** exercises across 3 intensity tiers (10 eye, 42 movement); **7** tray moods; **5** rendered icon sizes (22–64 px).
 - Break clock held to **5 s per tick** at most while you are away, so a suspend cannot add hours to a break; a **10-second** hold before the "break paused" notice.

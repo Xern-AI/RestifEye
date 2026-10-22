@@ -25,9 +25,12 @@ enum TrayState {
 /// StatusNotifierItem host. Rather than document that and hope, the app
 /// detects it and offers to fix it.
 class TraySupport {
-  const TraySupport(this.state, {this.extensionName});
+  const TraySupport(this.state, {this.extensionName, this.location});
 
   final TrayState state;
+
+  /// Where a working icon shows, in words. Null means GNOME's top bar.
+  final String? location;
 
   /// e.g. "AppIndicator and KStatusNotifierItem Support" — named verbatim so
   /// the user can tell which of their extensions is the one that matters.

@@ -3,16 +3,22 @@
 // license that can be found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 
 import 'app/app.dart';
 import 'app/bootstrap.dart';
 import 'app/startup_failure.dart';
 import 'app/tray_face.dart';
 import 'core/mood/mood.dart';
+import 'data/database.dart';
+import 'platform/interfaces/app_log.dart';
 import 'platform/interfaces/tray_indicator.dart';
+import 'platform/windows/file_app_log.dart';
 import 'services/app_lifecycle.dart';
 import 'services/providers.dart';
 import 'services/tray_mood_presenter.dart';
@@ -20,12 +26,16 @@ import 'services/tray_mood_presenter.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  final log = _openLog();
+  if (log.enabled) _logUncaughtErrors(log);
+
   final BootResult boot;
   try {
-    boot = await bootstrap();
+    boot = await bootstrap(log: log);
   } catch (error, stack) {
     // The runner shows the GTK window before Dart starts, so an unhandled
     // failure here leaves a blank window with no way to tell what broke.
+    log.error(error, stack);
     runApp(StartupFailureApp(error: error, stack: stack));
     return;
   }
@@ -48,6 +58,7 @@ Future<void> main() async {
       appLifecycleProvider.overrideWithValue(lifecycle),
       soundPlayerProvider.overrideWithValue(boot.sounds),
       trayHostSupportProvider.overrideWithValue(boot.traySupport),
+      updateCheckAvailableProvider.overrideWithValue(boot.updateChecks),
     ],
   );
 
@@ -59,6 +70,28 @@ Future<void> main() async {
       child: const RestifEyeApp(),
     ),
   );
+  log.info('startup complete');
+}
+
+/// The Windows test build keeps a log a tester can paste back, beside the
+/// database. Linux keeps none, as before.
+AppLog _openLog() => Platform.isWindows
+    ? FileAppLog(
+        Directory(p.join(p.dirname(AppDatabase.productionPath), 'logs')),
+      )
+    : const NoAppLog();
+
+/// Records what would otherwise vanish, then lets Flutter report it as usual.
+void _logUncaughtErrors(AppLog log) {
+  final previous = FlutterError.onError;
+  FlutterError.onError = (details) {
+    log.error(details.exception, details.stack);
+    previous?.call(details);
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    log.error(error, stack);
+    return false;
+  };
 }
 
 /// Tray icon: the visible "RestifEye is running" signal. Failures must
@@ -73,7 +106,9 @@ Future<void> _wireTray(
   // to see.
   final initial = boot.moodIndicator ? boot.mood.current : Mood.good;
   try {
-    await boot.tray.init(icons: await renderTrayFace(initial));
+    await boot.tray.init(
+      icons: await renderTrayFace(initial, sizes: boot.traySizes),
+    );
   } on Exception {
     return; // no status area / no bus — the app works without it
   }
@@ -84,6 +119,7 @@ Future<void> _wireTray(
     moods: boot.mood.moods,
     enabled: boot.moodIndicator,
     initial: boot.mood.current,
+    sizes: boot.traySizes,
   );
   container.read(trayMoodPresenterProvider).presenter = presenter;
   await presenter.start();

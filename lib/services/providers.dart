@@ -138,6 +138,11 @@ final autostartProvider = Provider<Autostart>(
   (ref) => throw UnimplementedError('override in bootstrap'),
 );
 
+/// Whether this build checks for updates itself. False on Windows, where
+/// there are no public releases to compare against and the Store will
+/// deliver updates, so Settings has no switch to show.
+final updateCheckAvailableProvider = Provider<bool>((ref) => true);
+
 final rollupRepositoryProvider = Provider<RollupRepository>(
   (ref) => RollupRepository(ref.watch(databaseProvider)),
 );

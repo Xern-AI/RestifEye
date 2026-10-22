@@ -4,8 +4,8 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:restifeye/platform/interfaces/overlay_controller.dart';
-import 'package:restifeye/platform/linux/window_ops.dart';
-import 'package:restifeye/platform/linux/window_takeover.dart';
+import 'package:restifeye/platform/desktop/window_ops.dart';
+import 'package:restifeye/platform/desktop/window_takeover.dart';
 import 'package:window_manager/window_manager.dart';
 
 /// Records the order window calls land in — the only thing that has ever

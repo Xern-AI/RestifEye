@@ -19,6 +19,7 @@ class TrayMoodPresenter {
     required this._moods,
     this.enabled = true,
     Mood initial = Mood.good,
+    this.sizes,
   }) : _mood = initial;
 
   /// A short acknowledgement, not an idle animation.
@@ -37,6 +38,9 @@ class TrayMoodPresenter {
 
   /// When off, the icon stays on the neutral brand face.
   bool enabled;
+
+  /// Face sizes to render; null keeps `renderTrayFace`'s default set.
+  final List<int>? sizes;
 
   StreamSubscription<Mood>? _sub;
   Timer? _demo;
@@ -96,7 +100,7 @@ class TrayMoodPresenter {
 
   Future<void> _apply(Mood mood, int token, {double scale = 1}) =>
       _enqueue(() async {
-        final icons = await renderTrayFace(mood, scale: scale);
+        final icons = await renderTrayFace(mood, scale: scale, sizes: sizes);
         // Rendering five sizes takes long enough for the mood to have moved
         // on. Writing this frame now would leave the tray showing a mood we
         // already know is stale, and the next real change might be minutes
