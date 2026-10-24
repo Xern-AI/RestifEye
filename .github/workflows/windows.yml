@@ -137,11 +137,12 @@ jobs:
           if ($log) { Get-Content $log.FullName | Select-Object -Last 40 } else { Write-Host "(no log file)" }
           Write-Host "-------------------------"
 
+          # Read before uninstalling: removing the package deletes its data.
+          $text = if ($log) { (Get-Content $log.FullName | Select-Object -Last 40) -join "`n" } else { '' }
           if ($app) { $app | Stop-Process -Force }
           Remove-AppxPackage -Package $package.PackageFullName
           if (-not $app) { throw "The Store build was not running after 20 seconds" }
           if (-not $log) { throw "The Store build wrote no log" }
-          $text = (Get-Content $log.FullName | Select-Object -Last 40) -join "`n"
           if ($text -notmatch "Store build") { throw "The package did not run as a Store build" }
           if ($text -notmatch "licence trial, 14 days left") { throw "The trial did not start" }
           if ($text -notmatch "startup complete") { throw "The log never reached 'startup complete'" }
