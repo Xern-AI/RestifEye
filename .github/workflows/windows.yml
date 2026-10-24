@@ -80,6 +80,73 @@ jobs:
           if ($text -match " (FAIL|ERROR) ") { throw "The log shows an adapter failure or an uncaught error" }
           if ($text -match "startup RestifEye 0\.0\.0") { throw "The app could not read its own version" }
 
+      # The Microsoft Store package. Microsoft signs it on upload. An MSIX
+      # version's last part must be 0 and every upload needs a higher version,
+      # so the build number becomes the third part: 0.3.0+16 -> 0.3.16.0.
+      - name: Store package
+        shell: pwsh
+        run: |
+          $full = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(\S+)').Matches[0].Groups[1].Value
+          $version, $build = $full.Split('+')
+          $major, $minor, $null = $version.Split('.')
+          $msixVersion = "$major.$minor.$build.0"
+          dart run msix:create --store --build-windows false --version $msixVersion --output-path build\msix --output-name RestifEye
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path build\msix\RestifEye.msix)) { throw "No Store package was produced" }
+          Write-Host "Store package version $msixVersion"
+
+      # Installs the Store package the way Windows installs an app (signed
+      # here with a throwaway certificate carrying the Store publisher name,
+      # which never leaves this runner), runs it for 20 seconds, and requires
+      # its log to show a Store build that started cleanly with its trial.
+      # This is the only place the Store-only code runs before the Store does.
+      - name: Store package smoke test
+        shell: pwsh
+        run: |
+          $publisher = 'CN=794EA849-0120-4E1B-822E-5576A7C84BA6'
+          $cert = New-SelfSignedCertificate -Type Custom -Subject $publisher -KeyUsage DigitalSignature `
+            -CertStoreLocation 'Cert:\CurrentUser\My' `
+            -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
+          $pfx = Join-Path $env:RUNNER_TEMP 'ci-signing.pfx'
+          $password = ConvertTo-SecureString -String 'ci-only' -Force -AsPlainText
+          Export-PfxCertificate -Cert $cert -FilePath $pfx -Password $password | Out-Null
+          Import-PfxCertificate -FilePath $pfx -CertStoreLocation 'Cert:\LocalMachine\TrustedPeople' -Password $password | Out-Null
+
+          $signed = Join-Path $env:RUNNER_TEMP 'RestifEye-ci-signed.msix'
+          Copy-Item build\msix\RestifEye.msix $signed
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName | Select-Object -Last 1
+          & $signtool.FullName sign /fd SHA256 /f $pfx /p ci-only $signed | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "Signing the test copy failed" }
+
+          Get-Process RestifEye -ErrorAction SilentlyContinue | Stop-Process -Force
+          Remove-Item -Recurse -Force (Join-Path $env:APPDATA 'RestifEye') -ErrorAction SilentlyContinue
+          Add-AppxPackage -Path $signed
+          $package = Get-AppxPackage -Name 'XernAI.Restifeye'
+          if (-not $package) { throw "The Store package did not install" }
+          Start-Process "shell:AppsFolder\$($package.PackageFamilyName)!restifeye"
+          Start-Sleep -Seconds 20
+          $app = Get-Process RestifEye -ErrorAction SilentlyContinue
+
+          $roots = @(
+            (Join-Path $env:LOCALAPPDATA "Packages\$($package.PackageFamilyName)\LocalCache\Roaming\RestifEye\logs"),
+            (Join-Path $env:APPDATA 'RestifEye\logs'))
+          $log = $roots | Where-Object { Test-Path $_ } |
+            ForEach-Object { Get-ChildItem $_ -Filter 'restifeye-*.log' } |
+            Sort-Object LastWriteTime | Select-Object -Last 1
+          Write-Host "----- RestifEye Store build log ($($log.FullName)) -----"
+          if ($log) { Get-Content $log.FullName | Select-Object -Last 40 } else { Write-Host "(no log file)" }
+          Write-Host "-------------------------"
+
+          if ($app) { $app | Stop-Process -Force }
+          Remove-AppxPackage -Package $package.PackageFullName
+          if (-not $app) { throw "The Store build was not running after 20 seconds" }
+          if (-not $log) { throw "The Store build wrote no log" }
+          $text = (Get-Content $log.FullName | Select-Object -Last 40) -join "`n"
+          if ($text -notmatch "Store build") { throw "The package did not run as a Store build" }
+          if ($text -notmatch "licence trial, 14 days left") { throw "The trial did not start" }
+          if ($text -notmatch "startup complete") { throw "The log never reached 'startup complete'" }
+          if ($text -match " (FAIL|ERROR) ") { throw "The Store build log shows a failure" }
+
       - name: Package
         id: package
         if: github.repository == 'Xern-AI/RestifEye' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
@@ -91,6 +158,9 @@ jobs:
           $zip = "RestifEye-$version-$sha-windows-x64.zip"
           Compress-Archive -Path "build\windows\x64\runner\Release\*" -DestinationPath $zip
           "zip=$zip" >> $env:GITHUB_OUTPUT
+          $msix = "RestifEye-$version-$sha-store.msix"
+          Copy-Item build\msix\RestifEye.msix $msix
+          "msix=$msix" >> $env:GITHUB_OUTPUT
           "tag=windows-v$version-b$build-r${{ github.run_number }}-$sha" >> $env:GITHUB_OUTPUT
           "title=RestifEye $full ($sha) for Windows" >> $env:GITHUB_OUTPUT
 
@@ -102,13 +172,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.WINDOWS_BUILDS_TOKEN }}
           ZIP: ${{ steps.package.outputs.zip }}
+          MSIX: ${{ steps.package.outputs.msix }}
           TAG: ${{ steps.package.outputs.tag }}
           TITLE: ${{ steps.package.outputs.title }}
           BRANCH: ${{ github.ref_name }}
         run: |
           if (-not $env:GH_TOKEN) { throw "The WINDOWS_BUILDS_TOKEN secret is not set in this repo" }
-          $notes = "Test build from branch $env:BRANCH, commit ${{ github.sha }}.`n`nUnzip, then run RestifEye.exe. Windows SmartScreen: More info, then Run anyway. Logs: %APPDATA%\RestifEye\logs"
-          gh release create $env:TAG $env:ZIP --repo $env:BUILDS_REPO --title $env:TITLE --notes $notes --prerelease | Out-Null
+          $notes = "Test build from branch $env:BRANCH, commit ${{ github.sha }}.`n`nZip: unzip, then run RestifEye.exe (SmartScreen: More info, then Run anyway). Logs: %APPDATA%\RestifEye\logs`n`n.msix: the Microsoft Store package, for uploading in Partner Center only (it is unsigned until the Store signs it)."
+          gh release create $env:TAG $env:ZIP $env:MSIX --repo $env:BUILDS_REPO --title $env:TITLE --notes $notes --prerelease | Out-Null
           if ($LASTEXITCODE -ne 0) { throw "Could not create the release" }
           Write-Host "Delivered $env:ZIP as release $env:TAG in the private builds repo."
 
