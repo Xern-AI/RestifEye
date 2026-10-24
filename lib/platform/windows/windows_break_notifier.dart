@@ -45,6 +45,10 @@ abstract interface class ToastBackend {
 
   /// Removes every toast this app has shown, from screen and Action Center.
   Future<void> clearAll();
+
+  /// Removes one toast. Only works for the packaged Store build: Windows
+  /// lets an app remove a single toast only when it has package identity.
+  Future<void> cancel(int id);
 }
 
 /// Break warnings as Windows toasts with Start now / Snooze / Skip buttons.
@@ -57,7 +61,15 @@ abstract interface class ToastBackend {
 /// coexist (one belongs to the warning phase, the other to a break), so that
 /// is the only side effect. The packaged Store build can remove a single one.
 class WindowsBreakNotifier implements BreakNotifier {
-  WindowsBreakNotifier({required this.backend, required this.log});
+  WindowsBreakNotifier({
+    required this.backend,
+    required this.log,
+    this.singleRemoval = false,
+  });
+
+  /// True for the Store build, which can take down just the toast it means
+  /// to instead of clearing every RestifEye toast.
+  final bool singleRemoval;
 
   static const _warningId = 1;
   static const _heldId = 2;
@@ -125,7 +137,7 @@ class WindowsBreakNotifier implements BreakNotifier {
   Future<void> dismissWarning() => _enqueue(() async {
     if (!_warningLive) return;
     _warningLive = false;
-    await backend.clearAll();
+    await _remove(_warningId);
   });
 
   @override
@@ -138,8 +150,11 @@ class WindowsBreakNotifier implements BreakNotifier {
   Future<void> dismissBreakHeld() => _enqueue(() async {
     if (!_heldLive) return;
     _heldLive = false;
-    await backend.clearAll();
+    await _remove(_heldId);
   });
+
+  Future<void> _remove(int id) =>
+      singleRemoval ? backend.cancel(id) : backend.clearAll();
 
   @override
   Future<void> showInfo({required String title, required String body}) =>
@@ -246,4 +261,7 @@ class PluginToastBackend implements ToastBackend {
 
   @override
   Future<void> clearAll() => _plugin.cancelAll();
+
+  @override
+  Future<void> cancel(int id) => _plugin.cancel(id: id);
 }

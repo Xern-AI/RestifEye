@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.2.0+15
+version: 0.3.0+16
 
 environment:
   sdk: ^3.12.2
@@ -60,6 +60,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.34.0
   build_runner: ^2.15.1
+  msix: ^3.18.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -97,3 +98,24 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Microsoft Store package (`dart run msix:create`, run by the Windows CI job).
+# Identity values come from Partner Center → Product identity and must match
+# it exactly. The Store signs the package, so nothing is signed here.
+msix_config:
+  display_name: RestifEye
+  publisher_display_name: XernAI
+  identity_name: XernAI.Restifeye
+  publisher: CN=794EA849-0120-4E1B-822E-5576A7C84BA6
+  description: Break reminders that respect your flow.
+  logo_path: assets/linux/com.xernai.restifeye.png
+  store: true
+  build_windows: false
+  capabilities: internetClient
+  startup_task:
+    task_id: RestifEyeStartup
+    enabled: false
+  toast_activator:
+    clsid: bc303b9f-40e0-4d6d-9a9c-d7f1bd3af46f
+    arguments: -ToastActivated
+    display_name: RestifEye

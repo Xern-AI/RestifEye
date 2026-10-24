@@ -7,6 +7,7 @@ import '../platform/interfaces/autostart.dart';
 import '../platform/interfaces/break_notifier.dart';
 import '../platform/interfaces/context_signals.dart';
 import '../platform/interfaces/idle_monitor.dart';
+import '../platform/interfaces/licence_store.dart';
 import '../platform/interfaces/presentation_signals.dart';
 import '../platform/interfaces/session_signals.dart';
 import '../platform/interfaces/sound_player.dart';
@@ -30,6 +31,9 @@ typedef PlatformAdapters = ({
   ContextSignals context,
   PresentationSignals presentation,
   TrayIndicator tray,
+
+  /// Where plans are bought; nothing to license outside the Store build.
+  LicenceStore licenceStore,
 
   /// Tray face sizes to draw; null keeps the default set.
   List<int>? traySizes,

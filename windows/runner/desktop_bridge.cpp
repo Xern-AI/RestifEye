@@ -10,10 +10,13 @@
 
 #include <cstring>
 
+#include "store_services.h"
+
 namespace {
 
 constexpr wchar_t kHelperClass[] = L"RestifEyeDesktopBridge";
 constexpr UINT kTrayMessage = WM_APP + 1;
+constexpr UINT kRunQueued = WM_APP + 2;
 constexpr UINT kTrayId = 1;
 constexpr UINT kMenuOpen = 1;
 constexpr UINT kMenuPause = 2;
@@ -28,6 +31,21 @@ std::wstring Utf16FromUtf8(const std::string& utf8) {
   ::MultiByteToWideChar(CP_UTF8, 0, utf8.data(), static_cast<int>(utf8.size()),
                         utf16.data(), length);
   return utf16;
+}
+
+// Queues [work] for the window's thread. Dropped once the bridge is gone.
+void PostToUi(const std::shared_ptr<UiMailbox>& box,
+              std::function<void()> work) {
+  std::lock_guard<std::mutex> guard(box->lock);
+  if (!box->window) return;
+  box->work.push_back(std::move(work));
+  ::PostMessageW(box->window, kRunQueued, 0, 0);
+}
+
+flutter::EncodableValue Strings(const std::vector<std::string>& values) {
+  flutter::EncodableList list;
+  for (const auto& value : values) list.emplace_back(value);
+  return flutter::EncodableValue(list);
 }
 
 const flutter::EncodableValue* Field(const flutter::EncodableMap& map,
@@ -113,9 +131,16 @@ DesktopBridge::DesktopBridge(flutter::BinaryMessenger* messenger,
                               this);
   taskbar_created_ = ::RegisterWindowMessageW(L"TaskbarCreated");
   RelaunchMessage();
+  std::lock_guard<std::mutex> guard(mailbox_->lock);
+  mailbox_->window = helper_;
 }
 
 DesktopBridge::~DesktopBridge() {
+  {
+    std::lock_guard<std::mutex> guard(mailbox_->lock);
+    mailbox_->window = nullptr;
+    mailbox_->work.clear();
+  }
   RemoveTray();
   if (session_registered_) ::WTSUnRegisterSessionNotification(helper_);
   if (helper_) ::DestroyWindow(helper_);
@@ -177,6 +202,10 @@ LRESULT DesktopBridge::HandleHelperMessage(UINT message, WPARAM wparam,
     Send("relaunch", "");
     return 0;
   }
+  if (message == kRunQueued) {
+    RunQueuedWork();
+    return 0;
+  }
   return ::DefWindowProcW(helper_, message, wparam, lparam);
 }
 
@@ -224,8 +253,98 @@ void DesktopBridge::HandleMethodCall(
     result->Success(flutter::EncodableValue(flag && SetFullScreen(*flag)));
   } else if (method == "coversScreen") {
     result->Success(flutter::EncodableValue(CoversScreen()));
+  } else if (method == "isPackaged") {
+    result->Success(flutter::EncodableValue(store_services::IsPackaged()));
+  } else if (method.rfind("store", 0) == 0 || method.rfind("startup", 0) == 0) {
+    HandleStoreCall(method, args, std::move(result));
   } else {
     result->NotImplemented();
+  }
+}
+
+void DesktopBridge::RunQueuedWork() {
+  std::deque<std::function<void()>> work;
+  {
+    std::lock_guard<std::mutex> guard(mailbox_->lock);
+    work.swap(mailbox_->work);
+  }
+  for (auto& item : work) item();
+}
+
+void DesktopBridge::HandleStoreCall(
+    const std::string& method, const flutter::EncodableMap* args,
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+  std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>> reply =
+      std::move(result);
+  auto box = mailbox_;
+  auto state_reply = [box, reply](std::string state) {
+    PostToUi(box, [reply, state] { reply->Success(flutter::EncodableValue(state)); });
+  };
+
+  if (method == "storeOwned") {
+    store_services::OwnedTokens(
+        main_window_, [box, reply](bool ok, std::vector<std::string> tokens,
+                                   std::string error) {
+          PostToUi(box, [reply, ok, tokens, error] {
+            flutter::EncodableMap map;
+            map[flutter::EncodableValue("ok")] = flutter::EncodableValue(ok);
+            map[flutter::EncodableValue("tokens")] = Strings(tokens);
+            map[flutter::EncodableValue("error")] = flutter::EncodableValue(error);
+            reply->Success(flutter::EncodableValue(map));
+          });
+        });
+  } else if (method == "storeOffers") {
+    store_services::Offers(
+        main_window_, [box, reply](bool ok,
+                                   std::vector<store_services::Offer> offers,
+                                   std::string error) {
+          PostToUi(box, [reply, ok, offers, error] {
+            flutter::EncodableList list;
+            for (const auto& offer : offers) {
+              flutter::EncodableMap item;
+              item[flutter::EncodableValue("token")] =
+                  flutter::EncodableValue(offer.token);
+              item[flutter::EncodableValue("storeId")] =
+                  flutter::EncodableValue(offer.store_id);
+              item[flutter::EncodableValue("price")] =
+                  flutter::EncodableValue(offer.price);
+              item[flutter::EncodableValue("fullPrice")] =
+                  flutter::EncodableValue(offer.full_price);
+              list.emplace_back(item);
+            }
+            flutter::EncodableMap map;
+            map[flutter::EncodableValue("ok")] = flutter::EncodableValue(ok);
+            map[flutter::EncodableValue("offers")] = flutter::EncodableValue(list);
+            map[flutter::EncodableValue("error")] = flutter::EncodableValue(error);
+            reply->Success(flutter::EncodableValue(map));
+          });
+        });
+  } else if (method == "storePurchase" && args) {
+    const auto* id = Field(*args, "storeId");
+    const auto* store_id = id ? std::get_if<std::string>(id) : nullptr;
+    if (!store_id) {
+      reply->Error("bad-args", "storeId missing");
+      return;
+    }
+    store_services::Purchase(
+        main_window_, *store_id,
+        [box, reply](std::string status, std::string error) {
+          PostToUi(box, [reply, status, error] {
+            flutter::EncodableMap map;
+            map[flutter::EncodableValue("status")] =
+                flutter::EncodableValue(status);
+            map[flutter::EncodableValue("error")] = flutter::EncodableValue(error);
+            reply->Success(flutter::EncodableValue(map));
+          });
+        });
+  } else if (method == "startupState") {
+    store_services::StartupState(state_reply);
+  } else if (method == "startupEnable") {
+    store_services::StartupEnable(state_reply);
+  } else if (method == "startupDisable") {
+    store_services::StartupDisable(state_reply);
+  } else {
+    reply->NotImplemented();
   }
 }
 

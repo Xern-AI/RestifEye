@@ -12,6 +12,7 @@ import '../../core/models/activity.dart';
 import '../../core/models/break_kind.dart';
 import '../../services/insights.dart';
 import '../../services/providers.dart';
+import '../plans/plans.dart';
 import 'day_shape.dart';
 
 /// Today at a glance: the live countdown, the shape the day has taken, and
@@ -30,6 +31,7 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             Text('Today', style: textTheme.headlineMedium),
             const SizedBox(height: AppTokens.spaceLg),
+            const PlanBanner(),
             const _NextBreakCard(),
             const SizedBox(height: AppTokens.spaceSm),
             const _PauseControl(),
@@ -95,6 +97,7 @@ class _NextBreakCard extends ConsumerWidget {
         switch (reason) {
           PauseReason.user => 'by you',
           PauseReason.workHours => 'outside work hours',
+          PauseReason.trialEnded => 'your free trial has ended',
           PauseReason.media =>
             byApp == null
                 ? 'while something is playing'

@@ -6,6 +6,7 @@ import 'package:dbus/dbus.dart';
 
 import '../../app/platform_adapters.dart';
 import '../desktop/window_ops.dart';
+import '../interfaces/licence_store.dart';
 import 'github_update_checker.dart';
 import 'gnome_tray_support.dart';
 import 'linux_break_notifier.dart';
@@ -36,6 +37,7 @@ PlatformAdapters linuxAdapters({required bool soundsEnabled}) {
       system: systemBus,
     ),
     tray: SniTrayIndicator(sessionBus),
+    licenceStore: const NoLicenceStore(),
     traySizes: null,
     relaunches: const Stream<void>.empty(),
   );

@@ -2,6 +2,8 @@
 // Use of this source code is governed by the PolyForm Shield 1.0.0
 // license that can be found in the LICENSE file.
 
+import '../core/licensing/entitlement.dart';
+import 'licence_service.dart';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -137,6 +139,22 @@ final todayBreakCountsProvider = StreamProvider<BreakCounts>(
 final autostartProvider = Provider<Autostart>(
   (ref) => throw UnimplementedError('override in bootstrap'),
 );
+
+/// Trial and plans for the Store build; null where nothing is licensed
+/// (Linux, test zips, tests).
+final licenceServiceProvider = Provider<LicenceService?>((ref) => null);
+
+/// What this copy may do, kept current as the trial counts down or a plan is
+/// bought.
+final entitlementProvider = StreamProvider<Entitlement>((ref) async* {
+  final service = ref.watch(licenceServiceProvider);
+  if (service == null || !service.store.isStoreBuild) {
+    yield const Unlimited();
+    return;
+  }
+  yield service.current;
+  yield* service.changes;
+});
 
 /// Whether this build checks for updates itself. False on Windows, where
 /// there are no public releases to compare against and the Store will

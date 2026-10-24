@@ -101,4 +101,28 @@ class WindowsRunner {
   /// Whether the full-screen break window is what fills the screen right now.
   Future<bool> coversScreen() async =>
       await _channel.invokeMethod<bool>('coversScreen') ?? false;
+
+  /// Whether this copy runs from the Store's MSIX package.
+  Future<bool> isPackaged() async =>
+      await _channel.invokeMethod<bool>('isPackaged') ?? false;
+
+  /// `{ok, tokens, error}`: product IDs of the add-ons the user owns.
+  Future<Map<Object?, Object?>> storeOwned() async =>
+      await _channel.invokeMethod<Map<Object?, Object?>>('storeOwned') ?? {};
+
+  /// `{ok, offers: [{token, storeId, price, fullPrice}], error}`.
+  Future<Map<Object?, Object?>> storeOffers() async =>
+      await _channel.invokeMethod<Map<Object?, Object?>>('storeOffers') ?? {};
+
+  /// `{status, error}`; shows the Store's own purchase dialog.
+  Future<Map<Object?, Object?>> storePurchase(String storeId) async =>
+      await _channel.invokeMethod<Map<Object?, Object?>>('storePurchase', {
+        'storeId': storeId,
+      }) ??
+      {};
+
+  /// The package's start-at-login task: `enabled`, `disabled`,
+  /// `disabledByUser`, `disabledByPolicy`, `enabledByPolicy` or `error`.
+  Future<String> startupTask(String action) async =>
+      await _channel.invokeMethod<String>(action) ?? 'error';
 }
