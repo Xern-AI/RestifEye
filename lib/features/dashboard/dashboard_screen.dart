@@ -95,6 +95,7 @@ class _NextBreakCard extends ConsumerWidget {
         switch (reason) {
           PauseReason.user => 'by you',
           PauseReason.workHours => 'outside work hours',
+          PauseReason.trialEnded => 'your free trial has ended',
           PauseReason.media =>
             byApp == null
                 ? 'while something is playing'

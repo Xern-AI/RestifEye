@@ -81,6 +81,9 @@ enum PauseReason {
   /// Something on screen must not be interrupted — a fullscreen video, a
   /// presentation, anything holding an idle inhibitor.
   media,
+
+  /// The Store build's free trial is over and no plan has been bought.
+  trialEnded,
 }
 
 /// Outside work hours, paused by the user, or held back for media.
