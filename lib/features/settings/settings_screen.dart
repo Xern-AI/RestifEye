@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../plans/plans.dart';
 import '../../app/version.dart';
 import '../../core/models/break_config.dart';
 import '../../core/models/exercise.dart';
@@ -210,6 +211,7 @@ class SettingsScreen extends ConsumerWidget {
                     .setUpdateCheck(v),
               ),
             const _SectionHeader('About'),
+            const PlanSettingsTile(),
             ListTile(
               leading: const Icon(Icons.tag_outlined),
               title: const Text('Version'),
