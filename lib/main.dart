@@ -59,6 +59,7 @@ Future<void> main() async {
       soundPlayerProvider.overrideWithValue(boot.sounds),
       trayHostSupportProvider.overrideWithValue(boot.traySupport),
       updateCheckAvailableProvider.overrideWithValue(boot.updateChecks),
+      licenceServiceProvider.overrideWithValue(boot.licence),
     ],
   );
 

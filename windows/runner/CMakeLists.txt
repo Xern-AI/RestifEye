@@ -36,6 +36,16 @@ target_compile_definitions(${BINARY_NAME} PRIVATE "NOMINMAX")
 target_link_libraries(${BINARY_NAME} PRIVATE flutter flutter_wrapper_app)
 target_link_libraries(${BINARY_NAME} PRIVATE "dwmapi.lib")
 target_link_libraries(${BINARY_NAME} PRIVATE "wtsapi32.lib")
+
+# Store licensing and the startup task use C++/WinRT, which throws; it gets
+# its own target so the runner keeps Flutter's standard settings.
+add_library(store_services STATIC "store_services.cpp")
+target_compile_features(store_services PUBLIC cxx_std_17)
+target_compile_options(store_services PRIVATE /EHsc /W3 /permissive-)
+target_compile_definitions(store_services PRIVATE
+  UNICODE _UNICODE NOMINMAX _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+target_link_libraries(store_services PRIVATE "runtimeobject.lib")
+target_link_libraries(${BINARY_NAME} PRIVATE store_services)
 target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
 # Run the Flutter tool portions of the build. This must not be removed.

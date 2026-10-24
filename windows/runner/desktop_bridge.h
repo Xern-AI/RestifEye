@@ -12,7 +12,10 @@
 #include <shellapi.h>
 
 #include <cstdint>
+#include <deque>
+#include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -20,6 +23,15 @@
 // of its own: the tray icon and menu, session lock and power broadcasts,
 // Explorer restarts, and the message a second launch sends. Talks to Dart over
 // the "com.xernai.restifeye/windows" method channel (see windows_runner.dart).
+// Work handed back to the window's thread from a Store callback, which runs
+// on a thread pool thread where Flutter must not be touched. Shared so a
+// callback that outlives the bridge finds a closed mailbox, not freed memory.
+struct UiMailbox {
+  std::mutex lock;
+  HWND window = nullptr;
+  std::deque<std::function<void()>> work;
+};
+
 class DesktopBridge {
  public:
   DesktopBridge(flutter::BinaryMessenger* messenger, HWND main_window);
@@ -50,6 +62,10 @@ class DesktopBridge {
   bool SetFullScreen(bool on);
   bool CoversScreen();
   void Send(const char* method, const std::string& argument);
+  void HandleStoreCall(
+      const std::string& method, const flutter::EncodableMap* args,
+      std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
+  void RunQueuedWork();
 
   HWND main_window_;
   HWND helper_ = nullptr;
@@ -63,6 +79,7 @@ class DesktopBridge {
   std::wstring menu_quit_ = L"Quit";
   bool session_registered_ = false;
   UINT taskbar_created_ = 0;
+  std::shared_ptr<UiMailbox> mailbox_ = std::make_shared<UiMailbox>();
 
   // The window as it was before a break took the whole screen.
   bool fullscreen_ = false;
