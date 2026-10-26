@@ -97,7 +97,8 @@ jobs:
       # Installs the Store package the way Windows installs an app (signed
       # here with a throwaway certificate carrying the Store publisher name,
       # which never leaves this runner), runs it for 20 seconds, and requires
-      # its log to show a Store build that started cleanly with its trial.
+      # its log to show a Store build that started cleanly and asked the Store
+      # for its licence (a sideloaded copy has none, so it stays unlocked).
       # This is the only place the Store-only code runs before the Store does.
       - name: Store package smoke test
         shell: pwsh
@@ -144,7 +145,8 @@ jobs:
           if (-not $app) { throw "The Store build was not running after 20 seconds" }
           if (-not $log) { throw "The Store build wrote no log" }
           if ($text -notmatch "Store build") { throw "The package did not run as a Store build" }
-          if ($text -notmatch "licence trial, 14 days left") { throw "The trial did not start" }
+          # A sideloaded copy has no Store SKU, so it must not be locked.
+          if ($text -notmatch "licence unlimited") { throw "The Store licence check did not answer as expected" }
           if ($text -notmatch "startup complete") { throw "The log never reached 'startup complete'" }
           if ($text -match " (FAIL|ERROR) ") { throw "The Store build log shows a failure" }
 

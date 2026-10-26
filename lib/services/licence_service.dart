@@ -41,6 +41,7 @@ class LicenceService {
   final _changes = StreamController<Entitlement>.broadcast();
   Timer? _timer;
   Entitlement _current = const Unlimited();
+  bool _answered = false;
 
   Entitlement get current => _current;
   Stream<Entitlement> get changes => _changes.stream;
@@ -59,9 +60,12 @@ class LicenceService {
       licence: await _licence(),
       now: now,
     );
-    if (next != _current || next.runtimeType != _current.runtimeType) {
+    if (!_answered ||
+        next != _current ||
+        next.runtimeType != _current.runtimeType) {
       log.info('licence ${_describe(next)}');
     }
+    _answered = true;
     _current = next;
     engine.setLockedOut(!next.remindersAllowed);
     if (!_changes.isClosed) _changes.add(next);
