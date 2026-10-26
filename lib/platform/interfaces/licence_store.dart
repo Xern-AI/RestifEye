@@ -4,12 +4,11 @@
 
 import '../../core/licensing/entitlement.dart';
 
-/// A plan as the Store sells it right now, prices already formatted in the
+/// The app as the Store sells it right now, prices already formatted in the
 /// buyer's currency.
 class StoreOffer {
-  const StoreOffer({required this.plan, required this.price, this.fullPrice});
+  const StoreOffer({required this.price, this.fullPrice});
 
-  final Plan plan;
   final String price;
 
   /// The usual price while a sale is on (shown crossed out), else null.
@@ -18,20 +17,22 @@ class StoreOffer {
 
 enum PurchaseOutcome { purchased, alreadyOwned, cancelled, failed }
 
-/// Where plans are bought and owned plans are looked up.
+/// Where the app's licence is read and the app is bought.
 abstract interface class LicenceStore {
-  /// Whether this copy came from the Store and is therefore licensed.
+  /// Whether this copy runs from the Store's package and is therefore
+  /// licensed.
   bool get isStoreBuild;
 
-  /// The plans this user owns now. Throws when the Store cannot answer
-  /// (offline, Store app broken), so the caller can fall back to what it
-  /// last knew rather than locking a paying user out.
-  Future<Set<Plan>> owned();
+  /// This app's licence now. Throws when the Store cannot answer (offline,
+  /// Store app broken), so the caller can fall back to what it last knew
+  /// rather than locking a paying user out.
+  Future<StoreLicence> licence();
 
-  /// Current prices. Empty when the Store cannot answer.
-  Future<List<StoreOffer>> offers();
+  /// The current price, or null when the Store cannot answer.
+  Future<StoreOffer?> offer();
 
-  Future<PurchaseOutcome> buy(Plan plan);
+  /// Shows the Store's own purchase window for the full app.
+  Future<PurchaseOutcome> buy();
 }
 
 /// Linux and the Windows test zips: nothing to license.
@@ -42,11 +43,12 @@ class NoLicenceStore implements LicenceStore {
   bool get isStoreBuild => false;
 
   @override
-  Future<Set<Plan>> owned() async => const {};
+  Future<StoreLicence> licence() async =>
+      const StoreLicence(fromStore: false, active: true, trial: false);
 
   @override
-  Future<List<StoreOffer>> offers() async => const [];
+  Future<StoreOffer?> offer() async => null;
 
   @override
-  Future<PurchaseOutcome> buy(Plan plan) async => PurchaseOutcome.failed;
+  Future<PurchaseOutcome> buy() async => PurchaseOutcome.failed;
 }

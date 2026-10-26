@@ -7,6 +7,7 @@ import 'licence_service.dart';
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/engine/phase.dart';
 import '../core/models/activity.dart';
@@ -160,6 +161,12 @@ final entitlementProvider = StreamProvider<Entitlement>((ref) async* {
 /// there are no public releases to compare against and the Store will
 /// deliver updates, so Settings has no switch to show.
 final updateCheckAvailableProvider = Provider<bool>((ref) => true);
+
+/// Opens a web page in the user's browser.
+final linkOpenerProvider = Provider<Future<bool> Function(Uri)>(
+  (ref) =>
+      (uri) => launchUrl(uri, mode: LaunchMode.externalApplication),
+);
 
 final rollupRepositoryProvider = Provider<RollupRepository>(
   (ref) => RollupRepository(ref.watch(databaseProvider)),

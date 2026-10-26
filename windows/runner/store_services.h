@@ -7,9 +7,9 @@
 
 #include <windows.h>
 
+#include <cstdint>
 #include <functional>
 #include <string>
-#include <vector>
 
 // Microsoft Store licensing and the package's start-at-login task, through
 // C++/WinRT. Kept out of the rest of the runner so only this file needs
@@ -19,21 +19,29 @@ namespace store_services {
 // Whether this process runs from an MSIX package (the Store build).
 bool IsPackaged();
 
-struct Offer {
-  std::string token;       // the add-on's product ID, e.g. restifeye.yearly
+struct AppLicence {
+  bool active = false;
+  bool trial = false;
+  // False for a copy that was not acquired from the Store (sideloaded test
+  // packages), which has no Store SKU and nothing to enforce.
+  bool from_store = false;
+  // When a trial ends, in milliseconds since 1970; 0 when not a trial.
+  int64_t trial_ends_ms = 0;
+};
+
+struct AppOffer {
   std::string store_id;    // what a purchase is requested with
   std::string price;       // formatted in the buyer's currency
   std::string full_price;  // the usual price while on sale, else empty
 };
 
-void OwnedTokens(
-    HWND owner,
-    std::function<void(bool ok, std::vector<std::string> tokens,
-                       std::string error)> done);
+void Licence(HWND owner,
+             std::function<void(bool ok, AppLicence licence,
+                                std::string error)> done);
 
-void Offers(HWND owner,
-            std::function<void(bool ok, std::vector<Offer> offers,
-                               std::string error)> done);
+void CurrentOffer(HWND owner,
+                  std::function<void(bool ok, AppOffer offer,
+                                     std::string error)> done);
 
 // Must be called on the window's thread: the Store shows its purchase
 // dialog over [owner].

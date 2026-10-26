@@ -30,6 +30,7 @@ void main() {
     TestHarness h, {
     required TrayHostSupport tray,
     required bool updates,
+    Future<bool> Function(Uri)? openLink,
   }) async {
     tester.view.physicalSize = const Size(900, 4000);
     tester.view.devicePixelRatio = 1.0;
@@ -49,6 +50,7 @@ void main() {
           soundPlayerProvider.overrideWithValue(h.sounds),
           trayHostSupportProvider.overrideWithValue(tray),
           updateCheckAvailableProvider.overrideWithValue(updates),
+          if (openLink != null) linkOpenerProvider.overrideWithValue(openLink),
         ],
         child: const MaterialApp(home: SettingsScreen()),
       ),
@@ -75,6 +77,26 @@ void main() {
 
     expect(find.text('Showing in the taskbar corner'), findsOneWidget);
     expect(find.text('Check for updates weekly'), findsNothing);
+    await cleanupHarness(tester, h);
+  });
+
+  testWidgets('About credits XernAI and opens xernaitech.com', (tester) async {
+    final h = TestHarness();
+    final opened = <Uri>[];
+    await pump(
+      tester,
+      h,
+      tray: const WindowsTraySupport(),
+      updates: false,
+      openLink: (uri) async {
+        opened.add(uri);
+        return true;
+      },
+    );
+
+    expect(find.text('Made by XernAI'), findsOneWidget);
+    await tester.tap(find.text('More apps at xernaitech.com'));
+    expect(opened, [Uri.parse('https://xernaitech.com')]);
     await cleanupHarness(tester, h);
   });
 }

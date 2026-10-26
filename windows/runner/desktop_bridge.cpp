@@ -42,12 +42,6 @@ void PostToUi(const std::shared_ptr<UiMailbox>& box,
   ::PostMessageW(box->window, kRunQueued, 0, 0);
 }
 
-flutter::EncodableValue Strings(const std::vector<std::string>& values) {
-  flutter::EncodableList list;
-  for (const auto& value : values) list.emplace_back(value);
-  return flutter::EncodableValue(list);
-}
-
 const flutter::EncodableValue* Field(const flutter::EncodableMap& map,
                                      const char* key) {
   auto it = map.find(flutter::EncodableValue(key));
@@ -281,40 +275,38 @@ void DesktopBridge::HandleStoreCall(
     PostToUi(box, [reply, state] { reply->Success(flutter::EncodableValue(state)); });
   };
 
-  if (method == "storeOwned") {
-    store_services::OwnedTokens(
-        main_window_, [box, reply](bool ok, std::vector<std::string> tokens,
+  if (method == "storeLicence") {
+    store_services::Licence(
+        main_window_, [box, reply](bool ok, store_services::AppLicence licence,
                                    std::string error) {
-          PostToUi(box, [reply, ok, tokens, error] {
+          PostToUi(box, [reply, ok, licence, error] {
             flutter::EncodableMap map;
             map[flutter::EncodableValue("ok")] = flutter::EncodableValue(ok);
-            map[flutter::EncodableValue("tokens")] = Strings(tokens);
+            map[flutter::EncodableValue("active")] =
+                flutter::EncodableValue(licence.active);
+            map[flutter::EncodableValue("trial")] =
+                flutter::EncodableValue(licence.trial);
+            map[flutter::EncodableValue("fromStore")] =
+                flutter::EncodableValue(licence.from_store);
+            map[flutter::EncodableValue("trialEndsMs")] =
+                flutter::EncodableValue(licence.trial_ends_ms);
             map[flutter::EncodableValue("error")] = flutter::EncodableValue(error);
             reply->Success(flutter::EncodableValue(map));
           });
         });
-  } else if (method == "storeOffers") {
-    store_services::Offers(
-        main_window_, [box, reply](bool ok,
-                                   std::vector<store_services::Offer> offers,
+  } else if (method == "storeOffer") {
+    store_services::CurrentOffer(
+        main_window_, [box, reply](bool ok, store_services::AppOffer offer,
                                    std::string error) {
-          PostToUi(box, [reply, ok, offers, error] {
-            flutter::EncodableList list;
-            for (const auto& offer : offers) {
-              flutter::EncodableMap item;
-              item[flutter::EncodableValue("token")] =
-                  flutter::EncodableValue(offer.token);
-              item[flutter::EncodableValue("storeId")] =
-                  flutter::EncodableValue(offer.store_id);
-              item[flutter::EncodableValue("price")] =
-                  flutter::EncodableValue(offer.price);
-              item[flutter::EncodableValue("fullPrice")] =
-                  flutter::EncodableValue(offer.full_price);
-              list.emplace_back(item);
-            }
+          PostToUi(box, [reply, ok, offer, error] {
             flutter::EncodableMap map;
             map[flutter::EncodableValue("ok")] = flutter::EncodableValue(ok);
-            map[flutter::EncodableValue("offers")] = flutter::EncodableValue(list);
+            map[flutter::EncodableValue("storeId")] =
+                flutter::EncodableValue(offer.store_id);
+            map[flutter::EncodableValue("price")] =
+                flutter::EncodableValue(offer.price);
+            map[flutter::EncodableValue("fullPrice")] =
+                flutter::EncodableValue(offer.full_price);
             map[flutter::EncodableValue("error")] = flutter::EncodableValue(error);
             reply->Success(flutter::EncodableValue(map));
           });

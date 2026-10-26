@@ -5,30 +5,38 @@
 import '../../core/licensing/entitlement.dart';
 import '../interfaces/licence_store.dart';
 
-/// A Store for tests: owned plans, offers and outcomes are set directly.
+/// A Store for tests: the licence, price and outcomes are set directly.
 class FakeLicenceStore implements LicenceStore {
-  FakeLicenceStore({this.isStoreBuild = true});
+  FakeLicenceStore({this.isStoreBuild = true, DateTime? trialEndsAt})
+    : current = StoreLicence(
+        fromStore: true,
+        active: true,
+        trial: true,
+        trialEndsAt: trialEndsAt ?? DateTime(2026, 11, 9, 9),
+      );
 
   @override
   final bool isStoreBuild;
 
-  Set<Plan> ownedPlans = {};
+  StoreLicence current;
   bool offline = false;
   PurchaseOutcome nextOutcome = PurchaseOutcome.purchased;
-  List<StoreOffer> currentOffers = const [];
+  StoreOffer? currentOffer;
 
   @override
-  Future<Set<Plan>> owned() async {
+  Future<StoreLicence> licence() async {
     if (offline) throw StateError('offline');
-    return {...ownedPlans};
+    return current;
   }
 
   @override
-  Future<List<StoreOffer>> offers() async => currentOffers;
+  Future<StoreOffer?> offer() async => currentOffer;
 
   @override
-  Future<PurchaseOutcome> buy(Plan plan) async {
-    if (nextOutcome == PurchaseOutcome.purchased) ownedPlans.add(plan);
+  Future<PurchaseOutcome> buy() async {
+    if (nextOutcome == PurchaseOutcome.purchased) {
+      current = const StoreLicence(fromStore: true, active: true, trial: false);
+    }
     return nextOutcome;
   }
 }

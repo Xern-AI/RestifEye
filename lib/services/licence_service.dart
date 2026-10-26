@@ -11,12 +11,14 @@ import '../data/settings_repository.dart';
 import '../platform/interfaces/app_log.dart';
 import '../platform/interfaces/licence_store.dart';
 
-/// Keeps the engine's trial-ended lockout in step with what the user owns.
+/// Keeps the engine's trial-ended lockout in step with the app's Store
+/// licence.
 ///
-/// The Store is asked on start, every [recheckEvery], and after a purchase
-/// or a restore. Its last answer is kept: an offline laptop must not lock out
-/// someone who paid. A remembered Yearly plan is trusted for [offlineGrace]
-/// without a fresh answer, a remembered Lifetime plan for good.
+/// The Store is asked on start, every [recheckEvery] (so a purchase made in
+/// the Store app, or the trial running out, is noticed in a running copy),
+/// and after a purchase. Its last answer is kept: an offline laptop must
+/// not lock out someone who paid, and a remembered trial still ends on its
+/// date.
 class LicenceService {
   LicenceService({
     required this.store,
@@ -24,13 +26,10 @@ class LicenceService {
     required this.engine,
     required this.clock,
     this.log = const NoAppLog(),
-    this.recheckEvery = const Duration(hours: 1),
+    this.recheckEvery = const Duration(minutes: 10),
   });
 
-  static const keyTrialStartedAt = 'trial_started_at';
-  static const keyOwnedPlans = 'licence_owned_plans';
-  static const keyOwnedCheckedAt = 'licence_checked_at';
-  static const offlineGrace = Duration(days: 30);
+  static const keyLicence = 'store_licence';
 
   final LicenceStore store;
   final SettingsRepository settings;
@@ -42,6 +41,7 @@ class LicenceService {
   final _changes = StreamController<Entitlement>.broadcast();
   Timer? _timer;
   Entitlement _current = const Unlimited();
+  bool _answered = false;
 
   Entitlement get current => _current;
   Stream<Entitlement> get changes => _changes.stream;
@@ -52,92 +52,89 @@ class LicenceService {
     _timer = Timer.periodic(recheckEvery, (_) => unawaited(refresh()));
   }
 
-  /// Asks the Store again; also the "Restore purchase" action.
   Future<Entitlement> refresh() async {
     if (!store.isStoreBuild) return _current;
     final now = clock.now();
     final next = entitlementFrom(
       storeBuild: true,
-      trialStartedAt: await _trialStart(now),
+      licence: await _licence(),
       now: now,
-      owned: await _owned(now),
     );
-    if (next != _current || next.runtimeType != _current.runtimeType) {
+    if (!_answered ||
+        next != _current ||
+        next.runtimeType != _current.runtimeType) {
       log.info('licence ${_describe(next)}');
     }
+    _answered = true;
     _current = next;
     engine.setLockedOut(!next.remindersAllowed);
     if (!_changes.isClosed) _changes.add(next);
     return next;
   }
 
-  Future<PurchaseOutcome> buy(Plan plan) async {
-    final outcome = await store.buy(plan);
-    log.info('purchase ${plan.name}: ${outcome.name}');
+  Future<PurchaseOutcome> buy() async {
+    final outcome = await store.buy();
+    log.info('purchase: ${outcome.name}');
     await refresh();
     return outcome;
   }
 
-  Future<List<StoreOffer>> offers() => store.offers();
+  Future<StoreOffer?> offer() => store.offer();
 
   Future<void> dispose() async {
     _timer?.cancel();
     await _changes.close();
   }
 
-  Future<DateTime> _trialStart(DateTime now) async {
-    final saved = DateTime.tryParse(
-      await settings.readValue(keyTrialStartedAt) ?? '',
-    );
-    if (saved != null) return saved;
-    await settings.writeValue(keyTrialStartedAt, now.toIso8601String());
-    return now;
-  }
-
-  Future<Set<Plan>> _owned(DateTime now) async {
+  Future<StoreLicence?> _licence() async {
     try {
-      final owned = await store.owned();
-      await settings.writeValue(
-        keyOwnedPlans,
-        owned.map((p) => p.name).join(','),
-      );
-      await settings.writeValue(keyOwnedCheckedAt, now.toIso8601String());
-      return owned;
+      final licence = await store.licence();
+      await settings.writeValue(keyLicence, encodeLicence(licence));
+      return licence;
     } on Object catch (e) {
       log.info('licence check failed, using the last answer: $e');
-      return rememberedPlans(
-        saved: await settings.readValue(keyOwnedPlans),
-        checkedAt: DateTime.tryParse(
-          await settings.readValue(keyOwnedCheckedAt) ?? '',
-        ),
-        now: now,
-      );
+      return decodeLicence(await settings.readValue(keyLicence));
     }
   }
 
   static String _describe(Entitlement e) => switch (e) {
     Unlimited() => 'unlimited',
     Trial(:final daysLeft) => 'trial, $daysLeft days left',
-    Owned(:final plan) => 'owned ${plan.name}',
+    Owned() => 'owned',
     TrialEnded() => 'trial ended',
   };
 }
 
-/// The plans last confirmed by the Store, as far as they can still be
-/// trusted without a fresh answer.
-Set<Plan> rememberedPlans({
-  required String? saved,
-  required DateTime? checkedAt,
-  required DateTime now,
-}) {
-  final plans = {
-    for (final name in (saved ?? '').split(','))
-      for (final plan in Plan.values)
-        if (plan.name == name) plan,
-  };
-  final fresh =
-      checkedAt != null &&
-      now.difference(checkedAt) <= LicenceService.offlineGrace;
-  if (!fresh) plans.remove(Plan.yearly);
-  return plans;
+/// The Store's last answer as one settings value: `owned`, `ended`,
+/// `trial:<end>` or `none` (not acquired from the Store).
+String encodeLicence(StoreLicence licence) {
+  if (!licence.fromStore) return 'none';
+  if (!licence.trial) return licence.active ? 'owned' : 'ended';
+  final ends = licence.trialEndsAt;
+  if (!licence.active || ends == null) return 'ended';
+  return 'trial:${ends.toUtc().toIso8601String()}';
+}
+
+StoreLicence? decodeLicence(String? saved) {
+  if (saved == null) return null;
+  if (saved == 'none') {
+    return const StoreLicence(fromStore: false, active: true, trial: false);
+  }
+  if (saved == 'owned') {
+    return const StoreLicence(fromStore: true, active: true, trial: false);
+  }
+  if (saved == 'ended') {
+    return const StoreLicence(fromStore: true, active: false, trial: true);
+  }
+  if (saved.startsWith('trial:')) {
+    final ends = DateTime.tryParse(saved.substring('trial:'.length));
+    if (ends == null) return null;
+    return StoreLicence(
+      fromStore: true,
+      active: true,
+      trial: true,
+      trialEndsAt: ends.toLocal(),
+    );
+  }
+  return null;
 }
