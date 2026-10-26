@@ -33,6 +33,12 @@ class _FakeToasts implements ToastBackend {
     calls.add('clear');
     shown.clear();
   }
+
+  @override
+  Future<void> cancel(int id) async {
+    calls.add('cancel $id');
+    shown.remove(id);
+  }
 }
 
 void main() {
@@ -118,6 +124,26 @@ void main() {
       await sub.cancel();
     },
   );
+
+  test('the Store build removes only the toast it means to', () async {
+    final single = WindowsBreakNotifier(
+      backend: toasts,
+      log: const NoAppLog(),
+      singleRemoval: true,
+    );
+    await single.start();
+    await single.showInfo(title: 't', body: 'b');
+    await single.showWarning(
+      kind: BreakKind.micro,
+      startsIn: const Duration(seconds: 30),
+      canSnooze: true,
+      canSkip: true,
+    );
+    await single.dismissWarning();
+    expect(toasts.calls, ['show 3', 'show 1', 'cancel 1']);
+    expect(toasts.shown.keys, [3], reason: 'the info toast stays');
+    await single.dispose();
+  });
 
   test('a refused registration throws at start and then stays quiet', () async {
     final refused = _FakeToasts(accept: false);

@@ -141,6 +141,7 @@ class BreakEngine {
   /// has already been given credit for.
   Duration _awayFloor = Duration.zero;
   bool _pausedByUser = false;
+  bool _lockedOut = false;
   bool _pausedByHours = false;
   bool _pausedByMedia = false;
   String? _presentingApp;
@@ -171,6 +172,7 @@ class BreakEngine {
     // Order is precedence: an explicit user pause outranks the automatic
     // reasons, and work hours outrank media (no point reporting "video
     // playing" at 2 a.m. on a Sunday when the engine is off anyway).
+    if (_lockedOut) return const Paused(reason: PauseReason.trialEnded);
     if (_pausedByUser) {
       return Paused(reason: PauseReason.user, until: _pausedUntil);
     }
@@ -212,7 +214,8 @@ class BreakEngine {
     // The phase is published on every tick, even while paused: consumers
     // (the window takeover above all) re-derive their state from it, so a
     // silent engine would let them drift out of sync.
-    if (_updateUserPause() ||
+    if (_lockedOut ||
+        _updateUserPause() ||
         _updateWorkHoursPause() ||
         _updateMediaPause(input)) {
       _publishPhase();
@@ -345,6 +348,27 @@ class BreakEngine {
       _refillSnoozes();
       _mode = _Mode.monitoring;
       // Time spent paused is not rest to be credited.
+      _awayFloor = now;
+      _awayBegan = null;
+      _awayWasLocked = false;
+      _emit(EngineResumed(_clock.now()));
+    }
+    _publishPhase();
+  }
+
+  /// Holds all scheduling because the trial is over, above every other pause
+  /// and out of reach of the user's own pause toggle. Lifting it starts a
+  /// fresh schedule, exactly like resuming from a user pause.
+  void setLockedOut(bool lockedOut) {
+    if (lockedOut == _lockedOut) return;
+    if (lockedOut) _abandonBreak();
+    _lockedOut = lockedOut;
+    if (!lockedOut) {
+      final now = _clock.elapsed();
+      _resetDue(BreakKind.micro, from: now);
+      _resetDue(BreakKind.long, from: now);
+      _refillSnoozes();
+      _mode = _Mode.monitoring;
       _awayFloor = now;
       _awayBegan = null;
       _awayWasLocked = false;

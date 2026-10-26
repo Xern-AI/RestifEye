@@ -28,6 +28,7 @@ import '../services/activity_recorder.dart';
 import '../services/context_sampler.dart';
 import '../services/engine_service.dart';
 import '../services/exercise_picker.dart';
+import '../services/licence_service.dart';
 import '../services/mood_service.dart';
 import '../services/notification_coordinator.dart';
 import '../services/phase_log.dart';
@@ -74,6 +75,7 @@ typedef BootResult = ({
   bool moodIndicator,
   List<int>? traySizes,
   bool updateChecks,
+  LicenceService licence,
 });
 
 /// Builds the real object graph: database, engine, platform adapters,
@@ -218,6 +220,15 @@ Future<BootResult> bootstrap({AppLog log = const NoAppLog()}) async {
   await mood.start();
   if (log.enabled) PhaseLog(engine: engine, log: log).start();
 
+  final licence = LicenceService(
+    store: platform.licenceStore,
+    settings: settings,
+    engine: engine,
+    clock: clock,
+    log: log,
+  );
+  await licence.start();
+
   return (
     db: db,
     service: service,
@@ -241,6 +252,7 @@ Future<BootResult> bootstrap({AppLog log = const NoAppLog()}) async {
     ),
     traySizes: platform.traySizes,
     updateChecks: updateChecker != null,
+    licence: licence,
   );
 }
 

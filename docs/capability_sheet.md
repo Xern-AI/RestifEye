@@ -70,7 +70,12 @@ RestifEye reminds you to rest your eyes and move, on a schedule that adapts to w
 - Upgrades that change the database are all-or-nothing and can be re-run safely. Killing the app mid-upgrade rolls back cleanly, and a database left half-upgraded by an older build repairs itself on the next launch instead of refusing to start — your history is never wiped to recover.
 - If the app cannot start at all, it says so on screen with the error, the version and the database path, plus a Copy details button — rather than showing an empty window that tells you nothing.
 
-**Windows (test build, v0.2.0 — not yet released)**
+**Windows (Microsoft Store, v0.3.0 — in certification)**
+- Installs from the Microsoft Store into the Start menu, updates itself, uninstalls from Settings; no installer, no warning screens.
+- 14-day free trial with no card, then Yearly or Lifetime bought inside the app through the Store, at the Store's own prices in each buyer's currency. *Non-trivial: the licence keeps working offline (Lifetime for good, a Yearly plan for 30 days), and when a trial ends only the reminders stop — the user's whole history stays readable.*
+- Restore purchase, and the Store handles payment, renewal and cancelling.
+
+**Windows (test build, v0.2.0)**
 - The same app on Windows 10/11: one shared engine, screens and data; only the platform layer is new, and the Linux build still ships the same libraries and links the same system libraries as before. *Non-trivial: every OS-specific call sat behind an interface from day one, so the port is twelve small adapters rather than a rewrite.*
 - Knows you are away from the last keyboard or mouse input, from a screen lock (Win+L), and from sleep and wake.
 - Waits for meetings by reading which apps have the microphone or camera open — the same record behind the Windows privacy indicator — for Store apps and ordinary programs alike.
@@ -105,7 +110,7 @@ Honest read: Safe Eyes is the closest competitor and is genuinely good on Waylan
 
 ## Numbers
 
-- **311 automated tests** (58 added for the Windows work, all running on Linux against fakes), `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
+- **336 automated tests** (83 added for the Windows and Store work, all running on Linux against fakes), `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
 - **1 Hz** deterministic engine tick; monotonic clock for all interval maths, wall clock only where wall clock is the right answer.
 - **52** exercises across 3 intensity tiers (10 eye, 42 movement); **7** tray moods; **5** rendered icon sizes (22–64 px).
 - Break clock held to **5 s per tick** at most while you are away, so a suspend cannot add hours to a break; a **10-second** hold before the "break paused" notice.
