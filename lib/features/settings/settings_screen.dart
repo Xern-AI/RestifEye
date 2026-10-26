@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../plans/plans.dart';
+import '../../app/brand.dart';
 import '../../app/version.dart';
 import '../../core/models/break_config.dart';
 import '../../core/models/exercise.dart';
@@ -219,11 +220,20 @@ class SettingsScreen extends ConsumerWidget {
                 appBuild == null ? appVersion : '$appVersion (build $appBuild)',
               ),
             ),
+            ListTile(
+              leading: const Icon(Icons.apps_outlined),
+              title: const Text('Made by ${Brand.vendor}'),
+              subtitle: const Text('More apps at xernaitech.com'),
+              trailing: const Icon(Icons.open_in_new, size: 18),
+              onTap: () =>
+                  ref.read(linkOpenerProvider)(Uri.parse(Brand.vendorSite)),
+            ),
             AboutListTile(
               icon: const Icon(Icons.info_outlined),
-              applicationName: 'RestifEye',
+              applicationName: Brand.appName,
               applicationVersion: appVersion,
-              applicationLegalese: '© 2026 Xernai · PolyForm Shield 1.0.0',
+              applicationLegalese:
+                  '© 2026 ${Brand.vendor} · PolyForm Shield 1.0.0',
             ),
           ],
         ),

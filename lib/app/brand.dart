@@ -18,5 +18,8 @@ abstract final class Brand {
   static const appId = 'com.xernai.restifeye';
 
   /// Vendor, for the About box and copyright lines.
-  static const vendor = 'Xernai';
+  static const vendor = 'XernAI';
+
+  /// The company site, where the other apps are listed.
+  static const vendorSite = 'https://xernaitech.com';
 }
