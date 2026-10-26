@@ -6,50 +6,63 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:restifeye/core/licensing/entitlement.dart';
 
 void main() {
-  final start = DateTime(2026, 10, 25, 9);
+  final now = DateTime(2026, 10, 25, 9);
 
-  Entitlement at(
-    Duration after, {
-    Set<Plan> owned = const {},
-    bool store = true,
-  }) => entitlementFrom(
-    storeBuild: store,
-    trialStartedAt: start,
-    now: start.add(after),
-    owned: owned,
-  );
+  StoreLicence trialEnding(Duration after, {bool active = true}) =>
+      StoreLicence(
+        fromStore: true,
+        active: active,
+        trial: true,
+        trialEndsAt: now.add(after),
+      );
 
-  test('Linux and the test zips are never licensed', () {
-    expect(at(const Duration(days: 400), store: false), const Unlimited());
+  Entitlement at(StoreLicence? licence, {bool store = true}) =>
+      entitlementFrom(storeBuild: store, licence: licence, now: now);
+
+  test('Linux, test zips and sideloaded packages are never licensed', () {
+    expect(at(trialEnding(Duration.zero), store: false), const Unlimited());
+    expect(
+      at(const StoreLicence(fromStore: false, active: false, trial: false)),
+      const Unlimited(),
+    );
   });
 
-  test('the trial counts down 14 whole days, then ends', () {
-    expect(at(Duration.zero), const Trial(14));
-    expect(at(const Duration(hours: 1)), const Trial(14));
-    expect(at(const Duration(days: 1)), const Trial(13));
-    expect(at(const Duration(days: 13, hours: 23)), const Trial(1));
-    expect(at(const Duration(days: 14)), const TrialEnded());
-    expect(at(const Duration(days: 30)), const TrialEnded());
+  test('a Store that never answered locks nothing', () {
+    expect(at(null), const Unlimited());
   });
 
-  test('a plan unlocks at once, mid-trial or after it; Lifetime wins', () {
+  test('the Store trial counts down whole days to its end date', () {
+    expect(at(trialEnding(const Duration(days: 15))), const Trial(15));
     expect(
-      at(const Duration(days: 3), owned: {Plan.yearly}),
-      const Owned(Plan.yearly),
+      at(trialEnding(const Duration(days: 14, hours: 1))),
+      const Trial(15),
+    );
+    expect(at(trialEnding(const Duration(hours: 3))), const Trial(1));
+    expect(at(trialEnding(Duration.zero)), const TrialEnded());
+    expect(at(trialEnding(const Duration(days: -2))), const TrialEnded());
+  });
+
+  test('a trial the Store reports inactive has ended', () {
+    expect(
+      at(trialEnding(const Duration(days: 3), active: false)),
+      const TrialEnded(),
+    );
+  });
+
+  test('a full licence is owned; an inactive one is not', () {
+    expect(
+      at(const StoreLicence(fromStore: true, active: true, trial: false)),
+      const Owned(),
     );
     expect(
-      at(const Duration(days: 90), owned: {Plan.lifetime}),
-      const Owned(Plan.lifetime),
-    );
-    expect(
-      at(const Duration(days: 90), owned: {Plan.yearly, Plan.lifetime}),
-      const Owned(Plan.lifetime),
+      at(const StoreLicence(fromStore: true, active: false, trial: false)),
+      const TrialEnded(),
     );
   });
 
   test('only an ended trial stops reminders', () {
     expect(const Trial(1).remindersAllowed, isTrue);
-    expect(const Owned(Plan.yearly).remindersAllowed, isTrue);
+    expect(const Owned().remindersAllowed, isTrue);
     expect(const Unlimited().remindersAllowed, isTrue);
     expect(const TrialEnded().remindersAllowed, isFalse);
   });

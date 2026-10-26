@@ -82,7 +82,7 @@ enum PauseReason {
   /// presentation, anything holding an idle inhibitor.
   media,
 
-  /// The Store build's free trial is over and no plan has been bought.
+  /// The Store build's free trial is over and the app has not been bought.
   trialEnded,
 }
 

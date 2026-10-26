@@ -4,7 +4,6 @@
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:restifeye/core/licensing/entitlement.dart';
 import 'package:restifeye/platform/interfaces/licence_store.dart';
 import 'package:restifeye/platform/windows/windows_licence_store.dart';
 import 'package:restifeye/platform/windows/windows_runner.dart';
@@ -31,68 +30,70 @@ void main() {
   WindowsLicenceStore store() =>
       WindowsLicenceStore(WindowsRunner(), isStoreBuild: true);
 
-  test('plans are found by product ID; anything else is ignored', () {
-    expect(plansFromTokens(['restifeye.lifetime', 'other.addon']), {
-      Plan.lifetime,
-    });
-    expect(planFor('restifeye.yearly'), Plan.yearly);
-    expect(planFor('restifeye.monthly'), isNull);
-  });
-
-  test('owned plans come from active add-on licences', () async {
-    replies['storeOwned'] = {
+  test('a trial licence carries its end date', () async {
+    final ends = DateTime.utc(2026, 11, 9, 9);
+    replies['storeLicence'] = {
       'ok': true,
-      'tokens': ['restifeye.yearly'],
+      'active': true,
+      'trial': true,
+      'fromStore': true,
+      'trialEndsMs': ends.millisecondsSinceEpoch,
       'error': '',
     };
-    expect(await store().owned(), {Plan.yearly});
+    final licence = await store().licence();
+    expect(licence.fromStore, isTrue);
+    expect(licence.trial, isTrue);
+    expect(licence.trialEndsAt?.toUtc(), ends);
+  });
+
+  test('a full licence has no end date', () {
+    final licence = licenceFromReply({
+      'ok': true,
+      'active': true,
+      'trial': false,
+      'fromStore': true,
+      'trialEndsMs': 0,
+    });
+    expect(licence.active, isTrue);
+    expect(licence.trial, isFalse);
+    expect(licence.trialEndsAt, isNull);
   });
 
   test('a Store that cannot answer throws, so the last answer is kept', () {
-    replies['storeOwned'] = {'ok': false, 'tokens': [], 'error': 'offline'};
-    expect(store().owned(), throwsStateError);
+    replies['storeLicence'] = {'ok': false, 'error': 'offline'};
+    expect(store().licence(), throwsStateError);
   });
 
-  test('offers carry Store prices and a sale price, in plan order', () async {
-    replies['storeOffers'] = {
+  test('the offer carries the Store price and the sale price', () async {
+    replies['storeOffer'] = {
       'ok': true,
+      'storeId': '9APP',
+      'price': r'$19.99',
+      'fullPrice': r'$29.99',
       'error': '',
-      'offers': [
-        {
-          'token': 'restifeye.lifetime',
-          'storeId': '9LIFE',
-          'price': r'$29.99',
-          'fullPrice': r'$39.99',
-        },
-        {
-          'token': 'restifeye.yearly',
-          'storeId': '9YEAR',
-          'price': r'$11.99',
-          'fullPrice': '',
-        },
-      ],
     };
-    final offers = await store().offers();
-    expect(offers.map((o) => o.plan), [Plan.yearly, Plan.lifetime]);
-    expect(offers.first.fullPrice, isNull);
-    expect(offers.last.price, r'$29.99');
-    expect(offers.last.fullPrice, r'$39.99');
+    final offer = await store().offer();
+    expect(offer?.price, r'$19.99');
+    expect(offer?.fullPrice, r'$29.99');
+
+    replies['storeOffer'] = {'ok': false, 'error': 'offline'};
+    expect(await store().offer(), isNull);
   });
 
-  test('buying looks up the Store ID and maps the outcome', () async {
-    replies['storeOffers'] = {
+  test('buying uses the app Store ID and maps the outcome', () async {
+    replies['storeOffer'] = {
       'ok': true,
-      'error': '',
-      'offers': [
-        {'token': 'restifeye.yearly', 'storeId': '9YEAR', 'price': r'$11.99'},
-      ],
+      'storeId': '9APP',
+      'price': r'$29.99',
+      'fullPrice': '',
     };
     replies['storePurchase'] = {'status': 'cancelled', 'error': ''};
-    expect(await store().buy(Plan.yearly), PurchaseOutcome.cancelled);
+    expect(await store().buy(), PurchaseOutcome.cancelled);
     final purchase = calls.firstWhere((c) => c.method == 'storePurchase');
-    expect((purchase.arguments as Map)['storeId'], '9YEAR');
+    expect((purchase.arguments as Map)['storeId'], '9APP');
 
-    expect(await store().buy(Plan.lifetime), PurchaseOutcome.failed);
+    replies['storeOffer'] = {'ok': false, 'error': 'offline'};
+    expect(await store().buy(), PurchaseOutcome.failed);
   });
 
   test('the startup task counts as on only when Windows says so', () {

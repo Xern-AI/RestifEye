@@ -2,8 +2,22 @@
 // Use of this source code is governed by the PolyForm Shield 1.0.0
 // license that can be found in the LICENSE file.
 
-/// A paid plan on the Microsoft Store build.
-enum Plan { yearly, lifetime }
+/// The app's own licence as the Microsoft Store reports it.
+class StoreLicence {
+  const StoreLicence({
+    required this.fromStore,
+    required this.active,
+    required this.trial,
+    this.trialEndsAt,
+  });
+
+  /// False for a copy not acquired from the Store (a sideloaded test
+  /// package), which has nothing to enforce.
+  final bool fromStore;
+  final bool active;
+  final bool trial;
+  final DateTime? trialEndsAt;
+}
 
 /// What this copy of the app may do.
 sealed class Entitlement {
@@ -13,12 +27,13 @@ sealed class Entitlement {
   bool get remindersAllowed => this is! TrialEnded;
 }
 
-/// No licensing applies: Linux, and the Windows test zips.
+/// No licensing applies: Linux, the Windows test zips and sideloaded test
+/// packages, or a Store that has never answered.
 class Unlimited extends Entitlement {
   const Unlimited();
 }
 
-/// The free trial is running.
+/// The Store's free trial is running.
 class Trial extends Entitlement {
   const Trial(this.daysLeft);
 
@@ -33,42 +48,42 @@ class Trial extends Entitlement {
   int get hashCode => daysLeft.hashCode;
 }
 
-/// A plan is owned.
+/// The app has been bought.
 class Owned extends Entitlement {
-  const Owned(this.plan);
-
-  final Plan plan;
+  const Owned();
 
   @override
-  bool operator ==(Object other) => other is Owned && other.plan == plan;
+  bool operator ==(Object other) => other is Owned;
 
   @override
-  int get hashCode => plan.hashCode;
+  int get hashCode => (Owned).hashCode;
 }
 
-/// The trial is over and no plan is owned: reminders stop, history stays.
+/// The trial is over and the app has not been bought: reminders stop,
+/// history stays. Windows itself refuses to start the app from then on, so
+/// this is what a copy left running sees.
 class TrialEnded extends Entitlement {
   const TrialEnded();
 }
 
-/// Free trial length on the Store build (founder, 23 Oct 2026).
-const trialLength = Duration(days: 14);
-
 /// The one rule every licensing decision comes from.
 ///
-/// A plan always wins, so a purchase unlocks at once even mid-trial; Lifetime
-/// wins over Yearly. The trial counts down in whole days from when it began,
-/// on the wall clock, so it survives restarts and sleep.
+/// The trial counts down on the wall clock to the end date the Store gave,
+/// so it keeps ending on time while the PC is offline.
 Entitlement entitlementFrom({
   required bool storeBuild,
-  required DateTime trialStartedAt,
+  required StoreLicence? licence,
   required DateTime now,
-  required Set<Plan> owned,
 }) {
-  if (!storeBuild) return const Unlimited();
-  if (owned.contains(Plan.lifetime)) return const Owned(Plan.lifetime);
-  if (owned.contains(Plan.yearly)) return const Owned(Plan.yearly);
-  final left = trialStartedAt.add(trialLength).difference(now);
+  if (!storeBuild || licence == null || !licence.fromStore) {
+    return const Unlimited();
+  }
+  if (!licence.trial) {
+    return licence.active ? const Owned() : const TrialEnded();
+  }
+  final ends = licence.trialEndsAt;
+  if (!licence.active || ends == null) return const TrialEnded();
+  final left = ends.difference(now);
   if (left <= Duration.zero) return const TrialEnded();
   return Trial((left.inMinutes / Duration.minutesPerDay).ceil());
 }

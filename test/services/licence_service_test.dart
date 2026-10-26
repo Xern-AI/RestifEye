@@ -15,6 +15,7 @@ import 'package:restifeye/platform/interfaces/licence_store.dart';
 import 'package:restifeye/services/licence_service.dart';
 
 void main() {
+  final start = DateTime(2026, 10, 25, 9);
   late AppDatabase db;
   late SettingsRepository settings;
   late ManualClock clock;
@@ -24,9 +25,9 @@ void main() {
   setUp(() {
     db = AppDatabase.inMemory();
     settings = SettingsRepository(db);
-    clock = ManualClock(startAt: DateTime(2026, 10, 25, 9));
+    clock = ManualClock(startAt: start);
     engine = BreakEngine(clock: clock, config: const BreakConfig());
-    store = FakeLicenceStore();
+    store = FakeLicenceStore(trialEndsAt: start.add(const Duration(days: 15)));
   });
 
   tearDown(() => db.close());
@@ -47,33 +48,29 @@ void main() {
     final s = service();
     await s.start();
     expect(s.current, const Unlimited());
-    expect(await settings.readValue(LicenceService.keyTrialStartedAt), isNull);
+    expect(await settings.readValue(LicenceService.keyLicence), isNull);
     expect(lockedOut(), isFalse);
     await s.dispose();
   });
 
-  test('the trial starts on first run and survives a restart', () async {
-    final first = service();
-    await first.start();
-    expect(first.current, const Trial(14));
-    await first.dispose();
-
+  test('the Store trial counts down as the clock moves', () async {
+    final s = service();
+    await s.start();
+    expect(s.current, const Trial(15));
     clock.advance(const Duration(days: 5));
-    final again = service();
-    await again.start();
-    expect(again.current, const Trial(9));
-    await again.dispose();
+    expect(await s.refresh(), const Trial(10));
+    await s.dispose();
   });
 
   test('the trial ending locks reminders; buying unlocks them', () async {
     final s = service();
     await s.start();
-    clock.advance(const Duration(days: 14));
+    clock.advance(const Duration(days: 15));
     expect(await s.refresh(), const TrialEnded());
     expect(lockedOut(), isTrue);
 
-    expect(await s.buy(Plan.lifetime), PurchaseOutcome.purchased);
-    expect(s.current, const Owned(Plan.lifetime));
+    expect(await s.buy(), PurchaseOutcome.purchased);
+    expect(s.current, const Owned());
     expect(lockedOut(), isFalse);
     await s.dispose();
   });
@@ -84,42 +81,66 @@ void main() {
     clock.advance(const Duration(days: 20));
     await s.refresh();
     store.nextOutcome = PurchaseOutcome.cancelled;
-    expect(await s.buy(Plan.yearly), PurchaseOutcome.cancelled);
+    expect(await s.buy(), PurchaseOutcome.cancelled);
     expect(s.current, const TrialEnded());
     await s.dispose();
   });
 
-  test(
-    'offline keeps the last answer: Lifetime for good, Yearly 30 days',
-    () async {
-      store.ownedPlans = {Plan.yearly};
-      final s = service();
-      await s.start();
-      expect(s.current, const Owned(Plan.yearly));
-
-      store.offline = true;
-      clock.advance(const Duration(days: 29));
-      expect(await s.refresh(), const Owned(Plan.yearly));
-      clock.advance(const Duration(days: 2));
-      expect(await s.refresh(), const TrialEnded());
-      await s.dispose();
-    },
-  );
-
-  test('remembered plans: unknown names are ignored, Lifetime never ages', () {
-    final now = DateTime(2027, 1, 1);
-    expect(
-      rememberedPlans(saved: 'lifetime,bogus', checkedAt: null, now: now),
-      {Plan.lifetime},
+  test('offline: a bought copy stays unlocked for good', () async {
+    store.current = const StoreLicence(
+      fromStore: true,
+      active: true,
+      trial: false,
     );
-    expect(
-      rememberedPlans(
-        saved: 'yearly',
-        checkedAt: now.subtract(const Duration(days: 31)),
-        now: now,
+    final s = service();
+    await s.start();
+    store.offline = true;
+    clock.advance(const Duration(days: 400));
+    expect(await s.refresh(), const Owned());
+    await s.dispose();
+  });
+
+  test('offline: a remembered trial still ends on its date', () async {
+    final s = service();
+    await s.start();
+    store.offline = true;
+    clock.advance(const Duration(days: 14));
+    expect(await s.refresh(), const Trial(1));
+    clock.advance(const Duration(days: 1));
+    expect(await s.refresh(), const TrialEnded());
+    await s.dispose();
+  });
+
+  test('a Store that has never answered locks nothing', () async {
+    store.offline = true;
+    final s = service();
+    await s.start();
+    expect(s.current, const Unlimited());
+    expect(lockedOut(), isFalse);
+    await s.dispose();
+  });
+
+  test('the saved answer round-trips', () {
+    final ends = DateTime.utc(2026, 11, 9, 3, 30);
+    for (final licence in [
+      const StoreLicence(fromStore: false, active: true, trial: false),
+      const StoreLicence(fromStore: true, active: true, trial: false),
+      const StoreLicence(fromStore: true, active: false, trial: true),
+      StoreLicence(
+        fromStore: true,
+        active: true,
+        trial: true,
+        trialEndsAt: ends,
       ),
-      isEmpty,
-    );
-    expect(rememberedPlans(saved: null, checkedAt: null, now: now), isEmpty);
+    ]) {
+      final back = decodeLicence(encodeLicence(licence))!;
+      expect(back.fromStore, licence.fromStore);
+      expect(back.active, licence.active);
+      expect(back.trial, licence.trial);
+      expect(back.trialEndsAt?.toUtc(), licence.trialEndsAt?.toUtc());
+    }
+    expect(decodeLicence(null), isNull);
+    expect(decodeLicence('trial:not-a-date'), isNull);
+    expect(decodeLicence('lifetime'), isNull);
   });
 }
