@@ -106,13 +106,14 @@ class WindowsRunner {
   Future<bool> isPackaged() async =>
       await _channel.invokeMethod<bool>('isPackaged') ?? false;
 
-  /// `{ok, tokens, error}`: product IDs of the add-ons the user owns.
-  Future<Map<Object?, Object?>> storeOwned() async =>
-      await _channel.invokeMethod<Map<Object?, Object?>>('storeOwned') ?? {};
+  /// `{ok, active, trial, fromStore, trialEndsMs, error}`: this app's own
+  /// Store licence.
+  Future<Map<Object?, Object?>> storeLicence() async =>
+      await _channel.invokeMethod<Map<Object?, Object?>>('storeLicence') ?? {};
 
-  /// `{ok, offers: [{token, storeId, price, fullPrice}], error}`.
-  Future<Map<Object?, Object?>> storeOffers() async =>
-      await _channel.invokeMethod<Map<Object?, Object?>>('storeOffers') ?? {};
+  /// `{ok, storeId, price, fullPrice, error}`: the app as the Store sells it.
+  Future<Map<Object?, Object?>> storeOffer() async =>
+      await _channel.invokeMethod<Map<Object?, Object?>>('storeOffer') ?? {};
 
   /// `{status, error}`; shows the Store's own purchase dialog.
   Future<Map<Object?, Object?>> storePurchase(String storeId) async =>

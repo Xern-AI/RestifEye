@@ -10,8 +10,9 @@
 
 #include <appmodel.h>
 #include <shobjidl.h>
+
+#include <chrono>
 #include <winrt/Windows.ApplicationModel.h>
-#include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Services.Store.h>
 
@@ -23,7 +24,7 @@ using winrt::Windows::ApplicationModel::StartupTaskState;
 using winrt::Windows::Foundation::AsyncStatus;
 using winrt::Windows::Services::Store::StoreAppLicense;
 using winrt::Windows::Services::Store::StoreContext;
-using winrt::Windows::Services::Store::StoreProductQueryResult;
+using winrt::Windows::Services::Store::StoreProductResult;
 using winrt::Windows::Services::Store::StorePurchaseResult;
 using winrt::Windows::Services::Store::StorePurchaseStatus;
 
@@ -95,9 +96,8 @@ bool IsPackaged() {
          APPMODEL_ERROR_NO_PACKAGE;
 }
 
-void OwnedTokens(
-    HWND owner,
-    std::function<void(bool, std::vector<std::string>, std::string)> done) {
+void Licence(HWND owner,
+             std::function<void(bool, AppLicence, std::string)> done) {
   try {
     ContextFor(owner).GetAppLicenseAsync().Completed(
         [done](const auto& op, AsyncStatus status) {
@@ -106,14 +106,18 @@ void OwnedTokens(
               return done(false, {}, "licence query did not complete");
             }
             StoreAppLicense license = op.GetResults();
-            std::vector<std::string> tokens;
-            for (const auto& entry : license.AddOnLicenses()) {
-              const auto add_on = entry.Value();
-              if (add_on.IsActive()) {
-                tokens.push_back(winrt::to_string(add_on.InAppOfferToken()));
-              }
+            AppLicence licence;
+            licence.active = license.IsActive();
+            licence.trial = license.IsTrial();
+            licence.from_store = !license.SkuStoreId().empty();
+            if (licence.trial) {
+              const auto ends = winrt::clock::to_sys(license.ExpirationDate());
+              licence.trial_ends_ms =
+                  std::chrono::duration_cast<std::chrono::milliseconds>(
+                      ends.time_since_epoch())
+                      .count();
             }
-            done(true, tokens, "");
+            done(true, licence, "");
           } catch (const winrt::hresult_error& error) {
             done(false, {}, Message(error));
           }
@@ -123,37 +127,32 @@ void OwnedTokens(
   }
 }
 
-void Offers(HWND owner,
-            std::function<void(bool, std::vector<Offer>, std::string)> done) {
+void CurrentOffer(HWND owner,
+                  std::function<void(bool, AppOffer, std::string)> done) {
   try {
-    auto kinds = winrt::single_threaded_vector<winrt::hstring>({L"Durable"});
-    ContextFor(owner).GetAssociatedStoreProductsAsync(kinds).Completed(
+    ContextFor(owner).GetStoreProductForCurrentAppAsync().Completed(
         [done](const auto& op, AsyncStatus status) {
           try {
             if (status != AsyncStatus::Completed) {
               return done(false, {}, "product query did not complete");
             }
-            StoreProductQueryResult result = op.GetResults();
-            if (result.ExtendedError() != winrt::hresult(0)) {
+            StoreProductResult result = op.GetResults();
+            if (result.ExtendedError() != winrt::hresult(0) ||
+                !result.Product()) {
               return done(false, {},
                           winrt::to_string(winrt::hresult_error(
                                                result.ExtendedError())
                                                .message()));
             }
-            std::vector<Offer> offers;
-            for (const auto& entry : result.Products()) {
-              const auto product = entry.Value();
-              const auto price = product.Price();
-              Offer offer;
-              offer.token = winrt::to_string(product.InAppOfferToken());
-              offer.store_id = winrt::to_string(product.StoreId());
-              offer.price = winrt::to_string(price.FormattedPrice());
-              if (price.IsOnSale()) {
-                offer.full_price = winrt::to_string(price.FormattedBasePrice());
-              }
-              offers.push_back(offer);
+            const auto product = result.Product();
+            const auto price = product.Price();
+            AppOffer offer;
+            offer.store_id = winrt::to_string(product.StoreId());
+            offer.price = winrt::to_string(price.FormattedPrice());
+            if (price.IsOnSale()) {
+              offer.full_price = winrt::to_string(price.FormattedBasePrice());
             }
-            done(true, offers, "");
+            done(true, offer, "");
           } catch (const winrt::hresult_error& error) {
             done(false, {}, Message(error));
           }
