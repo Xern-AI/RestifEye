@@ -2,6 +2,7 @@
 // Use of this source code is governed by the PolyForm Shield 1.0.0
 // license that can be found in the LICENSE file.
 
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -92,6 +93,27 @@ void main() {
     expect(find.text('Breaks actually taken'), findsOneWidget);
     expect(find.text('When you work'), findsOneWidget);
     expect(find.text('Mon'), findsOneWidget);
+
+    await settle(tester);
+  });
+
+  // The bands are see-through steps of one hue, so whatever the rod is painted
+  // in shows through them; only a bare rod lets them match the legend.
+  testWidgets('stacked bars show only the legend colours', (tester) async {
+    await seed(20);
+    await pump(tester);
+
+    final stacked = [
+      for (final chart in tester.widgetList<BarChart>(find.byType(BarChart)))
+        for (final group in chart.data.barGroups)
+          for (final rod in group.barRods)
+            if (rod.rodStackItems.isNotEmpty) rod,
+    ];
+    expect(stacked, isNotEmpty);
+    for (final rod in stacked) {
+      expect(rod.color, Colors.transparent);
+      expect(rod.gradient, isNull);
+    }
 
     await settle(tester);
   });
