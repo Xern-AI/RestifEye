@@ -29,7 +29,7 @@ RestifEye reminds you to rest your eyes and move, on a schedule that adapts to w
 **The break itself**
 - 52 illustrated exercises, drawn in code rather than shipped as assets, themed light and dark: 10 for the eyes and 42 for the body, every one with its own looping animation. *Non-trivial: the figures are posed by joint angles, so the same skeleton draws a side stretch and a plank; nothing is a picture file, so it stays crisp at any size and adds nothing to the download.*
 - Three intensity tiers with a user ceiling — seated only, standing stretches, or anything you would do at home in your own room (planks, push-ups, skipping, floor work). *Non-trivial: a squat is impossible in an open-plan office, and an overlay suggesting the impossible teaches people to dismiss overlays.*
-- "Can't do this one" opts an exercise out permanently and swaps in another.
+- "Can't do this exercise" opts an exercise out permanently and swaps in another.
 - Windowed or full-screen breaks, your choice; strict breaks are always full-screen.
 - Strict mode with a logged 3-second hold-to-escape, once the snooze budget is gone.
 - The break clock only runs while you are actually on the break screen. Switch to another window and it stops where it is, then picks up where it left off when you come back — so a break you worked through is never recorded as one you took. *Non-trivial: no Linux compositor lets an app grab your keyboard, so no break app can truly stop you leaving. Rather than pretend otherwise, RestifEye makes leaving pointless: the time is still owed. Walking away from the machine entirely, or locking it, still counts as rest, so the honest cases are never punished.*
@@ -111,7 +111,7 @@ Honest read: Safe Eyes is the closest competitor and is genuinely good on Waylan
 
 ## Numbers
 
-- **342 automated tests** (89 added for the Windows and Store work, all running on Linux against fakes), `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
+- **343 automated tests** (89 added for the Windows and Store work, all running on Linux against fakes), `flutter analyze --fatal-infos` clean, pure-Dart engine core testable with no compositor, database or window.
 - **1 Hz** deterministic engine tick; monotonic clock for all interval maths, wall clock only where wall clock is the right answer.
 - **52** exercises across 3 intensity tiers (10 eye, 42 movement); **7** tray moods; **5** rendered icon sizes (22–64 px).
 - Break clock held to **5 s per tick** at most while you are away, so a suspend cannot add hours to a break; a **10-second** hold before the "break paused" notice.

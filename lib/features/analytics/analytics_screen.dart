@@ -415,6 +415,9 @@ class _CompositionCard extends StatelessWidget {
                 barRods: [
                   BarChartRodData(
                     toY: p.hours.values.fold(0.0, (a, b) => a + b),
+                    // fl_chart paints the rod under its stack, cyan unless
+                    // told otherwise, and the bands are see-through.
+                    color: Colors.transparent,
                     width: range == AnalyticsRange.month ? 6 : 14,
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(4),
